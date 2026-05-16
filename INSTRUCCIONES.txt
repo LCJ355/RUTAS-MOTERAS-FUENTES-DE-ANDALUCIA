@@ -1,56 +1,93 @@
 ╔══════════════════════════════════════════════════════════╗
-║   RUTAS MOTERAS · FUENTES DE ANDALUCÍA   v1.0          ║
-║   INSTRUCCIONES COMPLETAS                              ║
+║   RUTAS MOTERAS · FUENTES DE ANDALUCÍA   VERSIÓN 1.0   ║
+║   INSTRUCCIONES                                        ║
 ╚══════════════════════════════════════════════════════════╝
 
+Este archivo es una web completa de mapa interactivo.
+Abrelo con cualquier navegador (Chrome, Firefox, Edge...).
 
-════════════════════════════════════════════════════════════
-1. CÓMO VER LA WEB PUBLICADA
-════════════════════════════════════════════════════════════
-
-La web está publicada en GitHub Pages (cuando la subamos):
-  https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
+No necesita internet para ver el mapa (usa OpenStreetMap),
+pero si para calcular rutas (OSRM), el clima y los POIs.
 
 
 ════════════════════════════════════════════════════════════
-2. CÓMO USAR LA WEB
+CÓMO USAR LA WEB
 ════════════════════════════════════════════════════════════
 
-Planificar una ruta:
-──────────────────────────────────────────────────────────
-1. Elige "Salida" (pueblo de inicio)
-2. Elige "Destino" (pueblo al que quieres llegar)
-3. Añade paradas pulsando "+" en las fuentes
-   (se marcan en rojo con número)
-4. Pulsa "Calcular ruta"
-5. Aparece la línea azul con distancia y tiempo
+La web tiene 3 líneas de selección:
 
-Ver el clima:
-──────────────────────────────────────────────────────────
-1. Después de calcular la ruta, pulsa "🌤 Clima"
-2. Elige fecha y aparece la tabla con temperaturas
+  1. SALIDA        → Pueblo donde empieza la ruta
+  2. DESTINO       → Pueblo que quieres explorar
+     (al seleccionarlo, se filtran las fuentes en mapa y lista)
+  3. FINAL RUTA    → Pueblo donde termina la ruta
 
-Añadir fotos:
-──────────────────────────────────────────────────────────
-1. Pulsa "🔒 Admin" y escribe: rutas2025
-2. Pulsa una fuente, luego "📷" para añadir foto
-3. O pega una foto con Ctrl+V
+Planificar ruta:
+  1. Elige SALIDA, DESTINO y FINAL RUTA
+  2. Pulsa en una fuente del mapa para ver detalles
+  3. Pulsa "+" para añadirla como parada
+  4. Pulsa "Calcular ruta" → aparece la línea azul
 
-Buscar POIs:
-──────────────────────────────────────────────────────────
-Pulsa "⛽ POIs" y elige tipo (gasolineras, hoteles...)
+Filtrar fuentes:
+  - Selecciona provincia y pueblo en DESTINO
+  - El mapa muestra solo las fuentes de ese pueblo
+  - La lista lateral se actualiza automáticamente
+  - El botón "Ajustar" centra el mapa en las fuentes visibles
+
+Añadir fotos (solo admin):
+  1. Pulsa "🔒 Admin" y escribe la contraseña: rutas2025
+  2. Pulsa una fuente en el mapa, luego "📷"
+  3. O pega una foto directamente con Ctrl+V
+
+Otras funciones:
+  - 🌤 Clima: después de calcular la ruta
+  - ⛽ POIs: gasolineras, hoteles, talleres...
+  - 💾 Guardar/Cargar rutas
+  - 📤 Exportar HTML con fotos incluidas
+  - 🗺 Capas: mapa, topo, ciclismo, satélite
 
 
 ════════════════════════════════════════════════════════════
-3. DATOS DEL PROYECTO
+DATOS DEL PROYECTO
 ════════════════════════════════════════════════════════════
 
-Provincias incluidas:  8 (Almería, Cádiz, Córdoba, Granada,
-                        Huelva, Jaén, Málaga, Sevilla)
+Provincias:           8 (Almería, Cádiz, Córdoba, Granada,
+                       Huelva, Jaén, Málaga, Sevilla)
 
-Total fuentes:          ~13.400
-Total pueblos:          451
+Total fuentes:        13.676
+Total pueblos:        711
 
-Versión actual:         1.0
+Versión:              1.0 (Mayo 2026)
 
-Para cualquier duda, pregunta al que te hizo esta web.
+
+════════════════════════════════════════════════════════════
+ESTRUCTURA DE ARCHIVOS
+════════════════════════════════════════════════════════════
+
+index.html            → La web (ábrelo en el navegador)
+INSTRUCCIONES.txt     → Este archivo
+
+
+════════════════════════════════════════════════════════════
+CARPETA DE DESARROLLO
+════════════════════════════════════════════════════════════
+
+Los scripts y datos fuente están en la carpeta:
+  Rutas Moteras -Fuentes de Cadiz-
+
+Para regenerar index.html desde cero:
+  python _merge.py
+  python _build_andalucia.py
+  python _fix_html_v2.py
+
+
+════════════════════════════════════════════════════════════
+NOTAS TÉCNICAS
+════════════════════════════════════════════════════════════
+
+- Las coordenadas de las fuentes son aproximadas
+  (generadas desde el centro del pueblo + offset aleatorio)
+- Los pueblos con acentos corruptos (~39) no tienen
+  coordenadas pero aparecen en el listado de DESTINO
+- La contraseña de admin está visible en el código fuente
+- Los datos se almacenan en LocalStorage del navegador
+- Para compartir la web, sube index.html a cualquier hosting
