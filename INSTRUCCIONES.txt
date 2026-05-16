@@ -1,0 +1,56 @@
+╔══════════════════════════════════════════════════════════╗
+║   RUTAS MOTERAS · FUENTES DE ANDALUCÍA   v1.0          ║
+║   INSTRUCCIONES COMPLETAS                              ║
+╚══════════════════════════════════════════════════════════╝
+
+
+════════════════════════════════════════════════════════════
+1. CÓMO VER LA WEB PUBLICADA
+════════════════════════════════════════════════════════════
+
+La web está publicada en GitHub Pages (cuando la subamos):
+  https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
+
+
+════════════════════════════════════════════════════════════
+2. CÓMO USAR LA WEB
+════════════════════════════════════════════════════════════
+
+Planificar una ruta:
+──────────────────────────────────────────────────────────
+1. Elige "Salida" (pueblo de inicio)
+2. Elige "Destino" (pueblo al que quieres llegar)
+3. Añade paradas pulsando "+" en las fuentes
+   (se marcan en rojo con número)
+4. Pulsa "Calcular ruta"
+5. Aparece la línea azul con distancia y tiempo
+
+Ver el clima:
+──────────────────────────────────────────────────────────
+1. Después de calcular la ruta, pulsa "🌤 Clima"
+2. Elige fecha y aparece la tabla con temperaturas
+
+Añadir fotos:
+──────────────────────────────────────────────────────────
+1. Pulsa "🔒 Admin" y escribe: rutas2025
+2. Pulsa una fuente, luego "📷" para añadir foto
+3. O pega una foto con Ctrl+V
+
+Buscar POIs:
+──────────────────────────────────────────────────────────
+Pulsa "⛽ POIs" y elige tipo (gasolineras, hoteles...)
+
+
+════════════════════════════════════════════════════════════
+3. DATOS DEL PROYECTO
+════════════════════════════════════════════════════════════
+
+Provincias incluidas:  8 (Almería, Cádiz, Córdoba, Granada,
+                        Huelva, Jaén, Málaga, Sevilla)
+
+Total fuentes:          ~13.400
+Total pueblos:          451
+
+Versión actual:         1.0
+
+Para cualquier duda, pregunta al que te hizo esta web.
