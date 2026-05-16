@@ -1,0 +1,81 @@
+═══════════════════════════════════════════════
+  NO OLVIDAR · Rutas Moteras · Fuentes de Andalucía
+═══════════════════════════════════════════════
+
+1. CÓMO PUBLICAR CAMBIOS
+   - Editar index.html en D:\-IA-\Rutas Moteras -Fuentes de Andalucía-
+   - git add -A
+   - git commit -m "descripción"
+   - git push
+   - Esperar 1-2 min, la web se actualiza sola en:
+     https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
+
+2. SI SE AÑADEN NUEVAS FUENTES (datos)
+   - Los datos están en D:\-IA-\Rutas Moteras -Fuentes de Cadiz-
+   - El pipeline: CSV → _merge.py → _combinado.json
+   - _combinado.json → _geoloc.py → _coords_fuentes.json (coordenadas)
+   - _combinado.json + _coords_pueblos.json → _build_andalucia.py → index_andalucia.html
+   - Luego copiar el JS generado al index.html del proyecto Andalucía
+   - No re-ejecutar _build_andalucia.py sin antes respaldar los cambios de layout
+
+3. SI SE AÑADEN NUEVOS PUEBLOS
+   - _geo_pueblos.py genera _coords_pueblos.json (usando Nominatim)
+   - _coords_pueblos.json es la fuente ÚNICA de provincias (NO el CSV)
+   - TP (provincia por pueblo) se construye desde _coords_pueblos.json
+
+4. ERRORES COMUNES
+   - 39 pueblos con acentos corruptos (Alan�s, Bay�rcal...) no tienen
+     coordenadas en TC. Aparecen en dropdown pero al seleccionarlos no pasa nada.
+     Solución: corregir nombres en _combinado.json y re-ejecutar build.
+   - Si los botones Modo Ruta o Acceso no responden:
+     Los selectores deben usar :first-of-type no :first-child
+     Ver document.querySelector('.btn-grp:first-of-type')
+
+5. CLAVES TÉCNICAS
+   - FD: array de fuentes (13676). Campos: p(pueblo), n(nombre), la(lat),
+     lo(lng), t(tipo r=asfaltada o=off-road)
+   - TC: coordinate de pueblos {nombre: [lat, lng]} (733 entries)
+   - TP: provincia por pueblo {nombre: provincia} (desde _coords_pueblos.json)
+   - PROVS: provincias con tilde {Almeria, Cadiz, Cordoba, Granada, Huelva,
+     Jaen, Malaga, Sevilla}
+   - currentTown: pueblo seleccionado en DESTINO
+   - currentAcc: filtro acceso ('all', 'r', 'o')
+   - routeProfile: modo ruta ('r', 'c', 'o')
+   - mcg: markerClusterGroup (disableClusteringAtZoom:15)
+   - startTownMarker / endTownMarker: marcadores separados (NO en mcg)
+
+6. LAYOUT SIDEBAR (orden actual)
+   1. Título centrado + subtítulo verde centrado
+   2. Estadísticas
+   3. PROVINCIA / salida (2 selectores)
+   4. DESTINO (2 selectores)
+   5. FINAL RUTA (2 selectores)
+   6. Modo ruta (3 botones)
+   7. Tipo de acceso (3 botones)
+   8. Leyenda colores
+   9. Perfil de elevación (oculto, se muestra al rutear)
+  10. Contador + Lista de fuentes (flex:1, scrollable)
+  11. Información de ruta
+  12. Botones (Calcular ruta, GPX, Compartir, Guardar, etc.)
+
+7. MAPA: controles
+   - Zoom +/- : esquina superior derecha (topright)
+   - Capas (OSM, Topo, CyclOSM, Satélite) : esquina superior izquierda (topleft)
+     como control Leaflet personalizado
+
+8. RUTAS
+   - Al calcular ruta: solo se ven en el mapa los waypoints + fuentes del
+     pueblo en DESTINO (showRouteMarkers)
+   - Al limpiar ruta: se restauran todos los marcadores
+   - applyFilters() respeta rutas activas (no interfiere)
+
+9. SEGURIDAD
+   - Admin password por defecto: rutas2025
+   - Para cambiar: buscar 'rutas2025' en index.html
+   - Los visitantes no ven botones de admin, foto ni nota
+
+10. RESPALDO
+    - index.html y NO_OLVIDAR.txt en la carpeta Andalucía
+    - Scripts .py y CSVs/JSONs en la carpeta Cádiz
+    - Ambos repositorios GitHub: RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA
+      y RUTAS-MOTERAS-FUENTES-DE-CADIZ
