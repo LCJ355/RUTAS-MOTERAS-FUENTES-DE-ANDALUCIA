@@ -154,9 +154,8 @@ select option{background:#0d1117}
 <select id="province-select"><option value="">Capital...</option></select>
 <select id="town-select"><option value="">Pueblo...</option></select>
 </div>
-<div class="lbl">🏁 Salida / Destino</div>
+<div class="lbl">🏁 Destino</div>
 <div class="row">
-<select id="start-town"><option value="">Salida...</option></select>
 <select id="end-town"><option value="">Destino...</option></select>
 </div>
 
@@ -176,7 +175,7 @@ select option{background:#0d1117}
 <div style="display:flex;gap:6px;font-size:.58rem;color:#484f58">
 <span><span style="color:#66bb6a">●</span> Asfaltada</span>
 <span><span style="color:#e67e22">●</span> Sin asfaltar</span>
-<span><span style="color:#2ecc71">●</span> Salida</span>
+<span><span style="color:#2ecc71">●</span> Inicio</span>
 <span><span style="color:#e74c3c">●</span> Destino</span>
 <span><span style="color:#f5c842">●</span> Parada</span>
 </div>
@@ -313,7 +312,7 @@ function disableAdmin(){
   if(routing){map.removeLayer(routing);routing=null;}
   startTown=null;endTown=null;waypoints=[];
   elevData=[];poiMarkers=[];weatherData={};
-  document.getElementById('start-town').value='';document.getElementById('end-town').value='';
+  document.getElementById('end-town').value='';
   document.getElementById('r-dist').textContent='0 km';document.getElementById('r-time').textContent='0 min';
   document.getElementById('route-status').textContent='';
   document.getElementById('elevation-chart').style.display='none';
@@ -340,8 +339,7 @@ function updProv(){
   ts.innerHTML='<option value="">Pueblo...</option>';
   var towns=_currentProv?townList.filter(function(t){return TP[t]===_currentProv;}):[];
   towns.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;ts.appendChild(o);});
-  document.getElementById('start-town').value='';document.getElementById('end-town').value='';
-  popS('start-town','Salida...',_currentProv||null);
+  document.getElementById('end-town').value='';
   popS('end-town','Destino...',_currentProv||null);
   var ft=document.getElementById('filter-town');
   ft.innerHTML='<option value="">Todos</option>';
@@ -357,13 +355,16 @@ ps.addEventListener('change',updProv);
 document.getElementById('town-select').addEventListener('change',function(){
   var v=this.value;
   if(!v||!TC[v])return;
+  startTown={p:v,la:TC[v][0],lo:TC[v][1],n:v};
   map.setView(TC[v],12);
   document.getElementById('filter-town').value=v;
   currentTown=v;
   renderList();
-  document.getElementById('route-status').textContent='📍 '+v;
+  updTownMarkers();
+  updSum();
+  document.getElementById('route-status').textContent='📍 Inicio: '+v;
 });
-popS('start-town','Salida...');popS('end-town','Destino...');
+popS('end-town','Destino...');
 var ft=document.getElementById('filter-town');
 ft.innerHTML='<option value="">Todos</option>';
 townList.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;ft.appendChild(o);});
@@ -536,7 +537,7 @@ function updPop(mk){
   if(photo)h+='<div style="margin:4px 0"><img src="'+photo+'" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;border:1px solid #30363d" /></div>';
   h+='<div style="margin-top:4px;display:flex;gap:3px;flex-wrap:wrap">';
   if(startTownMarker&&startTownMarker._fd&&startTownMarker._fd._idx===f._idx){
-    h+='<button class="btn btn-sec btn-sm" disabled>🏁 Salida</button>';
+    h+='<button class="btn btn-sec btn-sm" disabled>🏁 Inicio</button>';
   }else if(endTownMarker&&endTownMarker._fd&&endTownMarker._fd._idx===f._idx){
     h+='<button class="btn btn-sec btn-sm" disabled>🎯 Destino</button>';
   }else{
@@ -553,7 +554,7 @@ function updPop(mk){
 function setStart(f){
   var isWp=waypoints.some(function(w){return w._idx===f._idx;});
   if(isWp)waypoints=waypoints.filter(function(w){return w._idx!==f._idx;});
-  startTown=f;document.getElementById('start-town').value='';updTownMarkers();updSum();renderList();
+  startTown=f;updTownMarkers();updSum();renderList();
 }
 function setEnd(f){
   var isWp=waypoints.some(function(w){return w._idx===f._idx;});
@@ -568,7 +569,7 @@ function updTownMarkers(){
   if(endTownMarker){map.removeLayer(endTownMarker);endTownMarker=null;}
   if(startTown&&startTown.la){
     startTownMarker=L.marker([startTown.la,startTown.lo],{icon:I.st}).addTo(map)
-      .bindPopup('<div class="p-title">🏁 '+startTown.n+'</div><div class="p-town">Pueblo de salida</div>');
+      .bindPopup('<div class="p-title">🏁 '+startTown.n+'</div><div class="p-town">Pueblo de inicio</div>');
     startTownMarker._fd=startTown;
   }
   if(endTown&&endTown.la){
@@ -752,7 +753,7 @@ function calcRoute(){
   document.getElementById('leg-body').innerHTML='';
   document.getElementById('route-status').textContent='';
 
-  if(rll.length<2){document.getElementById('route-status').textContent='⚠ Selecciona salida, paradas y destino';return;}
+  if(rll.length<2){document.getElementById('route-status').textContent='⚠ Selecciona inicio, paradas y destino';return;}
 
   var profiles={r:'driving',c:'cycling',o:'walking'};
   var profile=profiles[routeProfile]||'driving';
@@ -803,7 +804,7 @@ function calcRoute(){
         segTime+=s.duration;
         if(s.type===1||(j===leg.steps.length-1&&i===r.legs.length-1)){
           var isWp=wpIdx<rll.length;
-          var nm=isWp?(wpIdx===0?'🏁 Salida':wpIdx===rll.length-1?'🎯 Destino':'📍 '+(wpIdx)):s.name||'—';
+          var nm=isWp?(wpIdx===0?'🏁 Inicio':wpIdx===rll.length-1?'🎯 Destino':'📍 '+(wpIdx)):s.name||'—';
           var roadType=s.name||'—';
           legs.push({name:nm,dist:segDist,time:segTime,road:roadType});
           segDist=0;segTime=0;wpIdx++;
@@ -844,7 +845,7 @@ function renderLegs(legs){
 // ============== GPX EXPORT ==============
 function exportGPX(){
   var rll=[];
-  if(startTown&&startTown.la)rll.push({lat:startTown.la,lon:startTown.lo,n:'🏁 Salida: '+startTown.n});
+  if(startTown&&startTown.la)rll.push({lat:startTown.la,lon:startTown.lo,n:'🏁 Inicio: '+startTown.n});
   waypoints.forEach(function(w,i){rll.push({lat:w.la,lon:w.lo,n:'📍 Parada '+(i+1)+': '+w.n});});
   if(endTown&&endTown.la)rll.push({lat:endTown.la,lon:endTown.lo,n:'🎯 Destino: '+endTown.n});
   if(rll.length<2)return;
@@ -975,7 +976,6 @@ function loadRoute(idx){
       b.classList.toggle('active',b.dataset.v===routeProfile);
     });
   }
-  document.getElementById('start-town').value='';
   document.getElementById('end-town').value='';
   updTownMarkers();syncMm();renderList();updSum();
   document.getElementById('route-status').textContent='📁 Ruta cargada: '+r.name;
@@ -1135,16 +1135,6 @@ function showWeather(pts){
 }
 
 // ============== EVENT HANDLERS ==============
-document.getElementById('start-town').addEventListener('change',function(){
-  var v=this.value;
-  if(v&&TC[v]){
-    var f={_idx:-1,la:TC[v][0],lo:TC[v][1],n:v,p:v,t:'r'};
-    if(startTown&&startTown._idx>=0)startTown=null;
-    startTown=f;updTownMarkers();updSum();
-    document.getElementById('route-status').textContent='Salida: '+v;
-  }else{startTown=null;updTownMarkers();updSum();}
-});
-
 document.getElementById('end-town').addEventListener('change',function(){
   var v=this.value;
   if(v&&TC[v]){
@@ -1196,7 +1186,7 @@ document.getElementById('btn-weather').addEventListener('click',getWeather);
 
 document.getElementById('btn-clear').addEventListener('click',function(){
   startTown=null;endTown=null;waypoints=[];
-  document.getElementById('start-town').value='';document.getElementById('end-town').value='';
+  document.getElementById('end-town').value='';
   syncMm();updTownMarkers();renderList();updSum();
   document.getElementById('r-dist').textContent='0 km';document.getElementById('r-time').textContent='0 min';
   document.getElementById('route-status').textContent='';
