@@ -149,14 +149,20 @@ select option{background:#0d1117}
 <button class="map-layer-btn" data-layer="sat">Satélite</button>
 </div>
 
-<div class="lbl">📍 Provincia</div>
+<div class="lbl">📍 PROVINCIA / salida</div>
 <div class="row">
-<select id="province-select"><option value="">Capital...</option></select>
-<select id="town-select"><option value="">Pueblo...</option></select>
+<select id="prov-start"><option value="">Capital...</option></select>
+<select id="town-start"><option value="">Pueblo...</option></select>
 </div>
-<div class="lbl">🏁 Destino</div>
+<div class="lbl">📍 DESTINO</div>
 <div class="row">
-<select id="end-town"><option value="">Destino...</option></select>
+<select id="prov-dest"><option value="">Capital...</option></select>
+<select id="town-dest"><option value="">Pueblo...</option></select>
+</div>
+<div class="lbl">🏁 FINAL RUTA</div>
+<div class="row">
+<select id="prov-end"><option value="">Capital...</option></select>
+<select id="town-end"><option value="">Pueblo...</option></select>
 </div>
 
 <div class="lbl">🛣 Modo ruta</div>
@@ -312,7 +318,6 @@ function disableAdmin(){
   if(routing){map.removeLayer(routing);routing=null;}
   startTown=null;endTown=null;waypoints=[];
   elevData=[];poiMarkers=[];weatherData={};
-  document.getElementById('end-town').value='';
   document.getElementById('r-dist').textContent='0 km';document.getElementById('r-time').textContent='0 min';
   document.getElementById('route-status').textContent='';
   document.getElementById('elevation-chart').style.display='none';
@@ -328,43 +333,48 @@ if(!_isAdmin)document.documentElement.classList.add('visitor');
 
 // ============== TOWNS ==============
 var townList=Object.keys(TC).sort();
-var _currentProv='';
-function popS(id,p,prov){
-  var s=document.getElementById(id);s.innerHTML='<option value="">'+p+'</option>';
-  townList.forEach(function(t){if(!prov||TP[t]===prov){var o=document.createElement('option');o.value=t;o.textContent=t;s.appendChild(o);}});
-}
-function updProv(){
-  _currentProv=document.getElementById('province-select').value;
-  var ts=document.getElementById('town-select');ts.value='';
-  ts.innerHTML='<option value="">Pueblo...</option>';
-  var towns=_currentProv?townList.filter(function(t){return TP[t]===_currentProv;}):[];
-  towns.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;ts.appendChild(o);});
-  document.getElementById('end-town').value='';
-  popS('end-town','Destino...',_currentProv||null);
-  var ft=document.getElementById('filter-town');
-  ft.innerHTML='<option value="">Todos</option>';
-  var list=_currentProv?towns:townList;
-  list.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;ft.appendChild(o);});
-  renderList();
-}
-var ps=document.getElementById('province-select');
 var provKeys=Object.keys(PROVS).sort(function(a,b){return PROVS[a].localeCompare(PROVS[b]);});
-ps.innerHTML='<option value="">Capital...</option>';
-provKeys.forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=PROVS[k];ps.appendChild(o);});
-ps.addEventListener('change',updProv);
-document.getElementById('town-select').addEventListener('change',function(){
+
+function fillProv(selId){
+  var s=document.getElementById(selId);
+  s.innerHTML='<option value="">Capital...</option>';
+  provKeys.forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=PROVS[k];s.appendChild(o);});
+}
+function provChange(provId,townId){
+  var pv=document.getElementById(provId).value;
+  var ts=document.getElementById(townId);ts.value='';
+  ts.innerHTML='<option value="">Pueblo...</option>';
+  if(pv) townList.filter(function(t){return TP[t]===pv;}).forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;ts.appendChild(o);});
+}
+
+fillProv('prov-start');fillProv('prov-dest');fillProv('prov-end');
+document.getElementById('prov-start').addEventListener('change',function(){provChange('prov-start','town-start');});
+document.getElementById('prov-dest').addEventListener('change',function(){provChange('prov-dest','town-dest');});
+document.getElementById('prov-end').addEventListener('change',function(){provChange('prov-end','town-end');});
+
+document.getElementById('town-start').addEventListener('change',function(){
   var v=this.value;
   if(!v||!TC[v])return;
   startTown={p:v,la:TC[v][0],lo:TC[v][1],n:v};
-  map.setView(TC[v],12);
-  document.getElementById('filter-town').value=v;
-  currentTown=v;
-  renderList();
-  updTownMarkers();
-  updSum();
-  document.getElementById('route-status').textContent='📍 Inicio: '+v;
+  updTownMarkers();updSum();
+  document.getElementById('route-status').textContent='📍 Salida: '+v;
 });
-popS('end-town','Destino...');
+document.getElementById('town-dest').addEventListener('change',function(){
+  var v=this.value;
+  if(!v||!TC[v])return;
+  currentTown=v;
+  document.getElementById('filter-town').value=v;
+  map.setView(TC[v],12);
+  renderList();
+  document.getElementById('route-status').textContent='📍 Destino: '+v;
+});
+document.getElementById('town-end').addEventListener('change',function(){
+  var v=this.value;
+  if(!v||!TC[v])return;
+  endTown={p:v,la:TC[v][0],lo:TC[v][1],n:v};
+  updTownMarkers();updSum();
+  document.getElementById('route-status').textContent='🏁 Final ruta: '+v;
+});
 var ft=document.getElementById('filter-town');
 ft.innerHTML='<option value="">Todos</option>';
 townList.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;ft.appendChild(o);});
@@ -559,7 +569,7 @@ function setStart(f){
 function setEnd(f){
   var isWp=waypoints.some(function(w){return w._idx===f._idx;});
   if(isWp)waypoints=waypoints.filter(function(w){return w._idx!==f._idx;});
-  endTown=f;document.getElementById('end-town').value='';updTownMarkers();updSum();renderList();
+  endTown=f;updTownMarkers();updSum();renderList();
 }
 
 // ============== TOWN MARKERS ==============
@@ -976,7 +986,6 @@ function loadRoute(idx){
       b.classList.toggle('active',b.dataset.v===routeProfile);
     });
   }
-  document.getElementById('end-town').value='';
   updTownMarkers();syncMm();renderList();updSum();
   document.getElementById('route-status').textContent='📁 Ruta cargada: '+r.name;
   document.getElementById('saved-routes-panel').style.display='none';
@@ -1135,15 +1144,6 @@ function showWeather(pts){
 }
 
 // ============== EVENT HANDLERS ==============
-document.getElementById('end-town').addEventListener('change',function(){
-  var v=this.value;
-  if(v&&TC[v]){
-    var f={_idx:-1,la:TC[v][0],lo:TC[v][1],n:v,p:v,t:'r'};
-    if(endTown&&endTown._idx>=0)endTown=null;
-    endTown=f;updTownMarkers();updSum();
-    document.getElementById('route-status').textContent='Destino: '+v;
-  }else{endTown=null;updTownMarkers();updSum();}
-});
 
 document.querySelectorAll('.btn-grp button[data-v]').forEach(function(b){
   b.addEventListener('click',function(){
@@ -1186,7 +1186,6 @@ document.getElementById('btn-weather').addEventListener('click',getWeather);
 
 document.getElementById('btn-clear').addEventListener('click',function(){
   startTown=null;endTown=null;waypoints=[];
-  document.getElementById('end-town').value='';
   syncMm();updTownMarkers();renderList();updSum();
   document.getElementById('r-dist').textContent='0 km';document.getElementById('r-time').textContent='0 min';
   document.getElementById('route-status').textContent='';
