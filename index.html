@@ -210,6 +210,13 @@ select option{background:#0d1117}
 <button class="btn btn-sec btn-sm" id="btn-save">💾</button>
 <span style="font-size:.5rem;color:#484f58">📤 <a href="#" id="btn-export-html" class="admin-only" style="color:#484f58;text-decoration:underline;cursor:pointer">exportar</a></span>
 </div>
+<div id="route-share-btns" style="display:none;margin:4px 0">
+<div style="font-size:.6rem;color:#8b949e;margin-bottom:3px">📤 Compartir ruta:</div>
+<div class="row" style="gap:3px">
+<button class="btn btn-sec btn-sm" id="btn-share-maps" style="flex:1">🗺️ Google Maps</button>
+<button class="btn btn-sec btn-sm" id="btn-share-wa" style="flex:1">💬 WhatsApp</button>
+</div>
+</div>
 <div class="row" style="gap:3px">
 <button class="btn btn-sec btn-sm" id="btn-poi">⛽ POIs</button>
 <button class="btn btn-sec btn-sm" id="btn-weather">🌤 Clima</button>
@@ -774,6 +781,12 @@ function calcRoute(){
     document.getElementById('r-time').textContent=timeMin+' min';
     document.getElementById('route-status').textContent='✅ '+Math.round(distKm)+' km';
 
+    // Show route share buttons
+    var shareBtns=document.getElementById('route-share-btns');
+    shareBtns.style.display='block';
+    document.getElementById('btn-share-maps').onclick=function(){shareRouteMaps();};
+    document.getElementById('btn-share-wa').onclick=function(){shareRouteWA();};
+
     // draw polyline
     var legPts=decodePolyline(r.geometry);
     routing=L.polyline(legPts,{color:'#1a73e8',opacity:.9,weight:4}).addTo(map);
@@ -888,6 +901,33 @@ function shareLink(){
   }).catch(function(){
     prompt('Copia este enlace:',url);
   });
+}
+
+// ============== SHARE ROUTE ==============
+function shareRouteMaps(){
+  var pts=[];
+  if(startTown&&startTown.la)pts.push(startTown.la+','+startTown.lo);
+  waypoints.forEach(function(w){pts.push(w.la+','+w.lo);});
+  if(endTown&&endTown.la)pts.push(endTown.la+','+endTown.lo);
+  if(pts.length<2)return;
+  var url='https://www.google.com/maps/dir/'+pts.join('/');
+  window.open(url,'_blank');
+}
+
+function shareRouteWA(){
+  var dist=document.getElementById('r-dist').textContent;
+  var time=document.getElementById('r-time').textContent;
+  var text='\U0001f3cd\ufe0f *Ruta Motera - Fuentes de Andal\u00eda*\n\n';
+  if(startTown)text+='\U0001f3c1 *Inicio:* '+startTown.n+'\n';
+  waypoints.forEach(function(w,i){text+='\U0001f4cd *Parada '+(i+1)+':* '+w.n+'\n';});
+  if(endTown)text+='\U0001f3af *Destino:* '+endTown.n+'\n';
+  text+='\n\U0001f4cf *Distancia:* '+dist+'\n\u23f1 *Tiempo:* '+time+'\n\n\U0001f5fa\ufe0f Ver en Google Maps: ';
+  var pts=[];
+  if(startTown&&startTown.la)pts.push(startTown.la+','+startTown.lo);
+  waypoints.forEach(function(w){pts.push(w.la+','+w.lo);});
+  if(endTown&&endTown.la)pts.push(endTown.la+','+endTown.lo);
+  text+='https://www.google.com/maps/dir/'+pts.join('/');
+  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
 
 function parseHash(){
