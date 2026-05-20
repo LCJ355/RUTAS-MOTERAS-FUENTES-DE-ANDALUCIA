@@ -8758,7 +8758,7 @@ var FD = [
 {"p":"Castillo de Locubín","n":"Fuente del PARRAL","la":37.513065,"lo":-3.950408,"t":"r"},
 {"p":"Castillo de Locubín","n":"Fuente del PUERTO","la":37.56212,"lo":-3.884828,"t":"o"},
 {"p":"Castillo de Locubín","n":"Fuente EL PILAREJO","la":37.521303,"lo":-3.969196,"t":"o"},
-{"p":"Castillo de Locubín","n":"Fuente LOS PATALETOS","la":31.411051,"lo":34.325351,"t":"r"},
+{"p":"Castillo de Locubín","n":"Fuente LOS PATALETOS","la":37.528488,"lo":-3.942026,"t":"r"},
 {"p":"Castillo de Locubín","n":"FUENTE RUEDA","la":37.561958,"lo":-3.909906,"t":"r"},
 {"p":"Castillo de Locubín","n":"Manantial de las HERREZUELAS","la":37.515699,"lo":-3.993881,"t":"o"},
 {"p":"Castillo de Locubín","n":"Manantial del PEDREGAL","la":37.526371,"lo":-3.945586,"t":"o"},
