@@ -547,6 +547,14 @@ function publishToGithub(content){
   xhr.onload=function(){
     var sha='';
     if(xhr.status===200){try{sha=JSON.parse(xhr.responseText).sha;}catch(e){}}
+    else if(xhr.status===404){/* file doesn't exist yet, create new */}
+    else{
+      try{
+        var ed=JSON.parse(xhr.responseText);
+        el.innerHTML='❌ <span style="color:#f5c842">'+(ed.message||'Error '+xhr.status)+'</span><div style="font-size:.55rem;color:#8b949e">Crea un token clásico con scope <strong>repo</strong> en github.com/settings/tokens</div>';
+      }catch(e){el.textContent='❌ Error '+(xhr.status);}
+      return;
+    }
     var base64=btoa(unescape(encodeURIComponent(content)));
     var body=JSON.stringify({message:'📸 Actualizar fotos',content:base64,sha:sha||undefined});
     var xhr2=new XMLHttpRequest();
@@ -560,11 +568,13 @@ function publishToGithub(content){
         updateSaveStatus();
         document.getElementById('github-token-status').textContent='✅ Publicado';
       }else{
-        el.textContent='❌ Error al publicar: '+(xhr2.status)+' — token con permisos?';
         try{
-          var m=JSON.parse(xhr2.responseText).message;
-          if(m)el.textContent='❌ '+m;
-        }catch(e2){}
+          var ed=JSON.parse(xhr2.responseText);
+          var msg=ed.message||'desconocido';
+          el.innerHTML='❌ <span style="color:#f5c842">'+msg+'</span><div style="font-size:.55rem;color:#8b949e">Usa un token clásico (Settings → Developer settings → Personal access tokens → Tokens classic) con scope <strong>repo</strong></div>';
+        }catch(e2){
+          el.textContent='❌ Error '+(xhr2.status)+' al publicar';
+        }
       }
     };
     xhr2.onerror=function(){el.textContent='❌ Error de conexión al publicar';};
