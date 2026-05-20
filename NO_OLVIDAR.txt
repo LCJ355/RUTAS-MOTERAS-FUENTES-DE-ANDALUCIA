@@ -69,12 +69,22 @@
    - Al limpiar ruta: se restauran todos los marcadores
    - applyFilters() respeta rutas activas (no interfiere)
 
-9. SEGURIDAD
+9. FOTOS (publicación automática)
+   - Al añadir foto se guarda en localStorage del navegador actual
+   - Para que se vea en TODOS los navegadores:
+     a) Configurar token GitHub clásico con scope "repo" (una vez):
+        https://github.com/settings/tokens → Generate classic token → repo
+        Pégalo en la web (Admin → campo "Token clásico GitHub" → Guardar)
+     b) Añadir foto → pulsar "📸 Publicar fotos" (rojo parpadeante)
+     c) Esperar 1-2 min, recargar → visible en todos los navegadores
+   - Sin token: el botón descarga photos_data.js para subirlo manualmente
+
+10. SEGURIDAD
    - Admin password por defecto: rutas2025
    - Para cambiar: buscar 'rutas2025' en index.html
    - Los visitantes no ven botones de admin, foto ni nota
 
-10. RESPALDO
+11. RESPALDO
     - index.html y NO_OLVIDAR.txt en la carpeta Andalucía
     - Scripts .py y CSVs/JSONs en la carpeta Cádiz
     - Ambos repositorios GitHub: RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA
