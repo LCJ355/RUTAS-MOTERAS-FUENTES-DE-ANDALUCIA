@@ -1,0 +1,6 @@
+URL publica: https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
+
+Para actualizar:
+  1. Ve a https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/upload/main
+  2. Sube index.html y fuentes_data.js
+  3. GitHub Pages se actualiza en ~1 minuto
