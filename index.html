@@ -234,8 +234,8 @@ select option{background:#0d1117}
 <a href="#" id="link-legal">Aviso Legal</a> · <a href="#" id="link-privacy">Privacidad</a> · <a href="#" id="link-cookies">Cookies</a>
 </div>
 <div class="row admin-only" style="gap:3px;margin-top:3px" id="save-photos-row">
-<span id="save-photos-status" style="font-size:.6rem;color:#8b949e;flex:1;display:flex;align-items:center"></span>
-<button class="btn btn-sec btn-sm" id="btn-save-photos" style="display:none" onclick="exportPhotosToFile()">💾 Guardar fotos</button>
+<span id="save-photos-status" style="font-size:.6rem;color:#e67e22;flex:1"></span>
+<button class="btn btn-sm" id="btn-save-photos" style="display:none;background:#e67e22;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-weight:600;font-size:.65rem" onclick="exportPhotosToFile()">📸 Publicar fotos</button>
 </div>
 </div>
 <div id="saved-routes-panel"></div>
@@ -510,7 +510,7 @@ function exportPhotosToFile(){
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');a.href=url;a.download='photos_data.js';a.click();
   URL.revokeObjectURL(url);
-  document.getElementById('route-status').textContent='✅ '+(Object.keys(_savedPhotos).length)+' fotos exportadas a photos_data.js';
+  document.getElementById('route-status').textContent='✅ '+(Object.keys(_savedPhotos).length)+' fotos exportadas a photos_data.js — envíame el archivo para publicarlo en la web';
   updateSaveStatus();
 }
 function loadPhotosFile(){
@@ -572,11 +572,14 @@ function setPhoto(idx,dataUrl){
     if(!lsOK&&dataUrl.length<100){document.getElementById('route-status').textContent='⚠ Error: foto demasiado pequeña';return;}
     if(!_savedPhotos)_savedPhotos={};
     _savedPhotos[idx]=dataUrl;
+    if(!window.__PHOTOS)window.__PHOTOS={};
+    window.__PHOTOS[idx]=dataUrl;
     renderList();
     if(mm[idx]&&mm[idx].isPopupOpen())updPop(mm[idx]);
     document.getElementById('route-status').textContent='✅ Foto guardada ('+(dataUrl.length/1024).toFixed(0)+' KB)';
     updateSaveStatus();
     if(!lsOK)setTimeout(exportPhotosToFile,500);
+    if(lsOK)document.getElementById('route-status').textContent+=' — 📸 Pulsa "Publicar fotos" abajo para que se vea en todos los navegadores';
   }catch(e){
     document.getElementById('route-status').textContent='⚠ Error al guardar foto: '+e.message;
   }
