@@ -238,6 +238,14 @@ select option{background:#0d1117}
 <span id="save-photos-status" style="font-size:.6rem;color:#e67e22;flex:1"></span>
 <button class="btn btn-sm" id="btn-save-photos" style="display:none;background:#da3633;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite" onclick="exportPhotosToFile()">📸 Publicar fotos</button>
 </div>
+<div class="admin-only" style="margin-top:3px;font-size:.6rem;color:#8b949e">
+<input id="github-token" type="password" placeholder="Token GitHub (para publicar automático)" style="width:100%;padding:3px 4px;font-size:.6rem;border:1px solid #30363d;border-radius:3px;background:#0d1117;color:#c9d1d9;margin-bottom:2px">
+<div style="display:flex;gap:3px;align-items:center">
+<span id="github-token-status" style="color:#484f58">🔑 No configurado</span>
+<button class="btn btn-sec btn-sm" onclick="saveGithubToken()" style="font-size:.55rem">Guardar</button>
+<button class="btn btn-sec btn-sm" onclick="document.getElementById('github-token').value='';localStorage.removeItem('gh_token');document.getElementById('github-token-status').textContent='🔑 No configurado'" style="font-size:.55rem">Eliminar</button>
+</div>
+</div>
 </div>
 <div id="saved-routes-panel"></div>
 </div>
@@ -498,6 +506,13 @@ function updateSaveStatus(){
     btn.style.display='none';
   }
 }
+function saveGithubToken(){
+  var v=document.getElementById('github-token').value.trim();
+  if(!v){document.getElementById('github-token-status').textContent='❌ Token vacío';return;}
+  localStorage.setItem('gh_token',v);
+  document.getElementById('github-token-status').textContent='✅ Token guardado';
+}
+function getGithubToken(){return localStorage.getItem('gh_token')||'';}
 function exportPhotosToFile(){
   if(!_savedPhotos)_savedPhotos={};
   for(var i=0;i<FD.length;i++){
@@ -507,12 +522,56 @@ function exportPhotosToFile(){
   }
   window.__PHOTOS=JSON.parse(JSON.stringify(_savedPhotos));
   var js='window.__PHOTOS='+JSON.stringify(_savedPhotos)+';';
+  var token=getGithubToken();
+  var el=document.getElementById('route-status');
+  if(token){
+    el.textContent='⏳ Publicando fotos en GitHub...';
+    publishToGithub(js);
+    return;
+  }
   var blob=new Blob([js],{type:'text/javascript'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');a.href=url;a.download='photos_data.js';a.click();
   URL.revokeObjectURL(url);
-  document.getElementById('route-status').textContent='✅ '+(Object.keys(_savedPhotos).length)+' fotos exportadas a photos_data.js — envíame el archivo para publicarlo en la web';
+  el.innerHTML='✅ '+(Object.keys(_savedPhotos).length)+' fotos exportadas — 📸 <span class="blink" style="color:#f5c842;font-weight:700">Sube photos_data.js a GitHub</span>';
   updateSaveStatus();
+}
+function publishToGithub(content){
+  var owner='LCJ355',repo='RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA',path='photos_data.js';
+  var token=getGithubToken();
+  var el=document.getElementById('route-status');
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+path,true);
+  xhr.setRequestHeader('Authorization','Bearer '+token);
+  xhr.setRequestHeader('Accept','application/vnd.github.v3+json');
+  xhr.onload=function(){
+    var sha='';
+    if(xhr.status===200){try{sha=JSON.parse(xhr.responseText).sha;}catch(e){}}
+    var base64=btoa(unescape(encodeURIComponent(content)));
+    var body=JSON.stringify({message:'📸 Actualizar fotos',content:base64,sha:sha||undefined});
+    var xhr2=new XMLHttpRequest();
+    xhr2.open('PUT','https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+path,true);
+    xhr2.setRequestHeader('Authorization','Bearer '+token);
+    xhr2.setRequestHeader('Accept','application/vnd.github.v3+json');
+    xhr2.setRequestHeader('Content-Type','application/json');
+    xhr2.onload=function(){
+      if(xhr2.status===201||xhr2.status===200){
+        el.innerHTML='✅ <span class="blink" style="color:#66bb6a;font-weight:700">'+(Object.keys(_savedPhotos).length)+' fotos publicadas — espera 1-2 min y recarga</span>';
+        updateSaveStatus();
+        document.getElementById('github-token-status').textContent='✅ Publicado';
+      }else{
+        el.textContent='❌ Error al publicar: '+(xhr2.status)+' — token con permisos?';
+        try{
+          var m=JSON.parse(xhr2.responseText).message;
+          if(m)el.textContent='❌ '+m;
+        }catch(e2){}
+      }
+    };
+    xhr2.onerror=function(){el.textContent='❌ Error de conexión al publicar';};
+    xhr2.send(body);
+  };
+  xhr.onerror=function(){el.textContent='❌ Error de conexión al obtener SHA';};
+  xhr.send();
 }
 function loadPhotosFile(){
   var s=document.createElement('script');
@@ -1384,6 +1443,11 @@ function applyFilters(){
 document.getElementById('route-status').textContent='Selecciona salida, destino y paradas';
 parseHash();
 loadPhotosFile();
+var ghToken=getGithubToken();
+if(ghToken){
+  document.getElementById('github-token').value=ghToken;
+  document.getElementById('github-token-status').textContent='✅ Token configurado';
+}
 renderList();
 updSum();
 if(mcg.getLayers().length>0){try{map.fitBounds(mcg.getBounds().pad(0.08));}catch(e){}}
