@@ -124,6 +124,7 @@ select option{background:#0d1117}
 #map{flex:1;height:100vh}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 .cm.blink{animation:blink 1s ease-in-out infinite}
+.blink{animation:blink 1s ease-in-out infinite}
 .leaflet-tooltip{background:#161b22!important;border:1px solid #30363d!important;color:#66bb6a!important;font-size:.7rem!important;padding:4px 8px!important;border-radius:4px!important;box-shadow:0 2px 8px rgba(0,0,0,.4)!important}
 .leaflet-tooltip-top:before,.leaflet-tooltip-bottom:before,.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{border-top-color:#30363d!important;border-bottom-color:#30363d!important;border-left-color:#30363d!important;border-right-color:#30363d!important}
 
@@ -490,7 +491,7 @@ function updateSaveStatus(){
   var el=document.getElementById('save-photos-status');
   var btn=document.getElementById('btn-save-photos');
   if(unsaved>0){
-    el.textContent='📷 '+unsaved+' foto'+(unsaved>1?'s':'')+' sin guardar';
+    el.innerHTML='<span class="blink" style="color:#f5c842;font-weight:700">📷 '+unsaved+' foto'+(unsaved>1?'s':'')+' sin publicar</span>';
     btn.style.display='inline-block';
   }else{
     el.textContent='📷 '+Object.keys(_savedPhotos).length+' foto'+(Object.keys(_savedPhotos).length>1?'s':'');
@@ -579,7 +580,7 @@ function setPhoto(idx,dataUrl){
     document.getElementById('route-status').textContent='✅ Foto guardada ('+(dataUrl.length/1024).toFixed(0)+' KB)';
     updateSaveStatus();
     if(!lsOK)setTimeout(exportPhotosToFile,500);
-    if(lsOK)document.getElementById('route-status').textContent+=' — 📸 Pulsa "Publicar fotos" abajo para que se vea en todos los navegadores';
+    if(lsOK){document.getElementById('route-status').innerHTML='✅ Foto guardada — <span class="blink" style="color:#f5c842;font-weight:700">📸 Pulsa "Publicar fotos" abajo</span>';}
   }catch(e){
     document.getElementById('route-status').textContent='⚠ Error al guardar foto: '+e.message;
   }
