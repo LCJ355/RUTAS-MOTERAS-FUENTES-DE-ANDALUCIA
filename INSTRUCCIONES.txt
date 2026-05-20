@@ -1,7 +1,6 @@
-╔══════════════════════════════════════════════════════════╗
-║   RUTAS MOTERAS · FUENTES DE ANDALUCÍA   VERSIÓN 1.0   ║
-║   INSTRUCCIONES                                        ║
-╚══════════════════════════════════════════════════════════╝
+RUTAS MOTERAS - FUENTES DE ANDALUCIA    VERSION 2.0
+INSTRUCCIONES
+============================================================
 
 Este archivo es una web completa de mapa interactivo.
 Abrelo con cualquier navegador (Chrome, Firefox, Edge...).
@@ -10,84 +9,113 @@ No necesita internet para ver el mapa (usa OpenStreetMap),
 pero si para calcular rutas (OSRM), el clima y los POIs.
 
 
-════════════════════════════════════════════════════════════
-CÓMO USAR LA WEB
-════════════════════════════════════════════════════════════
+============================================================
+COMO USAR LA WEB
+============================================================
 
-La web tiene 3 líneas de selección:
+La web tiene 3 lineas de seleccion:
 
-  1. SALIDA        → Pueblo donde empieza la ruta
-  2. DESTINO       → Pueblo que quieres explorar
+  1. SALIDA        - Pueblo donde empieza la ruta
+  2. DESTINO       - Pueblo que quieres explorar
      (al seleccionarlo, se filtran las fuentes en mapa y lista)
-  3. FINAL RUTA    → Pueblo donde termina la ruta
+  3. FINAL RUTA    - Pueblo donde termina la ruta
 
 Planificar ruta:
   1. Elige SALIDA, DESTINO y FINAL RUTA
   2. Pulsa en una fuente del mapa para ver detalles
-  3. Pulsa "+" para añadirla como parada
-  4. Pulsa "Calcular ruta" → aparece la línea azul
+  3. Pulsa "+" para anadirla como parada
+  4. Pulsa "Calcular ruta" - aparece la linea azul
 
 Filtrar fuentes:
   - Selecciona provincia y pueblo en DESTINO
   - El mapa muestra solo las fuentes de ese pueblo
-  - La lista lateral se actualiza automáticamente
-  - El botón "Ajustar" centra el mapa en las fuentes visibles
+  - La lista lateral se actualiza automaticamente
+  - El boton "Ajustar" centra el mapa en las fuentes visibles
 
-Añadir fotos (solo admin):
-  1. Pulsa "🔒 Admin" y escribe la contraseña: rutas2025
-  2. Pulsa una fuente en el mapa, luego "📷"
+Anadir fotos (solo admin):
+  1. Pulsa "Admin" y escribe la contrasena: rutas2025
+  2. Pulsa una fuente en el mapa, luego "camara"
   3. O pega una foto directamente con Ctrl+V
 
 Otras funciones:
-  - 🌤 Clima: después de calcular la ruta
-  - ⛽ POIs: gasolineras, hoteles, talleres...
-  - 💾 Guardar/Cargar rutas
-  - 📤 Exportar HTML con fotos incluidas
-  - 🗺 Capas: mapa, topo, ciclismo, satélite
+  - Clima: despues de calcular la ruta
+  - POIs: gasolineras, hoteles, talleres...
+  - Guardar/Cargar rutas
+  - Exportar HTML con fotos incluidas
+  - Capas: mapa, topo, ciclismo, satelite
 
 
-════════════════════════════════════════════════════════════
+============================================================
+COMPARTIR FUENTES Y RUTAS
+============================================================
+
+Cada fuente tiene en su popup:
+  - Maps: abre Google Maps con las coordenadas exactas
+  - WhatsApp: comparte nombre, pueblo y coordenadas
+
+Despues de calcular una ruta aparecen botones para:
+  - Google Maps: abre la ruta completa con todos los waypoints
+  - WhatsApp: mensaje con inicio, paradas, destino,
+    distancia, tiempo y enlace a Google Maps
+
+
+============================================================
 DATOS DEL PROYECTO
-════════════════════════════════════════════════════════════
+============================================================
 
-Provincias:           8 (Almería, Cádiz, Córdoba, Granada,
-                       Huelva, Jaén, Málaga, Sevilla)
+Provincias:           8 (Almeria, Cadiz, Cordoba, Granada,
+                       Huelva, Jaen, Malaga, Sevilla)
 
-Total fuentes:        13.676
-Total pueblos:        711
+Total fuentes:        13.720
+Total pueblos:        742
 
-Versión:              1.0 (Mayo 2026)
+Version:              2.0 (Mayo 2026)
 
 
-════════════════════════════════════════════════════════════
+============================================================
 ESTRUCTURA DE ARCHIVOS
-════════════════════════════════════════════════════════════
+============================================================
 
-index.html            → La web (ábrelo en el navegador)
-INSTRUCCIONES.txt     → Este archivo
+index.html            - La web (abrelo en el navegador)
+fuentes_data.js       - Datos de 13.720 fuentes (coordenadas)
+INSTRUCCIONES.txt     - Este archivo
 
 
-════════════════════════════════════════════════════════════
+============================================================
+VERSION WEB (GITHUB PAGES)
+============================================================
+
+URL publica: https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
+
+Para actualizar:
+  1. Ve a https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/upload/main
+  2. Sube index.html y fuentes_data.js
+  3. GitHub Pages se actualiza en ~1 minuto
+
+
+============================================================
 CARPETA DE DESARROLLO
-════════════════════════════════════════════════════════════
+============================================================
 
-Los scripts y datos fuente están en la carpeta:
-  Rutas Moteras -Fuentes de Cadiz-
+Los scripts y datos fuente estan en la carpeta:
+  E:\-IA-\FUENTES-Access\
 
-Para regenerar index.html desde cero:
-  python _merge.py
-  python _build_andalucia.py
-  python _fix_html_v2.py
+Base de datos Access completa:
+  E:\-IA-\FUENTES-Access\FUENTES_Andalucia.accdb (13.720 registros)
+
+Para regenerar fuentes_data.js desde la DB:
+  python export_rutas.py
+
+Para subir a GitHub:
+  python upload_correct.py
 
 
-════════════════════════════════════════════════════════════
-NOTAS TÉCNICAS
-════════════════════════════════════════════════════════════
+============================================================
+NOTAS TECNICAS
+============================================================
 
-- Las coordenadas de las fuentes son aproximadas
-  (generadas desde el centro del pueblo + offset aleatorio)
-- Los pueblos con acentos corruptos (~39) no tienen
-  coordenadas pero aparecen en el listado de DESTINO
-- La contraseña de admin está visible en el código fuente
+- Las coordenadas de las fuentes son reales (UTM ETRS89
+  convertidas a WGS84 desde la DB de conocetusfuentes.com)
 - Los datos se almacenan en LocalStorage del navegador
-- Para compartir la web, sube index.html a cualquier hosting
+- La contrasena de admin esta visible en el codigo fuente
+- Para compartir la web, sube los archivos a cualquier hosting
