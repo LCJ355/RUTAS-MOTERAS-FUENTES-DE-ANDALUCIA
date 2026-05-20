@@ -105,7 +105,7 @@ select option{background:#0d1117}
 .p-status{font-size:.65rem;color:#8b949e;margin-top:2px}
 .p-note{font-size:.65rem;color:#f5c842;margin-top:2px;font-style:italic}
 #weather-container{display:none;font-size:.7rem;background:#0d1117;border-radius:6px;padding:6px 8px;margin:6px 0;border:1px solid #f5c842}
-.visitor .fi-btn.pt,.visitor .fi-btn.nt,.visitor .admin-only,.visitor #btn-export-html{display:none!important}
+.visitor .fi-btn.pt,.visitor .fi-btn.nt,.visitor .admin-only{display:none!important}
 .photo-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#3498db;margin-left:3px;vertical-align:middle}
 .legal-links{text-align:center;font-size:.5rem;color:#484f58;padding:6px 0 2px;border-top:1px solid #21262d;margin-top:4px}
 .legal-links a{color:#8b949e;text-decoration:underline;cursor:pointer}
@@ -210,7 +210,6 @@ select option{background:#0d1117}
 <button class="btn btn-sec btn-sm" id="btn-gpx">📥 GPX</button>
 <button class="btn btn-sec btn-sm" id="btn-share">🔗</button>
 <button class="btn btn-sec btn-sm" id="btn-save">💾</button>
-<span style="font-size:.5rem;color:#484f58">📤 <a href="#" id="btn-export-html" class="admin-only" style="color:#484f58;text-decoration:underline;cursor:pointer">exportar</a></span>
 </div>
 <div id="route-share-btns" style="display:none;margin:4px 0">
 <div style="font-size:.6rem;color:#8b949e;margin-bottom:3px">📤 Compartir ruta:</div>
@@ -301,6 +300,16 @@ function setLayer(name){
 document.querySelectorAll('.map-layer-btn').forEach(function(b){
   b.addEventListener('click',function(){setLayer(this.dataset.layer);});
 });
+
+var visitControl = L.control({position:'bottomleft'});
+visitControl.onAdd = function(){
+  var d = L.DomUtil.create('div', 'map-layer-ctrl');
+  var ym = new Date().toISOString().slice(0,7); // 2026-05
+  d.innerHTML = '<img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Flcj355.github.io%2FRUTAS-MOTERAS-FUENTES-DE-ANDALUCIA%2F%3Fm%3D'+ym+'&title=Visitas+mes&title_bg=%23555555&count_bg=%2379C83D&edge_flat=false" alt="visitas" style="display:block">';
+  L.DomEvent.disableClickPropagation(d);
+  return d;
+};
+visitControl.addTo(map);
 
 // ============== ICONS ==============
 function icn(c,s,a){
@@ -1356,22 +1365,6 @@ document.getElementById('btn-calc').addEventListener('click',calcRoute);
 document.getElementById('btn-gpx').addEventListener('click',exportGPX);
 document.getElementById('btn-share').addEventListener('click',shareLink);
 document.getElementById('btn-save').addEventListener('click',saveRoute);
-document.getElementById('btn-export-html').addEventListener('click',function(e){
-  e.preventDefault();
-  var photos={};
-  for(var i=0;i<FD.length;i++){
-    var p=getPhoto(i);
-    if(p)photos[i]=p;
-  }
-  if(!Object.keys(photos).length){document.getElementById('route-status').textContent='⚠ No hay fotos para exportar';return;}
-  var tag='<script>window.__PHOTOS='+JSON.stringify(photos)+'<\/script>';
-  var html=document.documentElement.outerHTML.replace('</body>',tag+'</body>');
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download='index_con_fotos.html';a.click();
-  URL.revokeObjectURL(url);
-  document.getElementById('route-status').textContent='✅ HTML exportado con '+Object.keys(photos).length+' fotos';
-});
 document.getElementById('btn-poi').addEventListener('click',searchPOIs);
 document.getElementById('btn-weather').addEventListener('click',getWeather);
 
