@@ -304,7 +304,8 @@ document.querySelectorAll('.map-layer-btn').forEach(function(b){
 var visitControl = L.control({position:'bottomleft'});
 visitControl.onAdd = function(){
   var d = L.DomUtil.create('div', 'map-layer-ctrl');
-  d.innerHTML = '<img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Flcj355.github.io%2FRUTAS-MOTERAS-FUENTES-DE-ANDALUCIA%2F&title=Visitas+mes&title_bg=%23555555&count_bg=%2379C83D&edge_flat=false" alt="visitas" style="display:block">';
+  var ym = new Date().toISOString().slice(0,7); // 2026-05
+  d.innerHTML = '<img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Flcj355.github.io%2FRUTAS-MOTERAS-FUENTES-DE-ANDALUCIA%2F%3Fm%3D'+ym+'&title=Visitas+mes&title_bg=%23555555&count_bg=%2379C83D&edge_flat=false" alt="visitas" style="display:block">';
   L.DomEvent.disableClickPropagation(d);
   return d;
 };
