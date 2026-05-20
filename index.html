@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="referrer" content="unsafe-url">
 <title>Rutas Moteras · Fuentes de Andalucía</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
@@ -95,11 +96,11 @@ select option{background:#0d1117}
 ::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px}
 .leaflet-popup-content-wrapper{background:#161b22!important;color:#c9d1d9!important;border-radius:6px!important}
 .leaflet-popup-tip{background:#161b22!important}
-.leaflet-popup-content{font-size:.78rem!important;margin:8px 10px!important}
+.leaflet-popup-content{font-size:.85rem!important;margin:10px 12px!important}
 .p-title{font-weight:700;color:#f5c842}
-.p-town{color:#8b949e;font-size:.7rem}
-.p-acc{display:inline-block;font-size:.65rem;padding:1px 5px;border-radius:3px;margin-top:2px}
-.p-acc.r{background:#66bb6a;color:#fff}
+.p-town{color:#8b949e;font-size:.75rem}
+.p-acc{display:inline-block;font-size:.7rem;padding:2px 7px;border-radius:3px;margin-top:3px}
+.p-acc.r{background:#1976d2;color:#fff}
 .p-acc.o{background:#e67e22;color:#fff}
 .p-status{font-size:.65rem;color:#8b949e;margin-top:2px}
 .p-note{font-size:.65rem;color:#f5c842;margin-top:2px;font-style:italic}
@@ -123,6 +124,7 @@ select option{background:#0d1117}
 #map{flex:1;height:100vh}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 .cm.blink{animation:blink 1s ease-in-out infinite}
+.blink{animation:blink 1s ease-in-out infinite}
 .leaflet-tooltip{background:#161b22!important;border:1px solid #30363d!important;color:#66bb6a!important;font-size:.7rem!important;padding:4px 8px!important;border-radius:4px!important;box-shadow:0 2px 8px rgba(0,0,0,.4)!important}
 .leaflet-tooltip-top:before,.leaflet-tooltip-bottom:before,.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{border-top-color:#30363d!important;border-bottom-color:#30363d!important;border-left-color:#30363d!important;border-right-color:#30363d!important}
 
@@ -232,6 +234,18 @@ select option{background:#0d1117}
 <div class="legal-links">
 <a href="#" id="link-legal">Aviso Legal</a> · <a href="#" id="link-privacy">Privacidad</a> · <a href="#" id="link-cookies">Cookies</a>
 </div>
+<div class="row admin-only" style="gap:3px;margin-top:3px" id="save-photos-row">
+<span id="save-photos-status" style="font-size:.6rem;color:#e67e22;flex:1"></span>
+<button class="btn btn-sm" id="btn-save-photos" style="display:none;background:#da3633;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite" onclick="exportPhotosToFile()">📸 Publicar fotos</button>
+</div>
+<div class="admin-only" style="margin-top:3px;font-size:.6rem;color:#8b949e">
+<input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo) para publicar automático" style="width:100%;padding:3px 4px;font-size:.6rem;border:1px solid #30363d;border-radius:3px;background:#0d1117;color:#c9d1d9;margin-bottom:2px">
+<div style="display:flex;gap:3px;align-items:center">
+<span id="github-token-status" style="color:#484f58">🔑 No configurado</span>
+<button class="btn btn-sec btn-sm" onclick="saveGithubToken()" style="font-size:.55rem">Guardar</button>
+<button class="btn btn-sec btn-sm" onclick="document.getElementById('github-token').value='';localStorage.removeItem('gh_token');document.getElementById('github-token-status').textContent='🔑 No configurado'" style="font-size:.55rem">Eliminar</button>
+</div>
+</div>
 </div>
 <div id="saved-routes-panel"></div>
 </div>
@@ -260,7 +274,7 @@ var tileLayers = {};
 var currentLayer = 'osm';
 
 function initLayers(){
-  tileLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19});
+  tileLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19,referrerPolicy:'unsafe-url'});
   tileLayers.topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenTopoMap',maxZoom:17});
   tileLayers.cyclo = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',{attribution:'&copy; CyclOSM',maxZoom:18});
   tileLayers.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'&copy; Esri',maxZoom:18});
@@ -292,7 +306,7 @@ document.querySelectorAll('.map-layer-btn').forEach(function(b){
 function icn(c,s,a){
   return L.divIcon({className:'cm',html:'<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"'+(a?' style="animation:blink 1s ease-in-out infinite"':'')+'><path fill="'+c+'" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',iconSize:[s,s],iconAnchor:[s/2,s],popupAnchor:[0,-s]});
 }
-var I={r:icn('#66bb6a',20),o:icn('#e67e22',20),st:icn('#2ecc71',28),en:icn('#e74c3c',28),sel:icn('#90ee90',24)};
+var I={r:icn('#1976d2',20),o:icn('#e67e22',20),st:icn('#2ecc71',28),en:icn('#e74c3c',28),sel:icn('#90ee90',24)};
 var _wpIcons={};
 function wpIcon(num){
   if(!_wpIcons[num])_wpIcons[num]=L.divIcon({className:'cm',html:'<svg width="36" height="36" viewBox="0 0 24 24" style="animation:blink 1s ease-in-out infinite"><path fill="#ff0000" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9.5" r="4.5" fill="#fff"/><text x="12" y="12.5" text-anchor="middle" fill="#ff0000" font-size="10" font-weight="700">'+num+'</text></svg>',iconSize:[36,36],iconAnchor:[18,36],popupAnchor:[0,-36]});
@@ -467,9 +481,122 @@ function initPhotoInput(){
 
 
 
+var _savedPhotos=null;
 function getPhoto(idx){
+  if(_savedPhotos&&_savedPhotos[idx]!==undefined)return _savedPhotos[idx];
   if(window.__PHOTOS&&window.__PHOTOS[idx]!==undefined)return window.__PHOTOS[idx];
   return localStorage.getItem('fp_'+idx);
+}
+function updateSaveStatus(){
+  if(!_savedPhotos||Object.keys(_savedPhotos).length===0){
+    document.getElementById('btn-save-photos').style.display='none';
+    document.getElementById('save-photos-status').textContent='';
+    return;
+  }
+  var saved=window.__PHOTOS||{};
+  var unsaved=0;
+  for(var k in _savedPhotos){if(!saved[k])unsaved++;}
+  var el=document.getElementById('save-photos-status');
+  var btn=document.getElementById('btn-save-photos');
+  if(unsaved>0){
+    el.innerHTML='<span class="blink" style="color:#f5c842;font-weight:700">📷 '+unsaved+' foto'+(unsaved>1?'s':'')+' sin publicar</span>';
+    btn.style.display='inline-block';
+  }else{
+    el.textContent='📷 '+Object.keys(_savedPhotos).length+' foto'+(Object.keys(_savedPhotos).length>1?'s':'');
+    btn.style.display='none';
+  }
+}
+function saveGithubToken(){
+  var v=document.getElementById('github-token').value.trim();
+  if(!v){document.getElementById('github-token-status').textContent='❌ Token vacío';return;}
+  localStorage.setItem('gh_token',v);
+  document.getElementById('github-token-status').textContent='✅ Token guardado';
+}
+function getGithubToken(){return localStorage.getItem('gh_token')||'';}
+function exportPhotosToFile(){
+  if(!_savedPhotos)_savedPhotos={};
+  for(var i=0;i<FD.length;i++){
+    if(!_savedPhotos[i]){
+      try{var p=localStorage.getItem('fp_'+i);if(p)_savedPhotos[i]=p;}catch(e){}
+    }
+  }
+  window.__PHOTOS=JSON.parse(JSON.stringify(_savedPhotos));
+  var js='window.__PHOTOS='+JSON.stringify(_savedPhotos)+';';
+  var token=getGithubToken();
+  var el=document.getElementById('route-status');
+  if(token){
+    el.textContent='⏳ Publicando fotos en GitHub...';
+    publishToGithub(js);
+    return;
+  }
+  var blob=new Blob([js],{type:'text/javascript'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='photos_data.js';a.click();
+  URL.revokeObjectURL(url);
+  el.innerHTML='✅ '+(Object.keys(_savedPhotos).length)+' fotos exportadas — 📸 <span class="blink" style="color:#f5c842;font-weight:700">Sube photos_data.js a GitHub</span>';
+  updateSaveStatus();
+}
+function publishToGithub(content){
+  var owner='LCJ355',repo='RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA',path='photos_data.js';
+  var token=getGithubToken();
+  var el=document.getElementById('route-status');
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+path,true);
+  xhr.setRequestHeader('Authorization','Bearer '+token);
+  xhr.setRequestHeader('Accept','application/vnd.github.v3+json');
+  xhr.onload=function(){
+    var sha='';
+    if(xhr.status===200){try{sha=JSON.parse(xhr.responseText).sha;}catch(e){}}
+    else if(xhr.status===404){/* file doesn't exist yet, create new */}
+    else{
+      try{
+        var ed=JSON.parse(xhr.responseText);
+        el.innerHTML='❌ <span style="color:#f5c842">'+(ed.message||'Error '+xhr.status)+'</span><div style="font-size:.55rem;color:#8b949e">Crea un token clásico con scope <strong>repo</strong> en github.com/settings/tokens</div>';
+      }catch(e){el.textContent='❌ Error '+(xhr.status);}
+      return;
+    }
+    var base64=btoa(unescape(encodeURIComponent(content)));
+    var body=JSON.stringify({message:'📸 Actualizar fotos',content:base64,sha:sha||undefined});
+    var xhr2=new XMLHttpRequest();
+    xhr2.open('PUT','https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+path,true);
+    xhr2.setRequestHeader('Authorization','Bearer '+token);
+    xhr2.setRequestHeader('Accept','application/vnd.github.v3+json');
+    xhr2.setRequestHeader('Content-Type','application/json');
+    xhr2.onload=function(){
+      if(xhr2.status===201||xhr2.status===200){
+        el.innerHTML='✅ <span class="blink" style="color:#66bb6a;font-weight:700">'+(Object.keys(_savedPhotos).length)+' fotos publicadas — espera 1-2 min y recarga</span>';
+        updateSaveStatus();
+        document.getElementById('github-token-status').textContent='✅ Publicado';
+      }else{
+        try{
+          var ed=JSON.parse(xhr2.responseText);
+          var msg=ed.message||'desconocido';
+          el.innerHTML='❌ <span style="color:#f5c842">'+msg+'</span><div style="font-size:.55rem;color:#8b949e">Usa un token clásico (Settings → Developer settings → Personal access tokens → Tokens classic) con scope <strong>repo</strong></div>';
+        }catch(e2){
+          el.textContent='❌ Error '+(xhr2.status)+' al publicar';
+        }
+      }
+    };
+    xhr2.onerror=function(){el.textContent='❌ Error de conexión al publicar';};
+    xhr2.send(body);
+  };
+  xhr.onerror=function(){el.textContent='❌ Error de conexión al obtener SHA';};
+  xhr.send();
+}
+function loadPhotosFile(){
+  var s=document.createElement('script');
+  s.src='photos_data.js';
+  s.onload=function(){
+    _savedPhotos=window.__PHOTOS;
+    for(var k in _savedPhotos){
+      try{localStorage.setItem('fp_'+k,_savedPhotos[k]);}catch(e){}
+    }
+    renderList();
+    for(var k in mm){if(mm[k]&&mm[k].isPopupOpen())updPop(mm[k]);}
+    updateSaveStatus();
+  };
+  s.onerror=function(){};
+  document.head.appendChild(s);
 }
 
 
@@ -481,15 +608,25 @@ function readBlob(blob){
 function compressAndSet(idx,dataUrl){
   var img=new Image();
   img.onload=function(){
-    var MAX=400;
-    var w=img.width,h=img.height;
-    if(w>MAX||h>MAX){
-      if(w>h){h=h*MAX/w;w=MAX;}else{w=w*MAX/h;h=MAX;}
+    try{
+      var MAX=400;
+      var w=img.width,h=img.height;
+      if(!w||!h){document.getElementById('route-status').textContent='⚠ Error: imagen vacía';return;}
+      if(w>MAX||h>MAX){
+        if(w>h){h=h*MAX/w;w=MAX;}else{w=w*MAX/h;h=MAX;}
+      }
+      if(w<1||h<1){document.getElementById('route-status').textContent='⚠ Error: dimensiones inválidas';return;}
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      var ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      var d=c.toDataURL('image/jpeg',0.5);
+      setPhoto(idx,d);
+    }catch(e){
+      document.getElementById('route-status').textContent='⚠ Error al comprimir imagen: '+e.message;
     }
-    var c=document.createElement('canvas');c.width=w;c.height=h;
-    var ctx=c.getContext('2d');
-    ctx.drawImage(img,0,0,w,h);
-    setPhoto(idx,c.toDataURL('image/jpeg',0.5));
+  };
+  img.onerror=function(){
+    document.getElementById('route-status').textContent='⚠ Error: no se puede cargar la imagen';
   };
   img.src=dataUrl;
 }
@@ -499,17 +636,32 @@ function focusPaste(){
   _pasteTarget.focus();
 }
 function setPhoto(idx,dataUrl){
-  localStorage.setItem('fp_'+idx,dataUrl);
-  renderList();
-  if(mm[idx]&&mm[idx].isPopupOpen())updPop(mm[idx]);
-  document.getElementById('route-status').textContent='✅ Foto guardada';
+  try{
+    var lsOK=true;
+    try{localStorage.setItem('fp_'+idx,dataUrl);var v=localStorage.getItem('fp_'+idx);if(!v||v.length<100)lsOK=false;}catch(e){lsOK=false;}
+    if(!lsOK&&dataUrl.length<100){document.getElementById('route-status').textContent='⚠ Error: foto demasiado pequeña';return;}
+    if(!_savedPhotos)_savedPhotos={};
+    _savedPhotos[idx]=dataUrl;
+    renderList();
+    if(mm[idx]&&mm[idx].isPopupOpen())updPop(mm[idx]);
+    document.getElementById('route-status').textContent='✅ Foto guardada ('+(dataUrl.length/1024).toFixed(0)+' KB)';
+    updateSaveStatus();
+    if(!lsOK)setTimeout(exportPhotosToFile,500);
+    if(lsOK){document.getElementById('route-status').innerHTML='✅ Foto guardada — <span class="blink" style="color:#f5c842;font-weight:700">📸 Pulsa "Publicar fotos" abajo</span>';}
+  }catch(e){
+    document.getElementById('route-status').textContent='⚠ Error al guardar foto: '+e.message;
+  }
+}
+function photoClick(idx){
+  _activePhotoIdx=idx;initPhotoInput();_photoInput.dataset.idx=idx;
+  setTimeout(function(){_photoInput.click();},0);
 }
 function photoBtn(idx){
   var has=getPhoto(idx);
   var b=document.createElement('button');b.className='fi-btn pt'+(has?' on':'');
   b.textContent='📷';b.title=has?'Cambiar foto':'Añadir foto';
   b.addEventListener('click',function(e){
-    e.stopPropagation();_activePhotoIdx=idx;initPhotoInput();_photoInput.dataset.idx=idx;_photoInput.click();
+    e.stopPropagation();photoClick(idx);
   });
   return b;
 }
@@ -534,8 +686,9 @@ function updPop(mk){
     h+='<button class="btn btn-sec btn-sm" onclick="if(!startTown&&!endTown){var f=FD['+f._idx+'];setStart(f);}else{toggleWp(FD['+f._idx+']);}">➕ Parada</button>';
   }
   if(_isAdmin){
-    h+='<button class="btn btn-sec btn-sm" onclick="_activePhotoIdx='+f._idx+';focusPaste();initPhotoInput();_photoInput.dataset.idx='+f._idx+';_photoInput.click()">'+(photo?'🔄':'📷')+'</button>';
-    if(photo)h+='<button class="btn btn-red btn-sm" onclick="localStorage.removeItem(\'fp_'+f._idx+'\');if(mm['+f._idx+']&&mm['+f._idx+'].isPopupOpen())updPop(mm['+f._idx+']);renderList();">❌</button>';
+    h+='<button class="btn btn-sec btn-sm" onclick="photoClick('+f._idx+')">'+(photo?'🔄':'📷')+'</button>';
+    if(photo)h+='<button class="btn btn-red btn-sm" onclick="localStorage.removeItem(\'fp_'+f._idx+'\');if(_savedPhotos)delete _savedPhotos['+f._idx+'];if(mm['+f._idx+']&&mm['+f._idx+'].isPopupOpen())updPop(mm['+f._idx+']);renderList();updateSaveStatus();">❌</button>';
+    if(photo)h+='<button class="btn btn-sec btn-sm" onclick="exportPhotosToFile()">💾</button>';
   }
   h+='<a href="https://www.google.com/maps?q='+f.la+','+f.lo+'" target="_blank" style="text-decoration:none"><button class="btn btn-sec btn-sm">🗺️ Maps</button></a>';
   var waText=encodeURIComponent(f.n+' · '+f.p+' (Andalucía)');
@@ -1299,10 +1452,17 @@ function applyFilters(){
 // ============== INIT ==============
 document.getElementById('route-status').textContent='Selecciona salida, destino y paradas';
 parseHash();
+loadPhotosFile();
+var ghToken=getGithubToken();
+if(ghToken){
+  document.getElementById('github-token').value=ghToken;
+  document.getElementById('github-token-status').textContent='✅ Token configurado';
+}
 renderList();
 updSum();
 if(mcg.getLayers().length>0){try{map.fitBounds(mcg.getBounds().pad(0.08));}catch(e){}}
 renderSaved();
+updateSaveStatus();
 </script>
 </body>
 </html>
