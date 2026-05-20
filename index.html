@@ -301,6 +301,15 @@ document.querySelectorAll('.map-layer-btn').forEach(function(b){
   b.addEventListener('click',function(){setLayer(this.dataset.layer);});
 });
 
+var visitControl = L.control({position:'bottomleft'});
+visitControl.onAdd = function(){
+  var d = L.DomUtil.create('div', 'map-layer-ctrl');
+  d.innerHTML = '<img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Flcj355.github.io%2FRUTAS-MOTERAS-FUENTES-DE-ANDALUCIA%2F&title=Visitas+mes&title_bg=%23555555&count_bg=%2379C83D&edge_flat=false" alt="visitas" style="display:block">';
+  L.DomEvent.disableClickPropagation(d);
+  return d;
+};
+visitControl.addTo(map);
+
 // ============== ICONS ==============
 function icn(c,s,a){
   return L.divIcon({className:'cm',html:'<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"'+(a?' style="animation:blink 1s ease-in-out infinite"':'')+'><path fill="'+c+'" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',iconSize:[s,s],iconAnchor:[s/2,s],popupAnchor:[0,-s]});
