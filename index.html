@@ -573,8 +573,6 @@ function setPhoto(idx,dataUrl){
     if(!lsOK&&dataUrl.length<100){document.getElementById('route-status').textContent='⚠ Error: foto demasiado pequeña';return;}
     if(!_savedPhotos)_savedPhotos={};
     _savedPhotos[idx]=dataUrl;
-    if(!window.__PHOTOS)window.__PHOTOS={};
-    window.__PHOTOS[idx]=dataUrl;
     renderList();
     if(mm[idx]&&mm[idx].isPopupOpen())updPop(mm[idx]);
     document.getElementById('route-status').textContent='✅ Foto guardada ('+(dataUrl.length/1024).toFixed(0)+' KB)';
