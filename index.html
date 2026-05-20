@@ -1366,14 +1366,20 @@ document.getElementById('btn-export-html').addEventListener('click',function(e){
     if(p)photos[i]=p;
   }
   if(!Object.keys(photos).length){document.getElementById('route-status').textContent='⚠ No hay fotos para exportar';return;}
-  var html=_sourceHTML
-    .replace('<script src="fuentes_data.js"><\/script>','<script>var PROVS='+JSON.stringify(PROVS)+';var TC='+JSON.stringify(TC)+';var TP='+JSON.stringify(TP)+';var FD='+JSON.stringify(FD)+';<\/script>')
-    .replace('</body>','<script>window.__PHOTOS='+JSON.stringify(photos)+';<\/script></body>');
-  var blob=new Blob(['<!DOCTYPE html>\n',html],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download='index_con_fotos.html';a.click();
-  URL.revokeObjectURL(url);
-  document.getElementById('route-status').textContent='✅ HTML exportado con '+Object.keys(photos).length+' fotos';
+  if(location.protocol==='file:'){document.getElementById('route-status').textContent='⚠ Solo funciona desde GitHub Pages, no local';return;}
+  document.getElementById('route-status').textContent='⏬ Descargando HTML original del servidor...';
+  fetch(location.href).then(function(r){return r.text();}).then(function(html){
+    html=html.replace('<script src="fuentes_data.js"><\/script>',
+      '<script>var PROVS='+JSON.stringify(PROVS)+';var TC='+JSON.stringify(TC)+';var TP='+JSON.stringify(TP)+';var FD='+JSON.stringify(FD)+';<\/script>');
+    html=html.replace('</body>','<script>window.__PHOTOS='+JSON.stringify(photos)+';<\/script></body>');
+    var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download='index_con_fotos.html';a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById('route-status').textContent='✅ HTML exportado con '+Object.keys(photos).length+' fotos (autocontenido)';
+  }).catch(function(e){
+    document.getElementById('route-status').textContent='❌ Error al descargar: '+e.message;
+  });
 });
 document.getElementById('btn-poi').addEventListener('click',searchPOIs);
 document.getElementById('btn-weather').addEventListener('click',getWeather);
