@@ -157,7 +157,7 @@ select option{background:var(--bg)}
 }
 </style>
 </head>
-<body class="visitor">
+<body>
 <div id="app">
 <div id="sidebar">
 <h1 style="text-align:center">🏍 RUTAS MOTERAS 🏍</h1><div style="color:#66bb6a;font-size:1.15rem;text-align:center;margin-bottom:2px">Fuentes/Manantiales de Andalucía</div>
@@ -410,7 +410,7 @@ function provChange(provId, townId) {
   const capital = PROVS[pv];
   const otherTowns = provinceTowns.filter(t => t !== capital).sort();
   const o = document.createElement('option');
-  o.value = capital; o.textContent = `(${capital} -${pv.toUpperCase()})`;
+  o.value = capital; o.textContent = `${capital} (${pv.toUpperCase()})`;
   ts.appendChild(o);
   otherTowns.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; ts.appendChild(o); });
 }
@@ -668,7 +668,7 @@ function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if
 
 /* === RENDER LIST === */
 function renderList() {
-  const el = $('#fountain-list');
+  const el = $('#fountain-list'); el.innerHTML = '';
   const f = FD.filter(x => (!currentTown || x.p === currentTown) && (currentAcc === 'all' || x.t === currentAcc));
   $('#fountain-count').textContent = `(${f.length})`;
   if (!f.length) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Sin coincidencias</div>'; return; }
