@@ -541,11 +541,13 @@ function getCaption(idx) {
 function updateSaveStatus() {
   if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) {
     for (let i = 0; i < FD.length; i++) { const p = safeLS.get('fp_' + i); if (p) { if (!_savedPhotos) _savedPhotos = {}; _savedPhotos[i] = p; } }
-    if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) { $('#btn-save-photos').style.display = 'none'; $('#save-photos-status').textContent = ''; return; }
+  }
+  const el = $('#save-photos-status'); const btn = $('#btn-save-photos');
+  if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) {
+    el.textContent = '📷 Sin fotos'; btn.style.display = 'none'; return;
   }
   const saved = window.__PHOTOS || {};
   const unsaved = Object.keys(_savedPhotos).filter(k => !saved[k]).length;
-  const el = $('#save-photos-status'); const btn = $('#btn-save-photos');
   if (unsaved > 0) {
     el.innerHTML = `<span class="blink" style="color:var(--accent);font-weight:700">📷 ${unsaved} foto${unsaved > 1 ? 's' : ''} sin publicar</span>`;
     btn.style.display = 'inline-block';
