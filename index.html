@@ -248,7 +248,7 @@ select option{background:var(--bg)}
 <button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
 <button class="btn btn-sec btn-sm" id="btn-admin" style="font-size:.62rem;padding:5px 8px" aria-label="Activar modo administrador">🔐 Admin</button>
 </div>
-<div class="admin-only" style="margin-top:5px;font-size:.62rem;color:var(--muted)">
+<div style="margin-top:5px;font-size:.62rem;color:var(--muted)">
 <input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo) para publicar automático" style="width:100%;padding:5px;font-size:.62rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-bottom:3px">
 <div style="display:flex;gap:4px;align-items:center">
 <span id="github-token-status" style="color:var(--sub)">🔑 No configurado</span>
@@ -367,6 +367,12 @@ let elevData = [], poiMarkers = [], weatherData = {};
 let _isAdmin = false;
 
 function enableAdmin() {
+  const token = getGithubToken();
+  if (!token) {
+    toast('⚠️ Configura un token de GitHub primero', 'warn');
+    $('#github-token').focus();
+    return;
+  }
   _isAdmin = true;
   document.documentElement.classList.remove('visitor');
   $('#btn-admin').textContent = '🔓 Admin';
