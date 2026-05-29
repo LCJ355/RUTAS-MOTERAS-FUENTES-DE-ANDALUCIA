@@ -8,6 +8,7 @@
 <meta name="description" content="Planificador interactivo de rutas moteras por fuentes y manantiales de Andalucía. Mapas Leaflet, perfiles de elevación, POIs, clima, exportación GPX y fotos locales.">
 <meta name="theme-color" content="#0d1117">
 <meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.json">
 <meta property="og:title" content="Rutas Moteras · Fuentes de Andalucía">
 <meta property="og:description" content="Diseña rutas moteras con elevación, clima, puntos de interés y compartir directo. Exporta a GPX.">
 <meta property="og:type" content="website">
@@ -28,6 +29,7 @@
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.4;overflow:hidden}
 #app{display:flex;height:100vh;width:100vw}
 #sidebar{width:420px;min-width:320px;background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;overflow-y:auto;gap:8px;scroll-behavior:smooth;scrollbar-gutter:stable;transition:width .2s}
+#sidebar-content{flex:1;min-height:0}
 #sidebar h1{font-size:1.2rem;color:var(--accent);text-align:center;margin-bottom:2px}
 #sidebar .sub{font-size:.7rem;color:var(--pri);text-align:center;margin-bottom:4px}
 #stats{font-size:.65rem;color:var(--sub)}
@@ -56,7 +58,7 @@ select option{background:var(--bg)}
 .btn-grp button.active[data-v="all"]{background:var(--accent);color:#0d1117;border-color:var(--accent)}
 .map-layer-btn{flex:1;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;font-size:.6rem;text-align:center;min-height:28px}
 .map-layer-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700}
-.map-layer-ctrl{background:var(--panel);border-radius:var(--radius);padding:5px;border:1px solid var(--border);display:flex;gap:3px}
+.map-layer-ctrl{background:var(--panel);border-radius:var(--radius);padding:5px;border:1px solid var(--border);display:flex;gap:3px;flex-wrap:wrap}
 .map-layer-ctrl .map-layer-btn{flex:none;padding:5px 10px;font-size:.65rem}
 #fountain-list{flex:1;overflow-y:auto;min-height:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:4px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .fi{display:flex;align-items:center;padding:5px 7px;border-bottom:1px solid var(--border);font-size:.72rem;gap:5px;cursor:pointer;min-height:34px;transition:background .1s}
@@ -119,9 +121,12 @@ select option{background:var(--bg)}
 .modal h3{color:var(--accent);font-size:.85rem;margin:12px 0 5px}
 .modal p{margin:6px 0;color:#b0b8c4}
 #map{flex:1;height:100vh;z-index:0;overscroll-behavior:contain}
+@media (prefers-reduced-motion: no-preference){
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
 .cm.blink{animation:blink 1s ease-in-out infinite}
 .blink{animation:blink 1s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+}
 .leaflet-tooltip{background:var(--panel)!important;border:1px solid var(--border)!important;color:#66bb6a!important;font-size:.72rem!important;padding:5px 9px!important;border-radius:5px!important;box-shadow:0 2px 12px rgba(0,0,0,.5)!important;white-space:nowrap}
 .leaflet-popup-content-wrapper{background:var(--panel)!important;color:var(--text)!important;border-radius:7px!important;box-shadow:0 3px 14px rgba(0,0,0,.6)!important}
 .leaflet-popup-tip{background:var(--panel)!important}
@@ -136,18 +141,42 @@ select option{background:var(--bg)}
 #weather-container{display:none;font-size:.72rem;background:var(--bg);border-radius:var(--radius);padding:10px 12px;margin:6px 0;border:1px solid var(--accent)}
 .admin-only{display:none}
 .admin-only.visible{display:flex}
-.visitor .fi-btn.pt,.visitor .fi-btn.nt,.visitor .admin-only{display:none!important}
+.visitor .fi-btn.pt,.visitor .admin-only{display:none!important}
 #loading-overlay{position:fixed;inset:0;z-index:10001;background:rgba(13,17,23,.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px}
-.loader{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+#offline-banner{position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--warn);color:#fff;text-align:center;padding:6px 10px;font-size:.7rem;display:none}
+.loader{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;border-top-color:var(--accent)}
 .toast{position:fixed;bottom:24px;right:24px;z-index:10002;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:11px 15px;font-size:.72rem;color:var(--text);box-shadow:0 5px 20px rgba(0,0,0,.5);transform:translateX(120%);transition:transform .25s cubic-bezier(.2,.8,.2,1);max-width:320px;pointer-events:auto}
 .toast.show{transform:translateX(0)}
 .toast.warn{border-color:var(--warn)}
 .toast.success{border-color:var(--pri)}
 @media(max-width:768px){
 #app{flex-direction:column}
-#sidebar{width:100%;min-width:unset;height:50vh;padding:12px 10px}
-#map{height:50vh}
+#sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;height:60vh;z-index:500;padding:12px 10px 0;transform:translateY(calc(100% - 44px));transition:transform .25s cubic-bezier(.2,.8,.2,1);border-radius:12px 12px 0 0;border-top:2px solid var(--accent);pointer-events:none;display:flex;flex-direction:column}
+#sidebar.open{transform:translateY(0);pointer-events:auto}
+#sidebar-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 8px;cursor:pointer;flex-shrink:0;pointer-events:auto}
+#sidebar-content{pointer-events:auto;flex:1;min-height:0;overflow-y:auto}
+#sidebar:not(.open) #sidebar-content{pointer-events:none}
+#map{height:100vh}
+select,input{font-size:16px;min-height:44px}
+.btn{min-height:44px;min-width:44px}
+.fi{min-height:44px}
+.fi-btn{width:38px;height:38px}
+.btn-grp button{font-size:.72rem;min-height:42px}
+.map-layer-btn{min-height:38px}
+.poi-item{min-height:42px}
+.sr-item{min-height:42px}
+.legal-links a{padding:8px 10px}
+.lbl{font-size:.7rem}
+#elevation-chart .el-stats{font-size:.7rem}
+.poi-item{font-size:.7rem}
+.poi-dist{font-size:.65rem}
+.sr-info{font-size:.65rem}
+.legal-links{font-size:.62rem}
+.wp-mini{font-size:.68rem}
+.poi-btn{font-size:.68rem;min-height:38px}
+#saved-routes-panel{font-size:.68rem}
+.poi-item,.sr-item{font-size:.68rem}
+#poi-list,#saved-routes-panel,#waypoints-mini{max-height:none!important}
 }
 @media(max-width:500px){
 #sidebar{width:100%;min-width:unset;height:60vh;padding:8px 8px;font-size:.85rem}
@@ -155,11 +184,22 @@ select option{background:var(--bg)}
 .row{gap:4px}
 .btn{padding:6px 9px;font-size:.68rem;min-height:34px}
 }
+@media(max-width:375px){
+#sidebar{height:65vh;padding:6px 6px 0}
+#sidebar h1{font-size:.95rem}
+#sidebar .sub{display:none}
+.row{gap:3px}
+.btn{font-size:.65rem;padding:5px 7px}
+.fi{font-size:.68rem}
+}
 </style>
 </head>
 <body>
+<div id="offline-banner" role="alert">📡 Sin conexión — algunos datos pueden no estar disponibles</div>
 <div id="app">
 <div id="sidebar">
+<div id="sidebar-handle"></div>
+<div id="sidebar-content">
 <h1 style="text-align:center">🏍 RUTAS MOTERAS 🏍</h1><div style="color:#66bb6a;font-size:1.15rem;text-align:center;margin-bottom:2px">Fuentes/Manantiales de Andalucía</div>
 <div class="sub">Selecciona salida/destino (pueblos) y paradas (fuentes)</div>
 <div id="stats"></div>
@@ -249,14 +289,19 @@ select option{background:var(--bg)}
 <button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
 <button class="btn btn-sec btn-sm" id="btn-admin" style="font-size:.62rem;padding:5px 8px" aria-label="Activar modo administrador">🔐 Admin</button>
 </div>
-<div style="margin-top:5px;font-size:.62rem;color:var(--muted)">
-<input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo) para publicar automático" style="width:100%;padding:5px;font-size:.62rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-bottom:3px">
+<details class="admin-only" style="margin-top:5px;font-size:.62rem;color:var(--muted)">
+<summary style="cursor:pointer;padding:4px;color:var(--muted);font-size:.65rem">🔐 Configuración GitHub</summary>
+<div style="margin-top:5px">
+<input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo)" style="width:100%;padding:5px;font-size:.62rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-bottom:3px">
 <div style="display:flex;gap:4px;align-items:center">
 <span id="github-token-status" style="color:var(--sub)">🔑 No configurado</span>
 <button class="btn btn-sec btn-sm" onclick="saveGithubToken()" style="font-size:.55rem" aria-label="Guardar token GitHub">Guardar</button>
 <button class="btn btn-sec btn-sm" onclick="clearGithubToken()" style="font-size:.55rem" aria-label="Eliminar token">Eliminar</button>
 </div>
 </div>
+<hr style="border:none;border-top:1px solid var(--border);margin:6px 0">
+<button class="btn btn-red btn-sm" id="btn-reset-all" onclick="if(confirm('¿Borrar TODOS los datos locales (fotos, notas, rutas guardadas)?')){safeLS.clear();_savedPhotos={};localStorage.clear();renderList();updateSaveStatus();toast('🗑 Datos locales borrados');}" style="width:100%;font-size:.6rem;padding:4px">🗑 Reset completo</button>
+</details>
 <div class="legal-links">
 <a href="#" id="link-legal" role="button">Aviso Legal</a> · <a href="#" id="link-privacy" role="button">Privacidad</a> · <a href="#" id="link-cookies" role="button">Cookies</a>
 </div>
@@ -264,8 +309,9 @@ select option{background:var(--bg)}
 <span id="save-photos-status" style="font-size:.62rem;color:var(--sec);flex:1"></span>
 <button class="btn btn-sm" id="btn-save-photos" style="display:none;background:var(--warn);color:#fff;border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite" onclick="exportPhotosToFile()" aria-label="Publicar fotos en repositorio">📸 Publicar fotos</button>
 </div>
-</div>
 <div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
+</div>
+</div>
 </div>
 <div id="map"></div>
 
@@ -316,10 +362,16 @@ const toast = (msg, type = 'success') => {
   setTimeout(() => t.classList.remove('show'), 3000);
 };
 const setLoading = on => { $('#loading-overlay').style.display = on ? 'flex' : 'none'; };
+const btnLoading = (id, text) => { const b = $(id); if (text) { b.dataset.restore = b.textContent; b.disabled = true; b.textContent = text; } else { b.disabled = false; b.textContent = b.dataset.restore || b.textContent; } };
 const safeLS = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { if (e.name === 'QuotaExceededError') toast('⚠️ Almacén lleno. Exporta datos.', 'warn'); return false; } }
 };
+
+/* === ICONOS SVG === */
+(function(){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.style.display='none';s.id='icon-sprite';s.innerHTML='<symbol id="i-loc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.5" fill="none"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 21V3h12l1 5-1 5H4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-wp" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><text x="12" y="15" font-size="9" text-anchor="middle" fill="currentColor">1</text></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/></symbol><symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M8 8h8M8 12h6M8 16h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><path d="M4 20h4l10-16h4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol><symbol id="i-gps" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2v3m0 14v3m10-10h-3M5 12H2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>';
+document.body.insertBefore(s,document.body.firstChild);})();
+function icon(name,size){const u=document.createElementNS('http://www.w3.org/2000/svg','svg');u.setAttribute('width',size||16);u.setAttribute('height',size||16);u.setAttribute('viewBox','0 0 24 24');u.innerHTML='<use href="#i-'+name+'"/>';return u;}
 
 /* === MAPA Y CAPAS === */
 const map = L.map('map', { center: [37.3, -4.5], zoom: 8, zoomControl: false });
@@ -345,6 +397,12 @@ layerControl.onAdd = function () {
   return d;
 };
 layerControl.addTo(map);
+const gpsControl = L.control({ position: 'topleft' });
+gpsControl.onAdd = function () { const b = L.DomUtil.create('button', ''); b.innerHTML = '📍'; b.title = 'Usar mi ubicación GPS'; b.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:1rem;line-height:1;display:flex;align-items:center'; L.DomEvent.disableClickPropagation(b); b.addEventListener('click', useGpsLocation); return b; };
+gpsControl.addTo(map);
+const panelControl = L.control({ position: 'topleft' });
+panelControl.onAdd = function () { const b = L.DomUtil.create('button', ''); b.innerHTML = '📋'; b.title = 'Abrir panel'; b.id = 'btn-toggle-panel'; b.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:1rem;line-height:1;display:none;align-items:center'; L.DomEvent.disableClickPropagation(b); b.addEventListener('click', togglePanel); return b; };
+panelControl.addTo(map);
 $$('.map-layer-btn').forEach(b => b.addEventListener('click', () => setLayer(b.dataset.layer)));
 
 function setLayer(name) {
@@ -376,8 +434,12 @@ function enableAdmin() {
   }
   _isAdmin = true;
   document.documentElement.classList.remove('visitor');
+  const ghDetails = document.querySelector('details.admin-only'); if (ghDetails) ghDetails.open = true;
   $('#btn-admin').textContent = '🔓 Admin';
   $('#route-status').textContent = CONFIG.ADMIN_MSG;
+  ['prov-start','prov-dest','prov-end'].forEach(id => fillProv(id));
+  ['prov-start/town-start','prov-dest/town-dest','prov-end/town-end'].forEach(pair => { const [pId, tId] = pair.split('/'); const pv = $('#' + pId).value; if (pv) provChange(pId, tId); });
+  renderList();
   toast('✅ Modo editor activado');
 }
 function disableAdmin() {
@@ -462,7 +524,7 @@ const mcg = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true
 FD.forEach((f, i) => {
   f._idx = i; const mk = L.marker([f.la, f.lo], { icon: I[f.t] || I.r });
   mk._fd = f; mk.bindPopup(''); mk.bindTooltip(f.n + ' · ' + f.p, { sticky: true });
-  mk.on('click', () => { map.setView(mk.getLatLng(), 15); _activePhotoIdx = mk._fd._idx; focusPaste(); updPop(mk); });
+  mk.on('click', () => { map.setView(mk.getLatLng(), 15, {animate:false,duration:0}); setTimeout(() => { mk.openPopup(); _activePhotoIdx = mk._fd._idx; focusPaste(); updPop(mk); }, 50); });
   mk.on('popupopen', () => { _activePhotoIdx = mk._fd._idx; focusPaste(); updPop(mk); selMk(mk); });
   mk.on('popupclose', () => { _activePhotoIdx = -1; if (_pasteTarget) _pasteTarget.blur(); selMk(null); });
   markers.push(mk); mm[i] = mk; mcg.addLayer(mk);
@@ -471,7 +533,7 @@ map.addLayer(mcg);
 const routeLayer = L.layerGroup().addTo(map);
 
 /* === GESTIÓN DE FOTOS === */
-let _photoInput = null, _activePhotoIdx = -1, _pasteTarget = null;
+let _photoInput = null, _photoInputCam = null, _activePhotoIdx = -1, _pasteTarget = null;
 function initPhotoInput() {
   if (_photoInput) return;
   _photoInput = document.createElement('input'); _photoInput.type = 'file'; _photoInput.accept = 'image/*';
@@ -484,6 +546,16 @@ function initPhotoInput() {
     fr.readAsDataURL(_photoInput.files[0]); _photoInput.value = '';
   });
   document.body.appendChild(_photoInput);
+  _photoInputCam = document.createElement('input'); _photoInputCam.type = 'file'; _photoInputCam.accept = 'image/*'; _photoInputCam.capture = 'environment';
+  _photoInputCam.style.display = 'none';
+  _photoInputCam.addEventListener('change', () => {
+    const idx = parseInt(_photoInputCam.dataset.idx);
+    if (isNaN(idx) || !_photoInputCam.files?.[0]) return;
+    const fr = new FileReader();
+    fr.onload = () => compressAndSet(idx, fr.result);
+    fr.readAsDataURL(_photoInputCam.files[0]); _photoInputCam.value = '';
+  });
+  document.body.appendChild(_photoInputCam);
   _pasteTarget = document.createElement('div');
   _pasteTarget.contentEditable = true;
   _pasteTarget.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
@@ -577,7 +649,7 @@ function loadPhotosFile() {
   s.onload = () => {
     _savedPhotos = window.__PHOTOS || {};
     Object.keys(_savedPhotos).forEach(k => safeLS.set('fp_' + k, _savedPhotos[k]));
-    renderList(); Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
+    Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
     updateSaveStatus();
   };
   s.onerror = () => {};
@@ -619,11 +691,16 @@ function setPhoto(idx, dataUrl) {
     else $('#route-status').innerHTML = '✅ Foto guardada — <span class="blink" style="color:var(--accent);font-weight:700">📸 Pulsa "Publicar fotos"</span>';
   } catch (e) { toast('⚠️ Error guardar: ' + e.message, 'warn'); }
 }
-function photoClick(idx) { _activePhotoIdx = idx; initPhotoInput(); _photoInput.dataset.idx = idx; setTimeout(() => _photoInput.click(), 0); }
+function photoClick(idx, cam) { _activePhotoIdx = idx; initPhotoInput(); const inp = cam ? _photoInputCam : _photoInput; inp.dataset.idx = idx; setTimeout(() => inp.click(), 0); }
 function photoBtn(idx) {
-  const has = getPhoto(idx); const b = document.createElement('button'); b.className = 'fi-btn pt' + (has ? ' on' : '');
-  b.textContent = '📷'; b.title = has ? 'Cambiar foto' : 'Añadir foto';
-  b.addEventListener('click', e => { e.stopPropagation(); photoClick(idx); }); return b;
+  const has = getPhoto(idx); const d = document.createElement('div'); d.style.display = 'flex'; d.style.gap = '2px';
+  const b = document.createElement('button'); b.className = 'fi-btn pt' + (has ? ' on' : ''); b.textContent = '📷'; b.title = has ? 'Cambiar foto' : 'Añadir foto';
+  b.addEventListener('click', e => { e.stopPropagation(); photoClick(idx, false); });
+  d.appendChild(b);
+  const bc = document.createElement('button'); bc.className = 'fi-btn pt' + (has ? ' on' : ''); bc.textContent = '📸'; bc.title = 'Cámara'; bc.style.fontSize = '.65rem';
+  bc.addEventListener('click', e => { e.stopPropagation(); photoClick(idx, true); });
+  d.appendChild(bc);
+  return d;
 }
 
 function updPop(mk) {
@@ -656,14 +733,15 @@ function setStart(f) { const isWp = waypoints.some(w => w._idx === f._idx); if (
 let startTownMarker = null, endTownMarker = null;
 function updTownMarkers() {
   startTownMarker?.remove(); endTownMarker?.remove();
-  if (startTown?.la) { startTownMarker = L.marker([startTown.la, startTown.lo], { icon: I.st }).addTo(map).bindPopup(`<div class="p-title">🏁 ${startTown.n}</div><div class="p-town">${startTown._fd ? 'Pueblo de inicio' : 'Ubicación actual'}</div>`); startTownMarker._fd = startTown; startTownMarker.openPopup(); startTownMarker.on('popupclose', () => startTownMarker?.openPopup()); }
-  if (endTown?.la) { endTownMarker = L.marker([endTown.la, endTown.lo], { icon: I.en }).addTo(map).bindPopup(`<div class="p-title">🎯 ${endTown.n}</div><div class="p-town">Pueblo de destino</div>`); endTownMarker._fd = endTown; endTownMarker.openPopup(); endTownMarker.on('popupclose', () => endTownMarker?.openPopup()); }
+  if (startTown?.la) { startTownMarker = L.marker([startTown.la, startTown.lo], { icon: I.st }).addTo(map).bindPopup(`<div class="p-title">🏁 ${startTown.n}</div><div class="p-town">${startTown._fd ? 'Pueblo de inicio' : 'Ubicación actual'}</div>`); startTownMarker._fd = startTown; startTownMarker.openPopup(); startTownMarker.on('popupclose', () => { if (map._popup) return; setTimeout(() => { if (!map._popup) startTownMarker?.openPopup(); }, 100); }); }
+  if (endTown?.la) { endTownMarker = L.marker([endTown.la, endTown.lo], { icon: I.en }).addTo(map).bindPopup(`<div class="p-title">🎯 ${endTown.n}</div><div class="p-town">Pueblo de destino</div>`); endTownMarker._fd = endTown; endTownMarker.openPopup(); endTownMarker.on('popupclose', () => { if (map._popup) return; setTimeout(() => { if (!map._popup) endTownMarker?.openPopup(); }, 100); }); }
 }
 
 /* === WAYPOINTS === */
 function toggleWp(f) { const idx = waypoints.findIndex(w => w._idx === f._idx); if (idx >= 0) { waypoints.splice(idx, 1); const mk = mm[f._idx]; if (mk && routeLayer.hasLayer(mk)) routeLayer.removeLayer(mk); if (!routing) applyFilters(); } else { if (startTown?.l === f._idx) startTown = null; if (endTown?.l === f._idx) endTown = null; waypoints.push(f); const mk = mm[f._idx]; if (mk) { if (mcg.hasLayer(mk)) mcg.removeLayer(mk); routeLayer.addLayer(mk); mk.openPopup(); mk.on('popupclose', () => { if (waypoints.some(w => w._idx === f._idx)) mk.openPopup(); }); } } syncMm(); renderList(); updSum(); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
 function openRoutePopups() { if (startTownMarker && !startTownMarker.isPopupOpen()) startTownMarker.openPopup(); if (endTownMarker && !endTownMarker.isPopupOpen()) endTownMarker.openPopup(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && !mk.isPopupOpen()) mk.openPopup(); }); }
-function useGpsLocation() { navigator.geolocation.getCurrentPosition(p => { startTown = { la: p.coords.latitude, lo: p.coords.longitude, n: '📍 Mi ubicación', p: '📍 Mi ubicación' }; $('#prov-start').value = ''; $('#town-start').value = ''; updTownMarkers(); updSum(); toast('📍 GPS: ubicación actual como salida'); }, e => { toast('⚠️ GPS: ' + (e.code === 1 ? 'permiso denegado' : e.code === 2 ? 'señal no disponible' : 'timeout'), 'warn'); }, { enableHighAccuracy: true, timeout: 10000 }); }
+function useGpsLocation() { btnLoading('#btn-gps', '⏳ GPS...'); navigator.geolocation.getCurrentPosition(p => { btnLoading('#btn-gps'); startTown = { la: p.coords.latitude, lo: p.coords.longitude, n: '📍 Mi ubicación', p: '📍 Mi ubicación' }; $('#prov-start').value = ''; $('#town-start').value = ''; updTownMarkers(); updSum(); toast('📍 GPS: ubicación actual como salida'); }, e => { btnLoading('#btn-gps'); toast('⚠️ GPS: ' + (e.code === 1 ? 'permiso denegado' : e.code === 2 ? 'señal no disponible' : 'timeout'), 'warn'); }, { enableHighAccuracy: true, timeout: 10000 }); }
+function togglePanel() { const sb = $('#sidebar'); sb.classList.toggle('open'); const btn = $('#btn-toggle-panel'); if (btn) btn.textContent = sb.classList.contains('open') ? '✕' : '📋'; }
 function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if (mk === _selMk) return; const wi = waypoints.findIndex(w => w._idx === f._idx); mk.setIcon(wi >= 0 ? wpIcon(wi + 1) : (I[f.t] || I.r)); if (mk.isPopupOpen()) updPop(mk); }); }
 
 /* === RENDER LIST === */
@@ -688,7 +766,7 @@ function renderList() {
     const a = document.createElement('div'); a.style.display = 'flex'; a.style.gap = '3px'; a.appendChild(bw); a.appendChild(bn);
     if (_isAdmin) a.appendChild(photoBtn(x._idx));
     d.appendChild(a);
-    d.addEventListener('click', () => { map.setView([x.la, x.lo], 15); mm[x._idx]?.openPopup(); });
+    d.addEventListener('click', () => { map.setView([x.la, x.lo], 15, {animate:false,duration:0}); setTimeout(() => mm[x._idx]?.openPopup(), 50); });
     fragment.appendChild(d);
   });
   el.appendChild(fragment);
@@ -749,7 +827,7 @@ async function calcRoute() {
   $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#leg-body').innerHTML = ''; $('#route-status').textContent = '';
   if (rll.length < 2) { $('#route-status').textContent = '⚠ Selecciona inicio, paradas y destino'; return; }
   const profiles = { r: 'driving', c: 'cycling', o: 'walking' }; const profile = profiles[routeProfile] || 'driving';
-  $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true);
+  $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true); btnLoading('#btn-calc', '⏳ Calculando...');
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
   const coords = rll.map(p => p.lng + ',' + p.lat).join(';');
@@ -769,7 +847,7 @@ async function calcRoute() {
     if (elData?.length > 1) { $('#el-max').textContent = Math.round(Math.max(...elData.map(d => d.ele))); $('#el-min').textContent = Math.round(Math.min(...elData.map(d => d.ele))); let gn = 0, ls = 0; for (let i = 1; i < elData.length; i++) { const d = elData[i].ele - elData[i - 1].ele; if (d > 0) gn += d; else ls -= d; } $('#el-gain').textContent = Math.round(gn) + 'm'; $('#el-loss').textContent = Math.round(ls) + 'm'; }
     renderLegs(legs); showRouteMarkers();
   } catch (e) { $('#route-status').textContent = '❌ ' + (e.message || 'Error de conexión con OSRM'); }
-  finally { setLoading(false); }
+  finally { setLoading(false); btnLoading('#btn-calc'); }
 }
 
 function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; if (startTownMarker) { routeLayer.addLayer(startTownMarker); added[startTownMarker._fd._idx] = true; } if (endTownMarker && !added[endTownMarker._fd._idx]) { routeLayer.addLayer(endTownMarker); added[endTownMarker._fd._idx] = true; } waypoints.forEach(w => { if (!added[w._idx] && mm[w._idx]) { routeLayer.addLayer(mm[w._idx]); added[w._idx] = true; } }); markers.forEach(m => { const f = m._fd; if (!added[f._idx] && f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) { mcg.addLayer(m); added[f._idx] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
@@ -816,13 +894,13 @@ function renderSaved() { const el = $('#saved-routes-panel'); const routes = JSO
 function loadRoute(idx) { const routes = JSON.parse(safeLS.get('rm_routes') || '[]'); if (idx >= routes.length) return;   const r = routes[idx]; startTown = endTown = null; waypoints = []; if (r.startTown !== null && FD[r.startTown]) startTown = FD[r.startTown]; if (r.endTown !== null && FD[r.endTown]) endTown = FD[r.endTown]; (r.waypoints || []).forEach(id => { if (FD[id]) waypoints.push(FD[id]); }); if (['r', 'c', 'o'].includes(r.profile)) { routeProfile = r.profile; $$('.btn-grp:first-of-type button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); } updTownMarkers(); routeLayer.clearLayers(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && mcg.hasLayer(mk)) { mcg.removeLayer(mk); routeLayer.addLayer(mk); } }); syncMm(); renderList(); updSum(); toast('📁 Ruta cargada: ' + r.name); $('#saved-routes-panel').style.display = 'none'; }
 
 /* === POIs Y CLIMA === */
-async function searchPOIs() { const rll = []; if (startTown?.la) rll.push([startTown.la, startTown.lo]); waypoints.forEach(w => rll.push([w.la, w.lo])); if (endTown?.la) rll.push([endTown.la, endTown.lo]); if (rll.length < 2) { toast('⚠️ Calcula la ruta primero', 'warn'); return; } $('#route-status').textContent = '⏳ Buscando POIs...'; setLoading(true);
+async function searchPOIs() { const rll = []; if (startTown?.la) rll.push([startTown.la, startTown.lo]); waypoints.forEach(w => rll.push([w.la, w.lo])); if (endTown?.la) rll.push([endTown.la, endTown.lo]); if (rll.length < 2) { toast('⚠️ Calcula la ruta primero', 'warn'); return; } $('#route-status').textContent = '⏳ Buscando POIs...'; setLoading(true); btnLoading('#btn-poi', '⏳ Buscando...');
   let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
   rll.forEach(p => { if (p[0] < minLat) minLat = p[0]; if (p[0] > maxLat) maxLat = p[0]; if (p[1] < minLon) minLon = p[1]; if (p[1] > maxLon) maxLon = p[1]; });
   const pad = 0.03, bbox = (minLat - pad) + ',' + (minLon - pad) + ',' + (maxLat + pad) + ',' + (maxLon + pad);
   const query = '[out:json][timeout:15];(node["amenity"="fuel"](' + bbox + ');node["amenity"="car_repair"](' + bbox + ');node["tourism"="viewpoint"](' + bbox + ');node["tourism"="hotel"](' + bbox + ');node["tourism"="camp_site"](' + bbox + ');node["shop"="motorcycle"](' + bbox + ');node["shop"="motorcycle_repair"](' + bbox + '););out body;';
   let elements = []; for (let i = 0; i < CONFIG.OVERPASS.length; i++) { try { const res = await fetch(CONFIG.OVERPASS[i], { method: 'POST', signal: AbortSignal.timeout(20000), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(query) }); if (res.ok) { const data = await res.json(); if (data.elements?.length) { elements = data.elements; break; } } } catch { } }
-  setLoading(false);
+  setLoading(false); btnLoading('#btn-poi');
   if (!elements?.length) { $('#route-status').textContent = '⏱️ Tiempo de espera agotado. Inténtalo de nuevo.'; return; }
   showPOIs(elements);
 }
@@ -831,11 +909,11 @@ const POI_ICONS = { fuel: icn('#e74c3c', 16), car_repair: icn('#8b5cf6', 16), vi
 const POI_LABELS = { fuel: '⛽ Gasolinera', car_repair: '🔧 Taller', viewpoint: '📷 Mirador', hotel: '🏨 Hotel', camp_site: '⛺ Camping', motorcycle: '🏍️ Tienda Motera', motorcycle_repair: '🔧 Taller Moto' };
 
 function showPOIs(elements) { poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; const list = $('#poi-list'); list.innerHTML = ''; list.style.display = 'none';
-  elements.forEach(el => { if (!el.lat || !el.lon) return; const type = el.tags?.amenity || el.tags?.tourism || el.tags?.shop; const name = el.tags?.name || el.tags?.operator || POI_LABELS[type] || type; const icon = POI_ICONS[type] || icn('#888', 14); const mk = L.marker([el.lat, el.lon], { icon }).addTo(map); mk.bindPopup(`<div class="p-title">${POI_LABELS[type] || type}</div><div class="p-town">${name}</div>`); poiMarkers.push(mk); const d = document.createElement('div'); d.className = 'poi-item'; d.innerHTML = `<span class="poi-icon">${(POI_LABELS[type] || '📍').charAt(0)}</span><span>${name}</span><span class="poi-dist">${POI_LABELS[type] || type}</span>`; d.addEventListener('click', () => { map.setView([el.lat, el.lon], 15); mk.openPopup(); }); list.appendChild(d); }); list.style.display = 'block'; $('#route-status').textContent = '✅ ' + elements.length + ' POIs encontrados'; }
+  elements.forEach(el => { if (!el.lat || !el.lon) return; const type = el.tags?.amenity || el.tags?.tourism || el.tags?.shop; const name = el.tags?.name || el.tags?.operator || POI_LABELS[type] || type; const icon = POI_ICONS[type] || icn('#888', 14); const mk = L.marker([el.lat, el.lon], { icon }).addTo(map); mk.bindPopup(`<div class="p-title">${POI_LABELS[type] || type}</div><div class="p-town">${name}</div>`); poiMarkers.push(mk); const d = document.createElement('div'); d.className = 'poi-item'; d.innerHTML = `<span class="poi-icon">${(POI_LABELS[type] || '📍').charAt(0)}</span><span>${name}</span><span class="poi-dist">${POI_LABELS[type] || type}</span>`; d.addEventListener('click', () => { map.setView([el.lat, el.lon], 15, {animate:false,duration:0}); setTimeout(() => mk.openPopup(), 50); }); list.appendChild(d); }); list.style.display = 'block'; $('#route-status').textContent = '✅ ' + elements.length + ' POIs encontrados'; }
 
-async function getWeather() { const pts = []; if (startTown?.la) pts.push({ name: '🏁 ' + startTown.n, lat: startTown.la, lon: startTown.lo }); waypoints.forEach((w, i) => pts.push({ name: '📍 ' + (i + 1) + '. ' + w.n, lat: w.la, lon: w.lo })); if (endTown?.la) pts.push({ name: '🎯 ' + endTown.n, lat: endTown.la, lon: endTown.lo }); if (!pts.length) { toast('⚠️ No hay puntos en la ruta', 'warn'); return; } const dateInput = $('#weather-date'); let date = dateInput.value; if (!date) { const d = new Date(); d.setDate(d.getDate() + 1); date = d.toISOString().split('T')[0]; dateInput.value = date; } $('#route-status').textContent = '⏳ Consultando clima para ' + date + '...'; setLoading(true);
+async function getWeather() { const pts = []; if (startTown?.la) pts.push({ name: '🏁 ' + startTown.n, lat: startTown.la, lon: startTown.lo }); waypoints.forEach((w, i) => pts.push({ name: '📍 ' + (i + 1) + '. ' + w.n, lat: w.la, lon: w.lo })); if (endTown?.la) pts.push({ name: '🎯 ' + endTown.n, lat: endTown.la, lon: endTown.lo }); if (!pts.length) { toast('⚠️ No hay puntos en la ruta', 'warn'); return; } const dateInput = $('#weather-date'); let date = dateInput.value; if (!date) { const d = new Date(); d.setDate(d.getDate() + 1); date = d.toISOString().split('T')[0]; dateInput.value = date; } $('#route-status').textContent = '⏳ Consultando clima para ' + date + '...'; setLoading(true); btnLoading('#btn-weather', '⏳ Clima...');
   weatherData = {}; const results = await Promise.allSettled(pts.map(p => fetch(`${CONFIG.METEO}?latitude=${p.lat}&longitude=${p.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=auto&start_date=${date}&end_date=${date}`).then(r => r.json()).catch(() => null)));
-  setLoading(false);
+  setLoading(false); btnLoading('#btn-weather');
   results.forEach((res, i) => { if (res.status === 'fulfilled' && res.value.daily) weatherData[i] = res.value.daily; });
   showWeather(pts);
 }
@@ -856,8 +934,15 @@ function applyFilters() { if (routing) return; mcg.clearLayers(); markers.forEac
 
 /* === INICIALIZACIÓN === */
 $('#route-status').textContent = 'Selecciona salida, destino y paradas';
+if (!navigator.onLine) $('#offline-banner').style.display = 'block';
+window.addEventListener('offline', () => $('#offline-banner').style.display = 'block');
+window.addEventListener('online', () => $('#offline-banner').style.display = 'none');
+function respPanel() { const isMobile = window.innerWidth <= 768; const sb = $('#sidebar'); const btn = $('#btn-toggle-panel'); if (btn) btn.style.display = isMobile ? 'flex' : 'none'; if (!isMobile) sb.classList.remove('open'); else sb.classList.remove('open'); }
+respPanel(); window.addEventListener('resize', respPanel);
+(function() { let startY = 0, moved = false, touchedEl = null; const sb = $('#sidebar'), sc = $('#sidebar-content'), el = $('#fountain-list'), hd = $('#sidebar-handle'); function onStart(e) { startY = e.touches[0].clientY; moved = false; touchedEl = e.currentTarget; } function onMove(e) { if (window.innerWidth > 768) return; const dy = e.touches[0].clientY - startY; if (Math.abs(dy) < 10) return; moved = true; if (sb.classList.contains('open')) { if (sc.scrollTop <= 0 && dy > 50) { sb.classList.remove('open'); $('#btn-toggle-panel').textContent = '📋'; } } else { if (dy < -50) { sb.classList.add('open'); $('#btn-toggle-panel').textContent = '✕'; } else if (dy > 60) { el.style.transition = 'opacity .2s'; el.style.opacity = '0.3'; toast('🔄 Recargando...'); setTimeout(() => { renderList(); updSum(); el.style.opacity = '1'; setTimeout(() => { el.style.transition = ''; }, 300); }, 300); } } } function onEnd() { if (moved) { el.style.opacity = '1'; el.style.transition = ''; moved = false; } } hd.addEventListener('touchstart', onStart, { passive: true }); hd.addEventListener('touchmove', onMove, { passive: true }); hd.addEventListener('touchend', onEnd, { passive: true }); hd.addEventListener('click', function(e) { e.stopPropagation(); if (window.innerWidth <= 768) togglePanel(); }); sc.addEventListener('touchstart', onStart, { passive: true }); sc.addEventListener('touchmove', onMove, { passive: true }); sc.addEventListener('touchend', onEnd, { passive: true }); })();
 parseHash(); loadPhotosFile(); const ghToken = getGithubToken(); if (ghToken) { $('#github-token').value = ghToken; $('#github-token-status').textContent = '✅ Token configurado'; }
 renderList(); updSum(); if (mcg.getLayers().length > 0) try { map.fitBounds(mcg.getBounds().pad(0.08)); } catch {} renderSaved(); updateSaveStatus();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
