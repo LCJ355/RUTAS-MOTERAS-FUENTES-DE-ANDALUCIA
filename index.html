@@ -168,6 +168,7 @@ select option{background:var(--bg)}
 <div class="row">
 <select id="prov-start" aria-label="Provincia de inicio"><option value="">Capital...</option></select>
 <select id="town-start" aria-label="Pueblo de inicio"><option value="">Pueblo...</option></select>
+<button class="btn btn-sec btn-sm" id="btn-gps" style="font-size:.7rem;padding:5px 6px;flex-shrink:0" aria-label="Usar ubicación GPS">📍 GPS</button>
 </div>
 <div class="lbl">📍 DESTINO</div>
 <div class="row">
@@ -655,13 +656,14 @@ function setStart(f) { const isWp = waypoints.some(w => w._idx === f._idx); if (
 let startTownMarker = null, endTownMarker = null;
 function updTownMarkers() {
   startTownMarker?.remove(); endTownMarker?.remove();
-  if (startTown?.la) { startTownMarker = L.marker([startTown.la, startTown.lo], { icon: I.st }).addTo(map).bindPopup(`<div class="p-title">🏁 ${startTown.n}</div><div class="p-town">Pueblo de inicio</div>`); startTownMarker._fd = startTown; startTownMarker.openPopup(); startTownMarker.on('popupclose', () => startTownMarker?.openPopup()); }
+  if (startTown?.la) { startTownMarker = L.marker([startTown.la, startTown.lo], { icon: I.st }).addTo(map).bindPopup(`<div class="p-title">🏁 ${startTown.n}</div><div class="p-town">${startTown._fd ? 'Pueblo de inicio' : 'Ubicación actual'}</div>`); startTownMarker._fd = startTown; startTownMarker.openPopup(); startTownMarker.on('popupclose', () => startTownMarker?.openPopup()); }
   if (endTown?.la) { endTownMarker = L.marker([endTown.la, endTown.lo], { icon: I.en }).addTo(map).bindPopup(`<div class="p-title">🎯 ${endTown.n}</div><div class="p-town">Pueblo de destino</div>`); endTownMarker._fd = endTown; endTownMarker.openPopup(); endTownMarker.on('popupclose', () => endTownMarker?.openPopup()); }
 }
 
 /* === WAYPOINTS === */
 function toggleWp(f) { const idx = waypoints.findIndex(w => w._idx === f._idx); if (idx >= 0) { waypoints.splice(idx, 1); const mk = mm[f._idx]; if (mk && routeLayer.hasLayer(mk)) routeLayer.removeLayer(mk); if (!routing) applyFilters(); } else { if (startTown?.l === f._idx) startTown = null; if (endTown?.l === f._idx) endTown = null; waypoints.push(f); const mk = mm[f._idx]; if (mk) { if (mcg.hasLayer(mk)) mcg.removeLayer(mk); routeLayer.addLayer(mk); mk.openPopup(); mk.on('popupclose', () => { if (waypoints.some(w => w._idx === f._idx)) mk.openPopup(); }); } } syncMm(); renderList(); updSum(); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
 function openRoutePopups() { if (startTownMarker && !startTownMarker.isPopupOpen()) startTownMarker.openPopup(); if (endTownMarker && !endTownMarker.isPopupOpen()) endTownMarker.openPopup(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && !mk.isPopupOpen()) mk.openPopup(); }); }
+function useGpsLocation() { navigator.geolocation.getCurrentPosition(p => { startTown = { la: p.coords.latitude, lo: p.coords.longitude, n: '📍 Mi ubicación', p: '📍 Mi ubicación' }; $('#prov-start').value = ''; $('#town-start').value = ''; updTownMarkers(); updSum(); toast('📍 GPS: ubicación actual como salida'); }, e => { toast('⚠️ GPS: ' + (e.code === 1 ? 'permiso denegado' : e.code === 2 ? 'señal no disponible' : 'timeout'), 'warn'); }, { enableHighAccuracy: true, timeout: 10000 }); }
 function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if (mk === _selMk) return; const wi = waypoints.findIndex(w => w._idx === f._idx); mk.setIcon(wi >= 0 ? wpIcon(wi + 1) : (I[f.t] || I.r)); if (mk.isPopupOpen()) updPop(mk); }); }
 
 /* === RENDER LIST === */
@@ -842,7 +844,7 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 
 /* === EVENTOS Y CONTROLADORES === */
 $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; updSum(); } else { currentAcc = b.dataset.v; renderList(); applyFilters(); } }); });
-$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA);
+$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation);
 $('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#route-share-btns').style.display = 'none'; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-admin').addEventListener('click', () => { if (_isAdmin) { disableAdmin(); return; } enableAdmin(); });
