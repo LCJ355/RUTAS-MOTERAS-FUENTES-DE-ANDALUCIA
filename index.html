@@ -287,7 +287,7 @@ select,input{font-size:16px;min-height:44px}
 <div class="row" style="gap:4px">
 <button class="btn btn-sec btn-sm" id="btn-saved-toggle" style="flex:1" aria-label="Mis rutas guardadas">📁 Mis rutas</button>
 <button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
-<button class="btn btn-sec btn-sm" id="btn-admin" style="font-size:.62rem;padding:5px 8px" aria-label="Activar modo administrador">🔐 Admin</button>
+
 </div>
 <details class="admin-only" style="margin-top:5px;font-size:.62rem;color:var(--muted)">
 <summary style="cursor:pointer;padding:4px;color:var(--muted);font-size:.65rem">🔐 Configuración GitHub</summary>
@@ -423,42 +423,7 @@ let markers = [], mm = {};
 let startTown = null, endTown = null, waypoints = [];
 let routing = null, currentAcc = 'all', currentTown = '', routeProfile = 'r';
 let elevData = [], poiMarkers = [], weatherData = {};
-let _isAdmin = false;
-
-function enableAdmin() {
-  const token = getGithubToken();
-  if (!token) {
-    toast('⚠️ Configura un token de GitHub primero', 'warn');
-    $('#github-token').focus();
-    return;
-  }
-  _isAdmin = true;
-  document.documentElement.classList.remove('visitor');
-  const ghDetails = document.querySelector('details.admin-only'); if (ghDetails) ghDetails.open = true;
-  $('#btn-admin').textContent = '🔓 Admin';
-  $('#route-status').textContent = CONFIG.ADMIN_MSG;
-  ['prov-start','prov-dest','prov-end'].forEach(id => fillProv(id));
-  ['prov-start/town-start','prov-dest/town-dest','prov-end/town-end'].forEach(pair => { const [pId, tId] = pair.split('/'); const pv = $('#' + pId).value; if (pv) provChange(pId, tId); });
-  renderList();
-  toast('✅ Modo editor activado');
-}
-function disableAdmin() {
-  _isAdmin = false;
-  document.documentElement.classList.add('visitor');
-  $('#btn-admin').textContent = '🔐 Admin';
-  $('#route-status').textContent = 'Modo admin desactivado';
-  if (routing) { map.removeLayer(routing); routing = null; }
-  startTown = endTown = null; waypoints = [];
-  $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = '';
-  $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
-  $('#route-status').textContent = ''; $('#route-share-btns').style.display = 'none'; $('#elevation-chart').style.display = 'none';
-  $('#leg-body').innerHTML = ''; $('#weather-container').style.display = 'none'; $('#weather-container').innerHTML = '';
-  poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
-  $('#poi-list').style.display = 'none'; $('#poi-list').innerHTML = '';
-  routeLayer.clearLayers(); syncMm(); updTownMarkers(); renderList(); updSum();
-  toast('🔒 Modo visitor restaurado');
-}
-if (!_isAdmin) document.documentElement.classList.add('visitor');
+let _isAdmin = true;
 
 /* === PUEBLOS Y PROVINCIA === */
 const townList = Object.keys(TC).sort();
@@ -533,7 +498,7 @@ map.addLayer(mcg);
 const routeLayer = L.layerGroup().addTo(map);
 
 /* === GESTIÓN DE FOTOS === */
-let _photoInput = null, _photoInputCam = null, _activePhotoIdx = -1, _pasteTarget = null;
+let _photoInput = null, _activePhotoIdx = -1, _pasteTarget = null;
 function initPhotoInput() {
   if (_photoInput) return;
   _photoInput = document.createElement('input'); _photoInput.type = 'file'; _photoInput.accept = 'image/*';
@@ -546,16 +511,6 @@ function initPhotoInput() {
     fr.readAsDataURL(_photoInput.files[0]); _photoInput.value = '';
   });
   document.body.appendChild(_photoInput);
-  _photoInputCam = document.createElement('input'); _photoInputCam.type = 'file'; _photoInputCam.accept = 'image/*'; _photoInputCam.capture = 'environment';
-  _photoInputCam.style.display = 'none';
-  _photoInputCam.addEventListener('change', () => {
-    const idx = parseInt(_photoInputCam.dataset.idx);
-    if (isNaN(idx) || !_photoInputCam.files?.[0]) return;
-    const fr = new FileReader();
-    fr.onload = () => compressAndSet(idx, fr.result);
-    fr.readAsDataURL(_photoInputCam.files[0]); _photoInputCam.value = '';
-  });
-  document.body.appendChild(_photoInputCam);
   _pasteTarget = document.createElement('div');
   _pasteTarget.contentEditable = true;
   _pasteTarget.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
@@ -691,15 +646,12 @@ function setPhoto(idx, dataUrl) {
     else $('#route-status').innerHTML = '✅ Foto guardada — <span class="blink" style="color:var(--accent);font-weight:700">📸 Pulsa "Publicar fotos"</span>';
   } catch (e) { toast('⚠️ Error guardar: ' + e.message, 'warn'); }
 }
-function photoClick(idx, cam) { _activePhotoIdx = idx; initPhotoInput(); const inp = cam ? _photoInputCam : _photoInput; inp.dataset.idx = idx; setTimeout(() => inp.click(), 0); }
+function photoClick(idx) { _activePhotoIdx = idx; initPhotoInput(); _photoInput.dataset.idx = idx; setTimeout(() => _photoInput.click(), 0); }
 function photoBtn(idx) {
   const has = getPhoto(idx); const d = document.createElement('div'); d.style.display = 'flex'; d.style.gap = '2px';
   const b = document.createElement('button'); b.className = 'fi-btn pt' + (has ? ' on' : ''); b.textContent = '📷'; b.title = has ? 'Cambiar foto' : 'Añadir foto';
-  b.addEventListener('click', e => { e.stopPropagation(); photoClick(idx, false); });
+  b.addEventListener('click', e => { e.stopPropagation(); photoClick(idx); });
   d.appendChild(b);
-  const bc = document.createElement('button'); bc.className = 'fi-btn pt' + (has ? ' on' : ''); bc.textContent = '📸'; bc.title = 'Cámara'; bc.style.fontSize = '.65rem';
-  bc.addEventListener('click', e => { e.stopPropagation(); photoClick(idx, true); });
-  d.appendChild(bc);
   return d;
 }
 
@@ -716,9 +668,8 @@ function updPop(mk) {
   else if (endTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🎯 Destino</button>';
   else h += `<button class="btn btn-sec btn-sm" onclick="if(!startTown&&!endTown){var f=FD[${f._idx}];setStart(f);}else{toggleWp(FD[${f._idx}]);}">➕ Parada</button>`;
   if (_isAdmin) {
-    h += `<button class="btn btn-sec btn-sm" onclick="photoClick(${f._idx})">${photo ? '🔄' : '📷'}</button>`;
+    h += `<button class="btn btn-sec btn-sm" onclick="if(!getGithubToken()){var d=document.querySelector('details.admin-only');if(d){d.classList.add('visible');d.open=true;}$('#github-token').focus();toast('⚠️ Configura un token de GitHub primero','warn');}else photoClick(${f._idx})">📷 + Fotos</button>`;
     if (photo) h += `<button class="btn btn-red btn-sm" onclick="localStorage.removeItem('fp_${f._idx}');if(_savedPhotos)delete _savedPhotos[${f._idx}];if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);renderList();updateSaveStatus();">❌</button>`;
-    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="exportPhotosToFile()">💾</button>`;
   }
   h += `<a href="https://www.google.com/maps?q=${f.la},${f.lo}" target="_blank" rel="noopener" style="text-decoration:none"><button class="btn btn-sec btn-sm">🗺️ Maps</button></a>`;
   const waText = encodeURIComponent(`${f.n} · ${f.p} (Andalucía)`);
@@ -747,7 +698,8 @@ function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if
 /* === RENDER LIST === */
 function renderList() {
   const el = $('#fountain-list'); el.innerHTML = '';
-  const f = FD.filter(x => (!currentTown || x.p === currentTown) && (currentAcc === 'all' || x.t === currentAcc));
+  if (!currentTown) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Selecciona un destino</div>'; return; }
+  const f = FD.filter(x => x.p === currentTown && (currentAcc === 'all' || x.t === currentAcc));
   $('#fountain-count').textContent = `(${f.length})`;
   if (!f.length) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Sin coincidencias</div>'; return; }
   const fragment = document.createDocumentFragment();
@@ -925,9 +877,8 @@ $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => {
 $('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation);
 $('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#route-share-btns').style.display = 'none'; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
-$('#btn-admin').addEventListener('click', () => { if (_isAdmin) { disableAdmin(); return; } enableAdmin(); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
-function applyFilters() { if (routing) return; mcg.clearLayers(); markers.forEach(m => { if (routeLayer.hasLayer(m)) return; const f = m._fd; if ((!currentTown || f.p === currentTown) && (currentAcc === 'all' || f.t === currentAcc)) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
+function applyFilters() { if (routing) return; mcg.clearLayers(); if (!currentTown) return; markers.forEach(m => { if (routeLayer.hasLayer(m)) return; const f = m._fd; if (f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
 
 /* === LEGAL Y FOCUS TRAP === */
 (function () { if (!safeLS.get('cb_accepted')) $('#cookie-banner').style.display = 'block'; $('#cb-accept').addEventListener('click', () => { safeLS.set('cb_accepted', '1'); $('#cookie-banner').style.display = 'none'; }); const lt = { aviso: '<h2>Aviso Legal</h2><p><strong>Responsable:</strong> Propietario de esta web (aficionado, sin ánimo de lucro).</p><p><strong>Finalidad:</strong> Planificación de rutas moteras por fuentes de Andalucía.</p><p><strong>Propiedad intelectual:</strong> Datos del inventario público "Inventario_Fuentes_Cadiz_Completo". Código de uso libre.</p><p><strong>Exención de responsabilidad:</strong> El usuario es responsable de cumplir con la normativa de tráfico y medio ambiente. El responsable no se hace responsable de daños derivados del uso de esta web.</p><p><strong>Legislación:</strong> Ley 34/2002 LSSI-CE.</p>', privacidad: '<h2>Política de Privacidad (RGPD)</h2><p>Esta web <strong>no recopila ni comparte datos personales</strong> en servidores externos.</p><h3>Datos locales</h3><p>Usamos localStorage del navegador para guardar:<br>• Fotos que añadas a las fuentes<br>• Notas personales<br>• Rutas guardadas<br>• Preferencia de cookies</p><p>Estos datos permanecen en tu dispositivo y puedes borrarlos desde la configuración del navegador.</p><h3>Terceros</h3><p>Consultamos APIs públicas gratuitas (OSRM, Open-Elevation, Overpass, Open-Meteo) que pueden registrar tu IP según sus propias políticas.</p><h3>Tus derechos</h3><p>Acceso, rectificación, supresión: borra los datos locales desde el navegador.</p>', cookies: '<h2>Política de Cookies</h2><p>Usamos <strong>localStorage</strong> como equivalente técnico a cookies:</p><h3>Necesario</h3><p>• <strong>cb_accepted</strong>: guarda si aceptaste el aviso</p><h3>Funcional</h3><p>• <strong>fp_*</strong>: fotos de fuentes<br>• <strong>fn_*</strong>: notas personales<br>• <strong>saved_routes</strong>: rutas guardadas</p><p>Puedes eliminar estos datos desde Configuración del navegador → Borrar datos locales.</p>' }; function showLegal(id) { $('#legal-body').innerHTML = lt[id]; $('#legal-modal').style.display = 'block'; setTimeout(() => $('#legal-modal .modal-content').focus(), 10); } function trapFocus(e) { const focusable = $('#legal-modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'); const first = focusable[0]; const last = focusable[focusable.length - 1]; if (e.key === 'Tab') { if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } } $('#link-legal').addEventListener('click', e => { e.preventDefault(); showLegal('aviso'); }); $('#link-privacy').addEventListener('click', e => { e.preventDefault(); showLegal('privacidad'); }); $('#link-cookies').addEventListener('click', e => { e.preventDefault(); showLegal('cookies'); }); $('#cb-info').addEventListener('click', () => showLegal('cookies')); $('#legal-modal .modal-close').addEventListener('click', () => { $('#legal-modal').style.display = 'none'; document.activeElement?.blur(); }); $('#legal-modal').addEventListener('click', e => { if (e.target === $('#legal-modal')) { $('#legal-modal').style.display = 'none'; document.activeElement?.blur(); } }); $('#legal-modal').addEventListener('keydown', trapFocus); $('#cookie-banner').addEventListener('keydown', e => { if (e.key === 'Escape') $('#cb-accept').click(); }); })();
