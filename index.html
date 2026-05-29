@@ -103,6 +103,8 @@ select option{background:var(--bg)}
 .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{color:#8a0000!important}
 .note-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:2px;vertical-align:middle}
 .photo-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#3498db;margin-left:3px;vertical-align:middle}
+.cap-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#2ecc71;margin-left:3px;vertical-align:middle}
+.p-caption{font-size:.68rem;color:#3498db;margin-top:2px;font-style:italic}
 .legal-links{text-align:center;font-size:.52rem;color:var(--sub);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px}
 .legal-links a{color:var(--muted);text-decoration:underline;cursor:pointer;padding:2px 4px;border-radius:3px}
 .legal-links a:hover{color:var(--accent);background:#21262d}
@@ -300,7 +302,7 @@ select,input{font-size:16px;min-height:44px}
 </div>
 </div>
 <hr style="border:none;border-top:1px solid var(--border);margin:6px 0">
-<button class="btn btn-red btn-sm" id="btn-reset-all" onclick="if(confirm('¿Borrar TODOS los datos locales (fotos, notas, rutas guardadas)?')){safeLS.clear();_savedPhotos={};localStorage.clear();renderList();updateSaveStatus();toast('🗑 Datos locales borrados');}" style="width:100%;font-size:.6rem;padding:4px">🗑 Reset completo</button>
+<button class="btn btn-red btn-sm" id="btn-reset-all" onclick="if(confirm('¿Borrar TODOS los datos locales (fotos, notas, rutas guardadas)?')){safeLS.clear();_savedPhotos={};_savedCaptions={};localStorage.clear();renderList();updateSaveStatus();toast('🗑 Datos locales borrados');}" style="width:100%;font-size:.6rem;padding:4px">🗑 Reset completo</button>
 </details>
 <div class="legal-links">
 <a href="#" id="link-legal" role="button">Aviso Legal</a> · <a href="#" id="link-privacy" role="button">Privacidad</a> · <a href="#" id="link-cookies" role="button">Cookies</a>
@@ -525,12 +527,14 @@ function initPhotoInput() {
     toast('⚠️ No se detectó imagen en el portapapeles', 'warn');
   });
 }
-let _savedPhotos = null;
+let _savedPhotos = null, _savedCaptions = null;
 function getPhoto(idx) {
   if (_savedPhotos?.[idx] !== undefined) return _savedPhotos[idx];
-  if (window.__PHOTOS?.[idx] !== undefined) return window.__PHOTOS[idx];
-  return safeLS.get('fp_' + idx);
+  const p = safeLS.get('fp_' + idx);
+  if (p) { if (!_savedPhotos) _savedPhotos = {}; _savedPhotos[idx] = p; }
+  return p;
 }
+function getCaption(idx) { return safeLS.get('fc_' + idx) || ''; }
 function updateSaveStatus() {
   if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) {
     $('#btn-save-photos').style.display = 'none'; $('#save-photos-status').textContent = ''; return;
@@ -564,7 +568,8 @@ function getGithubToken() { return localStorage.getItem('gh_token') || ''; }
 async function exportPhotosToFile() {
   if (!_savedPhotos) _savedPhotos = {};
   for (let i = 0; i < FD.length; i++) { if (!_savedPhotos[i]) { const p = safeLS.get('fp_' + i); if (p) _savedPhotos[i] = p; } }
-  const js = 'window.__PHOTOS=' + JSON.stringify(_savedPhotos) + ';';
+  const caps = {}; for (let i = 0; i < FD.length; i++) { const c = safeLS.get('fc_' + i); if (c) caps[i] = c; }
+  const js = 'window.__PHOTOS=' + JSON.stringify(_savedPhotos) + ';window.__CAPTIONS=' + JSON.stringify(caps) + ';';
   const token = getGithubToken();
   const el = $('#route-status');
   if (token) {
@@ -604,6 +609,8 @@ function loadPhotosFile() {
   s.onload = () => {
     _savedPhotos = window.__PHOTOS || {};
     Object.keys(_savedPhotos).forEach(k => safeLS.set('fp_' + k, _savedPhotos[k]));
+    _savedCaptions = window.__CAPTIONS || {};
+    Object.keys(_savedCaptions).forEach(k => safeLS.set('fc_' + k, _savedCaptions[k]));
     Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
     updateSaveStatus();
   };
@@ -663,13 +670,16 @@ function updPop(mk) {
   if (isWp) h += `<div class="p-status">📍 Parada ${wpI + 1}</div>`;
   if (note) h += `<div class="p-note">📝 ${note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   if (photo) h += `<div style="margin:4px 0"><img src="${photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" /></div>`;
+  const cap = getCaption(f._idx);
+  if (cap) h += `<div class="p-caption">📷 ${cap.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   h += '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">';
   if (startTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🏁 Inicio</button>';
   else if (endTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🎯 Destino</button>';
   else h += `<button class="btn btn-sec btn-sm" onclick="if(!startTown&&!endTown){var f=FD[${f._idx}];setStart(f);}else{toggleWp(FD[${f._idx}]);}">➕ Parada</button>`;
   if (_isAdmin) {
     h += `<button class="btn btn-sec btn-sm" onclick="if(!getGithubToken()){var d=document.querySelector('details.admin-only');if(d){d.classList.add('visible');d.open=true;}$('#github-token').focus();toast('⚠️ Configura un token de GitHub primero','warn');}else photoClick(${f._idx})">📷 + Fotos</button>`;
-    if (photo) h += `<button class="btn btn-red btn-sm" onclick="localStorage.removeItem('fp_${f._idx}');if(_savedPhotos)delete _savedPhotos[${f._idx}];if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);renderList();updateSaveStatus();">❌</button>`;
+    if (photo) h += `<button class="btn btn-red btn-sm" onclick="localStorage.removeItem('fp_${f._idx}');localStorage.removeItem('fc_${f._idx}');if(_savedPhotos)delete _savedPhotos[${f._idx}];if(_savedCaptions)delete _savedCaptions[${f._idx}];if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);renderList();updateSaveStatus();">❌</button>`;
+    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="var c=prompt('Leyenda para la foto:',safeLS.get('fc_${f._idx}')||'');if(c!==null){safeLS.set('fc_${f._idx}',c);if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}">✏️ Leyenda</button>`;
   }
   h += `<a href="https://www.google.com/maps?q=${f.la},${f.lo}" target="_blank" rel="noopener" style="text-decoration:none"><button class="btn btn-sec btn-sm">🗺️ Maps</button></a>`;
   const waText = encodeURIComponent(`${f.n} · ${f.p} (Andalucía)`);
@@ -705,9 +715,9 @@ function renderList() {
   const fragment = document.createDocumentFragment();
   f.forEach(x => {
     const wpIdx = waypoints.findIndex(w => w._idx === x._idx); const isWp = wpIdx >= 0;
-    const hasNote = safeLS.get('fn_' + x._idx); const hasPhoto = getPhoto(x._idx);
+    const hasNote = safeLS.get('fn_' + x._idx); const hasPhoto = getPhoto(x._idx); const hasCap = safeLS.get('fc_' + x._idx);
     const d = document.createElement('div'); d.className = 'fi';
-    d.innerHTML = `<div class="fi-i"><div class="fi-n">${x.n}${hasNote ? ' <span class="note-dot"></span>' : ''}${hasPhoto ? ' <span class="photo-dot"></span>' : ''}</div><div class="fi-t">${x.p} · ${aLbl(x.t)}</div></div>`;
+    d.innerHTML = `<div class="fi-i"><div class="fi-n">${x.n}${hasNote ? ' <span class="note-dot"></span>' : ''}${hasPhoto ? ' <span class="photo-dot"></span>' : ''}${hasCap ? ' <span class="cap-dot"></span>' : ''}</div><div class="fi-t">${x.p} · ${aLbl(x.t)}</div></div>`;
     const bw = document.createElement('button'); bw.className = 'fi-btn wp' + (isWp ? ' on' : ''); bw.textContent = isWp ? wpIdx + 1 : '+'; bw.title = 'Parada';
     bw.addEventListener('click', e => { e.stopPropagation(); toggleWp(x); });
     const bn = document.createElement('button'); bn.className = 'fi-btn nt' + (hasNote ? ' on' : ''); bn.textContent = '📝';
