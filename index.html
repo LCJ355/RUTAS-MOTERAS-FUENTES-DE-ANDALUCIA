@@ -610,7 +610,7 @@ function loadPhotosFile() {
     _savedPhotos = window.__PHOTOS || {};
     Object.keys(_savedPhotos).forEach(k => safeLS.set('fp_' + k, _savedPhotos[k]));
     _savedCaptions = window.__CAPTIONS || {};
-    Object.keys(_savedCaptions).forEach(k => safeLS.set('fc_' + k, _savedCaptions[k]));
+    Object.keys(_savedCaptions).forEach(k => safeLS.set('fc_' + k, ('' + _savedCaptions[k]).slice(0, 200)));
     Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
     updateSaveStatus();
   };
@@ -671,7 +671,7 @@ function updPop(mk) {
   if (note) h += `<div class="p-note">📝 ${note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   if (photo) h += `<div style="margin:4px 0"><img src="${photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" /></div>`;
   const cap = getCaption(f._idx);
-  if (cap) h += `<div class="p-caption">📷 ${cap.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  if (photo && cap) h += `<div class="p-caption">📷 ${cap.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   h += '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">';
   if (startTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🏁 Inicio</button>';
   else if (endTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🎯 Destino</button>';
@@ -679,7 +679,7 @@ function updPop(mk) {
   if (_isAdmin) {
     h += `<button class="btn btn-sec btn-sm" onclick="if(!getGithubToken()){var d=document.querySelector('details.admin-only');if(d){d.classList.add('visible');d.open=true;}$('#github-token').focus();toast('⚠️ Configura un token de GitHub primero','warn');}else photoClick(${f._idx})">📷 + Fotos</button>`;
     if (photo) h += `<button class="btn btn-red btn-sm" onclick="localStorage.removeItem('fp_${f._idx}');localStorage.removeItem('fc_${f._idx}');if(_savedPhotos)delete _savedPhotos[${f._idx}];if(_savedCaptions)delete _savedCaptions[${f._idx}];if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);renderList();updateSaveStatus();">❌</button>`;
-    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="var c=prompt('Leyenda para la foto:',safeLS.get('fc_${f._idx}')||'');if(c!==null){safeLS.set('fc_${f._idx}',c);if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}">✏️ Leyenda</button>`;
+    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="var c=prompt('Leyenda para la foto (máx 200 carácteres):',safeLS.get('fc_${f._idx}')||'');if(c!==null){c=c.slice(0,200);safeLS.set('fc_${f._idx}',c);if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}">✏️ Leyenda</button>`;
   }
   h += `<a href="https://www.google.com/maps?q=${f.la},${f.lo}" target="_blank" rel="noopener" style="text-decoration:none"><button class="btn btn-sec btn-sm">🗺️ Maps</button></a>`;
   const waText = encodeURIComponent(`${f.n} · ${f.p} (Andalucía)`);
