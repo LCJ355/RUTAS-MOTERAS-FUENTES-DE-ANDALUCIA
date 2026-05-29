@@ -819,9 +819,9 @@ async function searchPOIs() { const rll = []; if (startTown?.la) rll.push([start
   rll.forEach(p => { if (p[0] < minLat) minLat = p[0]; if (p[0] > maxLat) maxLat = p[0]; if (p[1] < minLon) minLon = p[1]; if (p[1] > maxLon) maxLon = p[1]; });
   const pad = 0.03, bbox = (minLat - pad) + ',' + (minLon - pad) + ',' + (maxLat + pad) + ',' + (maxLon + pad);
   const query = '[out:json][timeout:15];(node["amenity"="fuel"](' + bbox + ');node["amenity"="car_repair"](' + bbox + ');node["tourism"="viewpoint"](' + bbox + ');node["tourism"="hotel"](' + bbox + ');node["tourism"="camp_site"](' + bbox + ');node["shop"="motorcycle"](' + bbox + ');node["shop"="motorcycle_repair"](' + bbox + '););out body;';
-  let elements = []; for (let i = 0; i < CONFIG.OVERPASS.length; i++) { try { const res = await fetch(CONFIG.OVERPASS[i], { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(query) }); if (res.ok) { const data = await res.json(); if (data.elements?.length) { elements = data.elements; break; } } } catch { } }
+  let elements = []; for (let i = 0; i < CONFIG.OVERPASS.length; i++) { try { const res = await fetch(CONFIG.OVERPASS[i], { method: 'POST', signal: AbortSignal.timeout(20000), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(query) }); if (res.ok) { const data = await res.json(); if (data.elements?.length) { elements = data.elements; break; } } } catch { } }
   setLoading(false);
-  if (!elements?.length) { $('#route-status').textContent = 'No se encontraron POIs cercanos'; return; }
+  if (!elements?.length) { $('#route-status').textContent = '⏱️ Tiempo de espera agotado. Inténtalo de nuevo.'; return; }
   showPOIs(elements);
 }
 
