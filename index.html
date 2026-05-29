@@ -533,7 +533,12 @@ function getPhoto(idx) {
   if (p) { if (!_savedPhotos) _savedPhotos = {}; _savedPhotos[idx] = p; }
   return p;
 }
-function getCaption(idx) { return safeLS.get('fc_' + idx) || ''; }
+function getCaption(idx) { 
+  if (_savedCaptions?.[idx] !== undefined) return _savedCaptions[idx];
+  const c = safeLS.get('fc_' + idx);
+  if (c) { if (!_savedCaptions) _savedCaptions = {}; _savedCaptions[idx] = c; }
+  return c || '';
+}
 function updateSaveStatus() {
   if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) {
     $('#btn-save-photos').style.display = 'none'; $('#save-photos-status').textContent = ''; return;
@@ -604,16 +609,16 @@ async function publishToGithub(content) {
 
 function loadPhotosFile() {
   const s = document.createElement('script');
-  s.src = 'photos_data.js';
+  s.src = 'photos_data.js?_=' + Date.now();
   s.onload = () => {
     _savedPhotos = window.__PHOTOS || {};
     Object.keys(_savedPhotos).forEach(k => safeLS.set('fp_' + k, _savedPhotos[k]));
     _savedCaptions = window.__CAPTIONS || {};
     Object.keys(_savedCaptions).forEach(k => safeLS.set('fc_' + k, ('' + _savedCaptions[k]).slice(0, 200)));
     Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
-    updateSaveStatus();
+    updateSaveStatus(); renderList(); updSum();
   };
-  s.onerror = () => {};
+  s.onerror = () => { if (!_savedPhotos) console.warn('photos_data.js no disponible'); };
   document.head.appendChild(s);
 }
 function readBlob(blob) {
