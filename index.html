@@ -540,7 +540,8 @@ function getCaption(idx) {
 }
 function updateSaveStatus() {
   if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) {
-    $('#btn-save-photos').style.display = 'none'; $('#save-photos-status').textContent = ''; return;
+    for (let i = 0; i < FD.length; i++) { const p = safeLS.get('fp_' + i); if (p) { if (!_savedPhotos) _savedPhotos = {}; _savedPhotos[i] = p; } }
+    if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) { $('#btn-save-photos').style.display = 'none'; $('#save-photos-status').textContent = ''; return; }
   }
   const saved = window.__PHOTOS || {};
   const unsaved = Object.keys(_savedPhotos).filter(k => !saved[k]).length;
@@ -613,7 +614,7 @@ function loadPhotosFile() {
     _savedPhotos = window.__PHOTOS || {};
     Object.keys(_savedPhotos).forEach(k => safeLS.set('fp_' + k, _savedPhotos[k]));
     _savedCaptions = window.__CAPTIONS || {};
-    Object.keys(_savedCaptions).forEach(k => safeLS.set('fc_' + k, ('' + _savedCaptions[k]).slice(0, 200)));
+    Object.keys(_savedCaptions).forEach(k => safeLS.set('fc_' + k, ('' + _savedCaptions[k]).slice(0, 250)));
     Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
     updateSaveStatus(); renderList(); updSum();
   };
@@ -682,7 +683,7 @@ function updPop(mk) {
   if (_isAdmin) {
     h += `<button class="btn btn-sec btn-sm" onclick="if(!getGithubToken()){var d=document.querySelector('details.admin-only');if(d){d.classList.add('visible');d.open=true;}$('#github-token').focus();toast('⚠️ Configura un token de GitHub primero','warn');}else photoClick(${f._idx})">📷 + Fotos</button>`;
     if (photo) h += `<button class="btn btn-red btn-sm" onclick="localStorage.removeItem('fp_${f._idx}');localStorage.removeItem('fc_${f._idx}');if(_savedPhotos)delete _savedPhotos[${f._idx}];if(_savedCaptions)delete _savedCaptions[${f._idx}];if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);renderList();updateSaveStatus();">❌</button>`;
-    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="if(!getGithubToken()){var d=document.querySelector('details.admin-only');if(d){d.classList.add('visible');d.open=true;}$('#github-token').focus();toast('⚠️ Configura un token de GitHub primero','warn');}else{var c=prompt('Leyenda para la foto (máx 200 carácteres):',safeLS.get('fc_${f._idx}')||'');if(c!==null){c=c.slice(0,200);safeLS.set('fc_${f._idx}',c);if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}}">✏️ Leyenda</button>`;
+    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="if(!getGithubToken()){var d=document.querySelector('details.admin-only');if(d){d.classList.add('visible');d.open=true;}$('#github-token').focus();toast('⚠️ Configura un token de GitHub primero','warn');}else{var c=prompt('Leyenda para la foto (máx 250 carácteres):',safeLS.get('fc_${f._idx}')||'');if(c!==null){c=c.slice(0,250);safeLS.set('fc_${f._idx}',c);if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}}">✏️ Leyenda</button>`;
   }
   h += `<a href="https://www.google.com/maps?q=${f.la},${f.lo}" target="_blank" rel="noopener" style="text-decoration:none"><button class="btn btn-sec btn-sm">🗺️ Maps</button></a>`;
   const waText = encodeURIComponent(`${f.n} · ${f.p} (Andalucía)`);
