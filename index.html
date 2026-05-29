@@ -392,7 +392,7 @@ function disableAdmin() {
   $('#leg-body').innerHTML = ''; $('#weather-container').style.display = 'none'; $('#weather-container').innerHTML = '';
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
   $('#poi-list').style.display = 'none'; $('#poi-list').innerHTML = '';
-  syncMm(); updTownMarkers(); renderList(); updSum();
+  routeLayer.clearLayers(); syncMm(); updTownMarkers(); renderList(); updSum();
   toast('🔒 Modo visitor restaurado');
 }
 if (!_isAdmin) document.documentElement.classList.add('visitor');
@@ -467,15 +467,7 @@ FD.forEach((f, i) => {
   markers.push(mk); mm[i] = mk; mcg.addLayer(mk);
 });
 map.addLayer(mcg);
-
-const fTownSet = new Set(FD.map(f => f.p));
-function showTownMarkers() {
-  if (!currentTown) { mcg.clearLayers(); if (!map.hasLayer(mcg)) map.addLayer(mcg); return; }
-  mcg.clearLayers();
-  const mks = markers.filter(m => m._fd.p === currentTown && (currentAcc === 'all' || m._fd.t === currentAcc));
-  mks.forEach(m => mcg.addLayer(m));
-  if (!map.hasLayer(mcg)) map.addLayer(mcg);
-}
+const routeLayer = L.layerGroup().addTo(map);
 
 /* === GESTIÓN DE FOTOS === */
 let _photoInput = null, _activePhotoIdx = -1, _pasteTarget = null;
@@ -639,7 +631,7 @@ function updPop(mk) {
   let h = `<div class="p-title">${f.n}</div><div class="p-town">📍 ${f.p}</div>`;
   h += `<div class="p-acc ${f.t}">${aLbl(f.t)}</div>`;
   if (isWp) h += `<div class="p-status">📍 Parada ${wpI + 1}</div>`;
-  if (note) h += `<div class="p-note">📝 ${note}</div>`;
+  if (note) h += `<div class="p-note">📝 ${note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   if (photo) h += `<div style="margin:4px 0"><img src="${photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" /></div>`;
   h += '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">';
   if (startTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🏁 Inicio</button>';
@@ -658,18 +650,18 @@ function updPop(mk) {
 }
 
 function setStart(f) { const isWp = waypoints.some(w => w._idx === f._idx); if (isWp) waypoints = waypoints.filter(w => w._idx !== f._idx); startTown = f; updTownMarkers(); updSum(); renderList(); }
-function setEnd(f) { const isWp = waypoints.some(w => w._idx === f._idx); if (isWp) waypoints = waypoints.filter(w => w._idx !== f._idx); endTown = f; updTownMarkers(); updSum(); renderList(); }
 
 /* === MARCADOS PUEBLOS === */
 let startTownMarker = null, endTownMarker = null;
 function updTownMarkers() {
   startTownMarker?.remove(); endTownMarker?.remove();
-  if (startTown?.la) { startTownMarker = L.marker([startTown.la, startTown.lo], { icon: I.st }).addTo(map).bindPopup(`<div class="p-title">🏁 ${startTown.n}</div><div class="p-town">Pueblo de inicio</div>`); startTownMarker._fd = startTown; }
-  if (endTown?.la) { endTownMarker = L.marker([endTown.la, endTown.lo], { icon: I.en }).addTo(map).bindPopup(`<div class="p-title">🎯 ${endTown.n}</div><div class="p-town">Pueblo de destino</div>`); endTownMarker._fd = endTown; }
+  if (startTown?.la) { startTownMarker = L.marker([startTown.la, startTown.lo], { icon: I.st }).addTo(map).bindPopup(`<div class="p-title">🏁 ${startTown.n}</div><div class="p-town">Pueblo de inicio</div>`); startTownMarker._fd = startTown; startTownMarker.openPopup(); startTownMarker.on('popupclose', () => startTownMarker?.openPopup()); }
+  if (endTown?.la) { endTownMarker = L.marker([endTown.la, endTown.lo], { icon: I.en }).addTo(map).bindPopup(`<div class="p-title">🎯 ${endTown.n}</div><div class="p-town">Pueblo de destino</div>`); endTownMarker._fd = endTown; endTownMarker.openPopup(); endTownMarker.on('popupclose', () => endTownMarker?.openPopup()); }
 }
 
 /* === WAYPOINTS === */
-function toggleWp(f) { const idx = waypoints.findIndex(w => w._idx === f._idx); if (idx >= 0) waypoints.splice(idx, 1); else { if (startTown?.l === f._idx) startTown = null; if (endTown?.l === f._idx) endTown = null; waypoints.push(f); } syncMm(); renderList(); updSum(); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
+function toggleWp(f) { const idx = waypoints.findIndex(w => w._idx === f._idx); if (idx >= 0) { waypoints.splice(idx, 1); const mk = mm[f._idx]; if (mk && routeLayer.hasLayer(mk)) routeLayer.removeLayer(mk); if (!routing) applyFilters(); } else { if (startTown?.l === f._idx) startTown = null; if (endTown?.l === f._idx) endTown = null; waypoints.push(f); const mk = mm[f._idx]; if (mk) { if (mcg.hasLayer(mk)) mcg.removeLayer(mk); routeLayer.addLayer(mk); mk.openPopup(); mk.on('popupclose', () => { if (waypoints.some(w => w._idx === f._idx)) mk.openPopup(); }); } } syncMm(); renderList(); updSum(); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
+function openRoutePopups() { if (startTownMarker && !startTownMarker.isPopupOpen()) startTownMarker.openPopup(); if (endTownMarker && !endTownMarker.isPopupOpen()) endTownMarker.openPopup(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && !mk.isPopupOpen()) mk.openPopup(); }); }
 function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if (mk === _selMk) return; const wi = waypoints.findIndex(w => w._idx === f._idx); mk.setIcon(wi >= 0 ? wpIcon(wi + 1) : (I[f.t] || I.r)); if (mk.isPopupOpen()) updPop(mk); }); }
 
 /* === RENDER LIST === */
@@ -766,7 +758,7 @@ async function calcRoute() {
     const r = data.routes[0]; const distKm = r.distance / 1000, timeMin = Math.round(r.duration / 60);
     $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = timeMin + ' min';
     $('#route-status').textContent = '✅ ' + Math.round(distKm) + ' km';
-    $('#route-share-btns').style.display = 'block'; $('#btn-share-maps').onclick = shareRouteMaps; $('#btn-share-wa').onclick = shareRouteWA;
+    $('#route-share-btns').style.display = 'block';
     const legPts = decodePolyline(r.geometry); routing = L.polyline(legPts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
     map.fitBounds(routing.getBounds(), { padding: [30, 30] });
     const legs = []; let wpIdx = 0, segDist = 0, segTime = 0;
@@ -778,7 +770,7 @@ async function calcRoute() {
   finally { setLoading(false); }
 }
 
-function showRouteMarkers() { mcg.clearLayers(); const added = {}; if (startTownMarker) { mcg.addLayer(startTownMarker); added[startTownMarker._fd._idx] = true; } if (endTownMarker && !added[endTownMarker._fd._idx]) { mcg.addLayer(endTownMarker); added[endTownMarker._fd._idx] = true; } waypoints.forEach(w => { if (!added[w._idx] && mm[w._idx]) { mcg.addLayer(mm[w._idx]); added[w._idx] = true; } }); markers.forEach(m => { const f = m._fd; if (!added[f._idx] && f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) { mcg.addLayer(m); added[f._idx] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
+function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; if (startTownMarker) { routeLayer.addLayer(startTownMarker); added[startTownMarker._fd._idx] = true; } if (endTownMarker && !added[endTownMarker._fd._idx]) { routeLayer.addLayer(endTownMarker); added[endTownMarker._fd._idx] = true; } waypoints.forEach(w => { if (!added[w._idx] && mm[w._idx]) { routeLayer.addLayer(mm[w._idx]); added[w._idx] = true; } }); markers.forEach(m => { const f = m._fd; if (!added[f._idx] && f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) { mcg.addLayer(m); added[f._idx] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
 
 function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHTML = legs.map((l, i) => { total += l.dist; const nm = l.name.length > 20 ? l.name.substring(0, 20) + '…' : l.name; return `<tr><td>${i + 1}</td><td class="leg-wp">${nm}</td><td>${(l.dist / 1000).toFixed(1)}km</td><td>${(total / 1000).toFixed(1)}km</td><td>${Math.round(l.time / 60)}min</td><td style="color:var(--sub);font-size:.55rem">${l.road.substring(0, 10)}</td></tr>`; }).join(''); }
 
@@ -819,7 +811,7 @@ function saveRoute() { const wpIds = waypoints.map(w => w._idx); if (!startTown 
 
 function renderSaved() { const el = $('#saved-routes-panel'); const routes = JSON.parse(safeLS.get('rm_routes') || '[]'); if (!routes.length) { el.style.display = 'none'; return; } el.style.display = 'block'; el.innerHTML = '<div class="lbl">📁 Mis rutas</div>'; routes.forEach((r, i) => { const d = document.createElement('div'); d.className = 'sr-item'; const n = document.createElement('span'); n.className = 'sr-name'; n.textContent = r.name; n.addEventListener('click', () => loadRoute(i)); const info = document.createElement('span'); info.className = 'sr-info'; info.textContent = `${r.startTown !== null ? FD[r.startTown]?.p || '?' : '—'} → ${r.endTown !== null ? FD[r.endTown]?.p || '?' : '—'}`; const del = document.createElement('button'); del.className = 'btn btn-red btn-sm'; del.textContent = '✕'; del.style.padding = '2px 6px'; del.style.fontSize = '.6rem'; del.addEventListener('click', e => { e.stopPropagation(); routes.splice(i, 1); safeLS.set('rm_routes', JSON.stringify(routes)); renderSaved(); }); d.appendChild(n); d.appendChild(info); d.appendChild(del); el.appendChild(d); }); }
 
-function loadRoute(idx) { const routes = JSON.parse(safeLS.get('rm_routes') || '[]'); if (idx >= routes.length) return;   const r = routes[idx]; startTown = endTown = null; waypoints = []; if (r.startTown !== null && FD[r.startTown]) startTown = FD[r.startTown]; if (r.endTown !== null && FD[r.endTown]) endTown = FD[r.endTown]; (r.waypoints || []).forEach(id => { if (FD[id]) waypoints.push(FD[id]); }); if (['r', 'c', 'o'].includes(r.profile)) { routeProfile = r.profile; $$('.btn-grp:first-of-type button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); } updTownMarkers(); syncMm(); renderList(); updSum(); toast('📁 Ruta cargada: ' + r.name); $('#saved-routes-panel').style.display = 'none'; }
+function loadRoute(idx) { const routes = JSON.parse(safeLS.get('rm_routes') || '[]'); if (idx >= routes.length) return;   const r = routes[idx]; startTown = endTown = null; waypoints = []; if (r.startTown !== null && FD[r.startTown]) startTown = FD[r.startTown]; if (r.endTown !== null && FD[r.endTown]) endTown = FD[r.endTown]; (r.waypoints || []).forEach(id => { if (FD[id]) waypoints.push(FD[id]); }); if (['r', 'c', 'o'].includes(r.profile)) { routeProfile = r.profile; $$('.btn-grp:first-of-type button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); } updTownMarkers(); routeLayer.clearLayers(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && mcg.hasLayer(mk)) { mcg.removeLayer(mk); routeLayer.addLayer(mk); } }); syncMm(); renderList(); updSum(); toast('📁 Ruta cargada: ' + r.name); $('#saved-routes-panel').style.display = 'none'; }
 
 /* === POIs Y CLIMA === */
 async function searchPOIs() { const rll = []; if (startTown?.la) rll.push([startTown.la, startTown.lo]); waypoints.forEach(w => rll.push([w.la, w.lo])); if (endTown?.la) rll.push([endTown.la, endTown.lo]); if (rll.length < 2) { toast('⚠️ Calcula la ruta primero', 'warn'); return; } $('#route-status').textContent = '⏳ Buscando POIs...'; setLoading(true);
@@ -850,12 +842,12 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 
 /* === EVENTOS Y CONTROLADORES === */
 $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; updSum(); } else { currentAcc = b.dataset.v; renderList(); applyFilters(); } }); });
-$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather);
-$('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; syncMm(); updTownMarkers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#route-share-btns').style.display = 'none'; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; routing?.remove(); routing = null; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; mcg.clearLayers(); markers.forEach(m => mcg.addLayer(m)); if (!map.hasLayer(mcg)) map.addLayer(mcg); applyFilters(); toast('🗑 Ruta limpiada'); });
-$('#btn-fit-all').addEventListener('click', () => { const pts = []; if (startTownMarker?.isAdded()) pts.push(startTownMarker.getLatLng()); if (endTownMarker?.isAdded()) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
+$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA);
+$('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#route-share-btns').style.display = 'none'; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
+$('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-admin').addEventListener('click', () => { if (_isAdmin) { disableAdmin(); return; } enableAdmin(); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
-function applyFilters() { if (routing) return; mcg.clearLayers(); markers.forEach(m => { const f = m._fd; if ((!currentTown || f.p === currentTown) && (currentAcc === 'all' || f.t === currentAcc)) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
+function applyFilters() { if (routing) return; mcg.clearLayers(); markers.forEach(m => { if (routeLayer.hasLayer(m)) return; const f = m._fd; if ((!currentTown || f.p === currentTown) && (currentAcc === 'all' || f.t === currentAcc)) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
 
 /* === LEGAL Y FOCUS TRAP === */
 (function () { if (!safeLS.get('cb_accepted')) $('#cookie-banner').style.display = 'block'; $('#cb-accept').addEventListener('click', () => { safeLS.set('cb_accepted', '1'); $('#cookie-banner').style.display = 'none'; }); const lt = { aviso: '<h2>Aviso Legal</h2><p><strong>Responsable:</strong> Propietario de esta web (aficionado, sin ánimo de lucro).</p><p><strong>Finalidad:</strong> Planificación de rutas moteras por fuentes de Andalucía.</p><p><strong>Propiedad intelectual:</strong> Datos del inventario público "Inventario_Fuentes_Cadiz_Completo". Código de uso libre.</p><p><strong>Exención de responsabilidad:</strong> El usuario es responsable de cumplir con la normativa de tráfico y medio ambiente. El responsable no se hace responsable de daños derivados del uso de esta web.</p><p><strong>Legislación:</strong> Ley 34/2002 LSSI-CE.</p>', privacidad: '<h2>Política de Privacidad (RGPD)</h2><p>Esta web <strong>no recopila ni comparte datos personales</strong> en servidores externos.</p><h3>Datos locales</h3><p>Usamos localStorage del navegador para guardar:<br>• Fotos que añadas a las fuentes<br>• Notas personales<br>• Rutas guardadas<br>• Preferencia de cookies</p><p>Estos datos permanecen en tu dispositivo y puedes borrarlos desde la configuración del navegador.</p><h3>Terceros</h3><p>Consultamos APIs públicas gratuitas (OSRM, Open-Elevation, Overpass, Open-Meteo) que pueden registrar tu IP según sus propias políticas.</p><h3>Tus derechos</h3><p>Acceso, rectificación, supresión: borra los datos locales desde el navegador.</p>', cookies: '<h2>Política de Cookies</h2><p>Usamos <strong>localStorage</strong> como equivalente técnico a cookies:</p><h3>Necesario</h3><p>• <strong>cb_accepted</strong>: guarda si aceptaste el aviso</p><h3>Funcional</h3><p>• <strong>fp_*</strong>: fotos de fuentes<br>• <strong>fn_*</strong>: notas personales<br>• <strong>saved_routes</strong>: rutas guardadas</p><p>Puedes eliminar estos datos desde Configuración del navegador → Borrar datos locales.</p>' }; function showLegal(id) { $('#legal-body').innerHTML = lt[id]; $('#legal-modal').style.display = 'block'; setTimeout(() => $('#legal-modal .modal-content').focus(), 10); } function trapFocus(e) { const focusable = $('#legal-modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'); const first = focusable[0]; const last = focusable[focusable.length - 1]; if (e.key === 'Tab') { if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } } $('#link-legal').addEventListener('click', e => { e.preventDefault(); showLegal('aviso'); }); $('#link-privacy').addEventListener('click', e => { e.preventDefault(); showLegal('privacidad'); }); $('#link-cookies').addEventListener('click', e => { e.preventDefault(); showLegal('cookies'); }); $('#cb-info').addEventListener('click', () => showLegal('cookies')); $('#legal-modal .modal-close').addEventListener('click', () => { $('#legal-modal').style.display = 'none'; document.activeElement?.blur(); }); $('#legal-modal').addEventListener('click', e => { if (e.target === $('#legal-modal')) { $('#legal-modal').style.display = 'none'; document.activeElement?.blur(); } }); $('#legal-modal').addEventListener('keydown', trapFocus); $('#cookie-banner').addEventListener('keydown', e => { if (e.key === 'Escape') $('#cb-accept').click(); }); })();
