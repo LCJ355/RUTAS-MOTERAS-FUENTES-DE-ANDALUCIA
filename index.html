@@ -302,15 +302,14 @@ select,input{font-size:16px;min-height:44px}
 <hr style="border:none;border-top:1px solid var(--border);margin:6px 0">
 <button class="btn btn-red btn-sm" id="btn-reset-all" onclick="if(confirm('¿Borrar TODOS los datos locales (fotos, notas, rutas guardadas)?')){safeLS.clear();_savedPhotos={};_savedCaptions={};localStorage.clear();renderList();updateSaveStatus();toast('🗑 Datos locales borrados');}" style="width:100%;font-size:.6rem;padding:4px">🗑 Reset completo</button>
 </details>
-<div class="legal-links">
-<a href="#" id="link-legal" role="button">Aviso Legal</a> · <a href="#" id="link-privacy" role="button">Privacidad</a> · <a href="#" id="link-cookies" role="button">Cookies</a>
-</div>
 <div class="row admin-only" style="gap:4px;margin-top:5px" id="save-photos-row">
 <span id="save-photos-status" style="font-size:.62rem;color:var(--sec);flex:1"></span>
 <button class="btn btn-sm" id="btn-save-photos" style="display:none;background:var(--warn);color:#fff;border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite" onclick="exportPhotosToFile()" aria-label="Publicar fotos en repositorio">📸 Publicar fotos</button>
 </div>
-<div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
+<div class="legal-links">
+<a href="#" id="link-legal" role="button">Aviso Legal</a> · <a href="#" id="link-privacy" role="button">Privacidad</a> · <a href="#" id="link-cookies" role="button">Cookies</a>
 </div>
+<div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
 </div>
 </div>
 <div id="map"></div>
