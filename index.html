@@ -684,7 +684,7 @@ function updPop(mk) {
   else h += `<button class="btn btn-sec btn-sm" onclick="if(!startTown&&!endTown){var f=FD[${f._idx}];setStart(f);}else{toggleWp(FD[${f._idx}]);}">➕ Parada</button>`;
   h += `<button class="btn btn-sec btn-sm" onclick="photoClick(${f._idx})">📷 + Fotos</button>`;
   if (photo) h += `<button class="btn btn-red btn-sm" onclick="localStorage.removeItem('fp_${f._idx}');localStorage.removeItem('fc_${f._idx}');if(_savedPhotos)delete _savedPhotos[${f._idx}];if(_savedCaptions)delete _savedCaptions[${f._idx}];if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);renderList();updateSaveStatus();">❌</button>`;
-  if (photo) h += `<button class="btn btn-sec btn-sm" onclick="var c=prompt('Leyenda para la foto (máx 250 carácteres):',safeLS.get('fc_${f._idx}')||'');if(c!==null){c=c.slice(0,250);safeLS.set('fc_${f._idx}',c);if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}">✏️ Leyenda</button>`;
+  if (photo) h += `<button class="btn btn-sec btn-sm" onclick="var c=prompt('Leyenda para la foto (máx 250 carácteres):',safeLS.get('fc_${f._idx}')||'');if(c!==null){c=c.slice(0,250);safeLS.set('fc_${f._idx}',c);if(!_savedCaptions)_savedCaptions={};_savedCaptions[${f._idx}]=c;if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}">✏️ Leyenda</button>`;
   h += `<a href="https://www.google.com/maps?q=${f.la},${f.lo}" target="_blank" rel="noopener" style="text-decoration:none"><button class="btn btn-sec btn-sm">🗺️ Maps</button></a>`;
   const waText = encodeURIComponent(`${f.n} · ${f.p} (Andalucía)`);
   h += `<a href="https://wa.me/?text=${waText}%20📍${f.la.toFixed(4)},${f.lo.toFixed(4)}" target="_blank" rel="noopener" style="text-decoration:none"><button class="btn btn-sec btn-sm">💬 WhatsApp</button></a>`;
