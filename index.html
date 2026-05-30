@@ -567,7 +567,7 @@ function updateSaveStatus() {
     el.innerHTML = `<span class="blink" style="color:var(--accent);font-weight:700">📷 ${unsaved} foto${unsaved > 1 ? 's' : ''} sin publicar</span>`;
     btn.style.display = 'inline-block';
   } else {
-    el.textContent = `📷 ${Object.keys(_savedPhotos).length} foto${Object.keys(_savedPhotos).length > 1 ? 's' : ''}`;
+    el.textContent = '📷 Fotos publicadas';
     btn.style.display = 'none';
   }
 }
