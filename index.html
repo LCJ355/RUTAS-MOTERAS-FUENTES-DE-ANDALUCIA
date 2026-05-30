@@ -30,6 +30,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 #app{display:flex;flex-direction:row;height:100vh;width:100vw}
 #sidebar{width:420px;min-width:320px;background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;overflow-y:auto;gap:8px;scroll-behavior:smooth;scrollbar-gutter:stable;transition:width .2s}
 #sidebar-content{flex:1;min-height:0}
+#tab-bar{display:none}
+.tab-panel{display:block}
 #sidebar h1{font-size:1.2rem;color:var(--accent);text-align:center;margin-bottom:2px}
 #sidebar .sub{font-size:.7rem;color:var(--pri);text-align:center;margin-bottom:4px}
 #stats{font-size:.65rem;color:var(--sub)}
@@ -76,7 +78,7 @@ select option{background:var(--bg)}
 #elevation-chart svg{width:100%;height:85px;display:block;shape-rendering:crispEdges}
 #elevation-chart .el-stats{display:flex;gap:10px;font-size:.62rem;color:var(--muted);justify-content:center;margin-top:4px}
 #elevation-chart .el-stats strong{color:var(--text)}
-#route-info{background:var(--panel);border-radius:var(--radius);padding:8px 12px;font-size:.72rem;flex-shrink:0;border:1px solid var(--border)}
+#route-info{background:var(--panel);border-radius:var(--radius);padding:8px 12px;font-size:.72rem;flex-shrink:0;border:1px solid var(--border);display:none}
 #route-info h3{color:var(--accent);font-size:.85rem;margin-bottom:5px}
 #route-summary{display:flex;gap:8px;flex-wrap:wrap;font-size:.68rem}
 #route-summary span{color:var(--muted)}
@@ -152,11 +154,16 @@ select option{background:var(--bg)}
 .toast.success{border-color:var(--pri)}
 @media(max-width:768px){
 #app{flex-direction:column}
-#sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;height:60vh;z-index:500;padding:12px 10px 0;transform:translateY(calc(100% - 44px));transition:transform .25s cubic-bezier(.2,.8,.2,1);border-radius:12px 12px 0 0;border-top:2px solid var(--accent);pointer-events:none;display:flex;flex-direction:column}
+#sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;height:80vh;z-index:500;padding:12px 10px 0;transform:translateY(calc(100% - 44px));transition:transform .25s cubic-bezier(.2,.8,.2,1);border-radius:12px 12px 0 0;border-top:2px solid var(--accent);pointer-events:none;display:flex;flex-direction:column}
 #sidebar.open{transform:translateY(0);pointer-events:auto}
-#sidebar-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 8px;cursor:pointer;flex-shrink:0;pointer-events:auto}
-#sidebar-content{pointer-events:auto;flex:1;min-height:0;overflow-y:auto}
+#sidebar-handle{width:48px;height:6px;background:var(--border);border-radius:3px;margin:0 auto 10px;cursor:pointer;flex-shrink:0;pointer-events:auto}
+#sidebar-content{pointer-events:auto;flex:1;min-height:0;display:flex;flex-direction:column}
 #sidebar:not(.open) #sidebar-content{pointer-events:none}
+#tab-bar{display:flex;flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+.tab-btn{flex:1;padding:8px 4px;border:none;background:0 0;color:var(--muted);font-size:.7rem;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.tab-panel{display:none;flex:1;min-height:0;overflow-y:auto}
+.tab-panel.active{display:flex;flex-direction:column}
 #map{height:100vh}
 select,input{font-size:16px;min-height:44px}
 .btn{min-height:44px;min-width:44px}
@@ -180,13 +187,13 @@ select,input{font-size:16px;min-height:44px}
 #poi-list,#saved-routes-panel,#waypoints-mini{max-height:none!important}
 }
 @media(max-width:500px){
-#sidebar{width:100%;min-width:unset;height:60vh;padding:8px 8px;font-size:.85rem}
+#sidebar{width:100%;min-width:unset;height:80vh;padding:8px 8px;font-size:.85rem}
 #sidebar h1{font-size:1.05rem}
 .row{gap:4px}
 .btn{padding:6px 9px;font-size:.68rem;min-height:34px}
 }
 @media(max-width:375px){
-#sidebar{height:65vh;padding:6px 6px 0}
+#sidebar{height:80vh;padding:6px 6px 0}
 #sidebar h1{font-size:.95rem}
 #sidebar .sub{display:none}
 .row{gap:3px}
@@ -201,6 +208,8 @@ select,input{font-size:16px;min-height:44px}
 <div id="sidebar">
 <div id="sidebar-handle"></div>
 <div id="sidebar-content">
+<div id="tab-bar"><button class="tab-btn active" data-tab="fuentes">📍 Fuentes</button><button class="tab-btn" data-tab="ruta">🛵 Ruta</button><button class="tab-btn" data-tab="ajustes">⚙️ Ajustes</button></div>
+<div class="tab-panel active" data-tab="fuentes">
 <h1 style="text-align:center">🏍 RUTAS MOTERAS 🏍</h1><div style="color:#66bb6a;font-size:1.15rem;text-align:center;margin-bottom:2px">Fuentes/Manantiales de Andalucía</div>
 <div class="sub">Selecciona salida/destino (pueblos) y paradas (fuentes)</div>
 <div id="stats"></div>
@@ -243,13 +252,15 @@ select,input{font-size:16px;min-height:44px}
 <span><span style="color:var(--accent)">●</span> Parada</span>
 </div>
 
+<span id="fountain-count" style="color:var(--sub);font-size:.62rem"></span>
+<div id="fountain-list" role="list" aria-label="Lista de fuentes"><div class="fi" style="justify-content:center;color:var(--sub);font-size:.78rem">Cargando...</div></div>
+
+</div>
+<div class="tab-panel" data-tab="ruta">
 <div id="elevation-chart" role="region" aria-label="Gráfico de elevación">
 <svg id="el-svg" viewBox="0 0 600 80" preserveAspectRatio="none"><polyline id="el-line" fill="none" stroke="#f5c842" stroke-width="1.5"/></svg>
 <div class="el-stats"><span>▲ <strong id="el-max">-</strong></span><span>▼ <strong id="el-min">-</strong></span><span>↗ <strong id="el-gain">-</strong></span><span>⬇ <strong id="el-loss">-</strong></span></div>
 </div>
-
-<span id="fountain-count" style="color:var(--sub);font-size:.62rem"></span>
-<div id="fountain-list" role="list" aria-label="Lista de fuentes"><div class="fi" style="justify-content:center;color:var(--sub);font-size:.78rem">Cargando...</div></div>
 
 <div id="route-info">
 <h3>🛵 Ruta</h3>
@@ -290,6 +301,8 @@ select,input{font-size:16px;min-height:44px}
 <button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
 </div>
 </div>
+</div>
+<div class="tab-panel" data-tab="ajustes">
 <details class="admin-only" style="margin-top:5px;font-size:.62rem;color:var(--muted)">
 <summary style="cursor:pointer;padding:4px;color:var(--muted);font-size:.65rem">🔐 Configuración GitHub</summary>
 <div style="margin-top:5px">
@@ -312,6 +325,7 @@ select,input{font-size:16px;min-height:44px}
 <span style="color:var(--muted)">Idea original de Luciano CJ <span style="color:var(--accent)">❤️</span> <em style="font-size:.48rem">"no me copies sino es para mejorarme"</em></span>
 </div>
 <div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
+</div>
 </div>
 </div>
 <div id="map"></div>
@@ -404,6 +418,9 @@ gpsControl.addTo(map);
 const panelControl = L.control({ position: 'topleft' });
 panelControl.onAdd = function () { const b = L.DomUtil.create('button', ''); b.innerHTML = '📋'; b.title = 'Abrir panel'; b.id = 'btn-toggle-panel'; b.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:1rem;line-height:1;display:none;align-items:center'; L.DomEvent.disableClickPropagation(b); b.addEventListener('click', togglePanel); return b; };
 panelControl.addTo(map);
+const fitControl = L.control({ position: 'topright' });
+fitControl.onAdd = function () { const b = L.DomUtil.create('button', ''); b.innerHTML = '🔍'; b.title = 'Ajustar vista'; b.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:5px 7px;cursor:pointer;font-size:.9rem;line-height:1'; L.DomEvent.disableClickPropagation(b); b.addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30,30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); }); return b; };
+fitControl.addTo(map);
 $$('.map-layer-btn').forEach(b => b.addEventListener('click', () => setLayer(b.dataset.layer)));
 
 function setLayer(name) {
@@ -814,7 +831,7 @@ async function calcRoute() {
     for (let i = 0; i < r.legs.length; i++) { const leg = r.legs[i]; for (let j = 0; j < leg.steps.length; j++) { const s = leg.steps[j]; segDist += s.distance; segTime += s.duration; if (s.type === 1 || (j === leg.steps.length - 1 && i === r.legs.length - 1)) { const isWp = wpIdx < rll.length; const nm = isWp ? (wpIdx === 0 ? '🏁 Inicio' : wpIdx === rll.length - 1 ? '🎯 Destino' : '📍 ' + (wpIdx + 1)) : s.name || '—'; legs.push({ name: nm, dist: segDist, time: segTime, road: s.name || '—' }); segDist = 0; segTime = 0; wpIdx++; } } }
     const elData = await calcElevation(legPts); drawElevation(elData);
     if (elData?.length > 1) { $('#el-max').textContent = Math.round(Math.max(...elData.map(d => d.ele))); $('#el-min').textContent = Math.round(Math.min(...elData.map(d => d.ele))); let gn = 0, ls = 0; for (let i = 1; i < elData.length; i++) { const d = elData[i].ele - elData[i - 1].ele; if (d > 0) gn += d; else ls -= d; } $('#el-gain').textContent = Math.round(gn) + 'm'; $('#el-loss').textContent = Math.round(ls) + 'm'; }
-    renderLegs(legs); showRouteMarkers();
+    renderLegs(legs); showRouteMarkers(); $('#route-info').style.display = 'block';
   } catch (e) { $('#route-status').textContent = '❌ ' + (e.message || 'Error de conexión con OSRM'); }
   finally { setLoading(false); btnLoading('#btn-calc'); }
 }
@@ -892,7 +909,7 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 /* === EVENTOS Y CONTROLADORES === */
 $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; updSum(); } else { currentAcc = b.dataset.v; renderList(); applyFilters(); } }); });
 $('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation);
-$('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
+$('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#route-info').style.display = 'none'; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
 function applyFilters() { if (routing) return; mcg.clearLayers(); if (!currentTown) return; markers.forEach(m => { if (routeLayer.hasLayer(m)) return; const f = m._fd; if (f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
@@ -907,7 +924,20 @@ window.addEventListener('offline', () => $('#offline-banner').style.display = 'b
 window.addEventListener('online', () => $('#offline-banner').style.display = 'none');
 function respPanel() { const isMobile = window.innerWidth <= 768; const sb = $('#sidebar'); const btn = $('#btn-toggle-panel'); if (btn) btn.style.display = isMobile ? 'flex' : 'none'; if (!isMobile) sb.classList.remove('open'); else sb.classList.remove('open'); }
 respPanel(); window.addEventListener('resize', respPanel);
-(function() { let startY = 0, moved = false, touchedEl = null; const sb = $('#sidebar'), sc = $('#sidebar-content'), el = $('#fountain-list'), hd = $('#sidebar-handle'); function onStart(e) { startY = e.touches[0].clientY; moved = false; touchedEl = e.currentTarget; } function onMove(e) { if (window.innerWidth > 768) return; const dy = e.touches[0].clientY - startY; if (Math.abs(dy) < 10) return; moved = true; if (sb.classList.contains('open')) { if (sc.scrollTop <= 0 && dy > 50) { sb.classList.remove('open'); $('#btn-toggle-panel').textContent = '📋'; } } else { if (dy < -50) { sb.classList.add('open'); $('#btn-toggle-panel').textContent = '✕'; } else if (dy > 60) { el.style.transition = 'opacity .2s'; el.style.opacity = '0.3'; toast('🔄 Recargando...'); setTimeout(() => { renderList(); updSum(); el.style.opacity = '1'; setTimeout(() => { el.style.transition = ''; }, 300); }, 300); } } } function onEnd() { if (moved) { el.style.opacity = '1'; el.style.transition = ''; moved = false; } } hd.addEventListener('touchstart', onStart, { passive: true }); hd.addEventListener('touchmove', onMove, { passive: true }); hd.addEventListener('touchend', onEnd, { passive: true }); hd.addEventListener('click', function(e) { e.stopPropagation(); if (window.innerWidth <= 768) togglePanel(); }); sc.addEventListener('touchstart', onStart, { passive: true }); sc.addEventListener('touchmove', onMove, { passive: true }); sc.addEventListener('touchend', onEnd, { passive: true }); })();
+(function() { let startY = 0, moved = false; const sb = $('#sidebar'), sc = $('#sidebar-content'), el = $('#fountain-list'), hd = $('#sidebar-handle'); let scrollLocked = false;
+function getScrollEl() { const active = document.querySelector('.tab-panel.active'); return active || sc; }
+function onStart(e) { startY = e.touches[0].clientY; moved = false; scrollLocked = false; }
+function onMove(e) { if (window.innerWidth > 768) return; const dy = e.touches[0].clientY - startY; if (Math.abs(dy) < 10) return; moved = true; const scrollEl = getScrollEl(); if (sb.classList.contains('open')) { if (scrollEl.scrollTop <= 0 && dy > 70) { sb.classList.remove('open'); $('#btn-toggle-panel').textContent = '📋'; } else if (dy > 70) scrollLocked = true; } else { if (dy < -50) { sb.classList.add('open'); $('#btn-toggle-panel').textContent = '✕'; } } }
+function onEnd() { moved = false; scrollLocked = false; }
+hd.addEventListener('touchstart', onStart, { passive: true });
+hd.addEventListener('touchmove', onMove, { passive: true });
+hd.addEventListener('touchend', onEnd, { passive: true });
+hd.addEventListener('click', function(e) { e.stopPropagation(); if (window.innerWidth <= 768) togglePanel(); });
+['touchstart','touchmove','touchend'].forEach(ev => sc.addEventListener(ev, ev === 'touchstart' ? onStart : ev === 'touchmove' ? onMove : onEnd, { passive: true })); })();
+// Tab switching
+$$('.tab-btn').forEach(btn => { btn.addEventListener('click', function() { if (window.innerWidth > 768) return; $$('.tab-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); $$('.tab-panel').forEach(p => p.classList.remove('active')); const p = document.querySelector(`.tab-panel[data-tab="${this.dataset.tab}"]`); if (p) p.classList.add('active'); }); });
+// D: close panel on fountain select (mobile)
+document.addEventListener('click', function(e) { const fi = e.target.closest('.fi'); if (fi && window.innerWidth <= 768) { const sb = $('#sidebar'); sb.classList.remove('open'); $('#btn-toggle-panel').textContent = '📋'; } });
 parseHash(); loadPhotosFile(); const ghToken = getGithubToken(); if (ghToken) { $('#github-token').value = ghToken; $('#github-token-status').textContent = '✅ Token configurado'; }
 renderList(); updSum(); if (mcg.getLayers().length > 0) try { map.fitBounds(mcg.getBounds().pad(0.08)); } catch {} renderSaved(); updateSaveStatus();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
