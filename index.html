@@ -56,7 +56,6 @@ select option{background:var(--bg)}
 .btn-grp button.active{font-weight:700;border-color:currentColor}
 .btn-grp button.active[data-v="r"]{background:#66bb6a;color:#fff;border-color:#66bb6a}
 .btn-grp button.active[data-v="c"]{background:#e67e22;color:#fff;border-color:#e67e22}
-.btn-grp button.active[data-v="o"]{background:#8b5cf6;color:#fff;border-color:#8b5cf6}
 .btn-grp button.active[data-v="all"]{background:var(--accent);color:#0d1117;border-color:var(--accent)}
 .map-layer-btn{flex:1;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;font-size:.6rem;text-align:center;min-height:28px}
 .map-layer-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700}
@@ -235,7 +234,6 @@ select,input{font-size:16px;min-height:44px}
 <div class="btn-grp" role="radiogroup" aria-label="Modo de ruta">
 <button class="active" data-v="r" role="radio" aria-checked="true">🏎 Rápido</button>
 <button data-v="c" role="radio" aria-checked="false">🌀 Curvas</button>
-<button data-v="o" role="radio" aria-checked="false">🛤 Off-road</button>
 </div>
 
 <div class="lbl">Tipo de acceso</div>
@@ -762,7 +760,7 @@ function updSum() {
   $('#r-start').textContent = startTown?.n?.substring(0, 18) || '—'; $('#r-end').textContent = endTown?.n?.substring(0, 18) || '—'; $('#r-wps').textContent = waypoints.length;
   const mini = $('#waypoints-mini');
   mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${w.n.substring(0, 12)}</span>`).join('');
-  const modeLabel = { r: 'Rápido', c: 'Curvas', o: 'Off-road' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
+  const modeLabel = { r: 'Rápido', c: 'Curvas' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
 }
 
 /* === POLYLINE DECODE === */
@@ -811,15 +809,17 @@ async function calcRoute() {
   waypoints.forEach(w => rll.push(L.latLng(w.la, w.lo))); if (endTown?.la) rll.push(L.latLng(endTown.la, endTown.lo));
   $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#leg-body').innerHTML = ''; $('#route-status').textContent = '';
   if (rll.length < 2) { $('#route-status').textContent = '⚠ Selecciona inicio, paradas y destino'; return; }
-  const profiles = { r: 'driving', c: 'cycling', o: 'walking' }; const profile = profiles[routeProfile] || 'driving';
+  const profiles = { r: 'driving', c: 'driving' }; const profile = profiles[routeProfile] || 'driving';
   $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true); btnLoading('#btn-calc', '⏳ Calculando...');
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
   const coords = rll.map(p => p.lng + ',' + p.lat).join(';');
-  const url = `${CONFIG.OSRM}/${profile}/${coords}?overview=full&geometries=polyline&steps=true&alternatives=false`;
+  const alternatives = routeProfile === 'c';
+  const url = `${CONFIG.OSRM}/${profile}/${coords}?overview=full&geometries=polyline&steps=true&alternatives=${alternatives}`;
   try {
     const res = await fetch(url); if (!res.ok) throw new Error(`OSRM ${res.status}`);
     const data = await res.json(); if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.code);
+    if (routeProfile === 'c' && data.routes.length > 1) data.routes.sort((a, b) => b.distance - a.distance);
     const r = data.routes[0]; const distKm = r.distance / 1000, timeMin = Math.round(r.duration / 60);
     const fmtTime = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
     $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
@@ -866,7 +866,7 @@ function shareRouteWA() { const pts = []; if (startTown?.la) pts.push(startTown.
 function parseHash() {
   const hash = window.location.hash.slice(1); if (!hash) return;
   const params = new URLSearchParams(hash);
-  if (['r', 'c', 'o'].includes(params.get('r'))) { routeProfile = params.get('r'); $$('.btn-grp:first-of-type button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); }
+  if (['r', 'c'].includes(params.get('r'))) { routeProfile = params.get('r'); $$('.btn-grp:first-of-type button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); }
   const startStr = params.get('s'); if (startStr) { const parts = startStr.split('|'); const name = decodeURIComponent(parts[0] || ''); const fName = parts[1] || ''; const f = FD.find(x => x.p === name && (!fName || x.n === fName)); if (f) setStart(f); }
   const endStr = params.get('e'); if (endStr) { const parts = endStr.split('|'); const name = decodeURIComponent(parts[0] || ''); const fName = parts[1] || ''; const f = FD.find(x => x.p === name && (!fName || x.n === fName)); if (f) setEnd(f); }
   const wpStr = params.get('w'); if (wpStr) { wpStr.split(',').map(Number).forEach(id => { if (id >= 0 && id < FD.length && !waypoints.some(w => w._idx === id)) waypoints.push(FD[id]); }); syncMm(); renderList(); updSum(); }
@@ -876,7 +876,7 @@ function saveRoute() { const wpIds = waypoints.map(w => w._idx); if (!startTown 
 
 function renderSaved() { const el = $('#saved-routes-panel'); const routes = JSON.parse(safeLS.get('rm_routes') || '[]'); if (!routes.length) { el.style.display = 'none'; return; } el.style.display = 'block'; el.innerHTML = '<div class="lbl">📁 Mis rutas</div>'; routes.forEach((r, i) => { const d = document.createElement('div'); d.className = 'sr-item'; const n = document.createElement('span'); n.className = 'sr-name'; n.textContent = r.name; n.addEventListener('click', () => loadRoute(i)); const info = document.createElement('span'); info.className = 'sr-info'; info.textContent = `${r.startTown !== null ? FD[r.startTown]?.p || '?' : '—'} → ${r.endTown !== null ? FD[r.endTown]?.p || '?' : '—'}`; const del = document.createElement('button'); del.className = 'btn btn-red btn-sm'; del.textContent = '✕'; del.style.padding = '2px 6px'; del.style.fontSize = '.6rem'; del.addEventListener('click', e => { e.stopPropagation(); routes.splice(i, 1); safeLS.set('rm_routes', JSON.stringify(routes)); renderSaved(); }); d.appendChild(n); d.appendChild(info); d.appendChild(del); el.appendChild(d); }); }
 
-function loadRoute(idx) { const routes = JSON.parse(safeLS.get('rm_routes') || '[]'); if (idx >= routes.length) return;   const r = routes[idx]; startTown = endTown = null; waypoints = []; if (r.startTown !== null && FD[r.startTown]) startTown = FD[r.startTown]; if (r.endTown !== null && FD[r.endTown]) endTown = FD[r.endTown]; (r.waypoints || []).forEach(id => { if (FD[id]) waypoints.push(FD[id]); }); if (['r', 'c', 'o'].includes(r.profile)) { routeProfile = r.profile; $$('.btn-grp:first-of-type button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); } updTownMarkers(); routeLayer.clearLayers(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && mcg.hasLayer(mk)) { mcg.removeLayer(mk); routeLayer.addLayer(mk); } }); syncMm(); renderList(); updSum(); toast('📁 Ruta cargada: ' + r.name); $('#saved-routes-panel').style.display = 'none'; }
+function loadRoute(idx) { const routes = JSON.parse(safeLS.get('rm_routes') || '[]'); if (idx >= routes.length) return;   const r = routes[idx]; startTown = endTown = null; waypoints = []; if (r.startTown !== null && FD[r.startTown]) startTown = FD[r.startTown]; if (r.endTown !== null && FD[r.endTown]) endTown = FD[r.endTown]; (r.waypoints || []).forEach(id => { if (FD[id]) waypoints.push(FD[id]); }); if (['r', 'c'].includes(r.profile)) { routeProfile = r.profile; $$('.btn-grp:first-of-type button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); } updTownMarkers(); routeLayer.clearLayers(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && mcg.hasLayer(mk)) { mcg.removeLayer(mk); routeLayer.addLayer(mk); } }); syncMm(); renderList(); updSum(); toast('📁 Ruta cargada: ' + r.name); $('#saved-routes-panel').style.display = 'none'; }
 
 /* === POIs Y CLIMA === */
 async function searchPOIs() { const rll = []; if (startTown?.la) rll.push([startTown.la, startTown.lo]); waypoints.forEach(w => rll.push([w.la, w.lo])); if (endTown?.la) rll.push([endTown.la, endTown.lo]); if (rll.length < 2) { toast('⚠️ Calcula la ruta primero', 'warn'); return; } $('#route-status').textContent = '⏳ Buscando POIs...'; setLoading(true); btnLoading('#btn-poi', '⏳ Buscando...');
