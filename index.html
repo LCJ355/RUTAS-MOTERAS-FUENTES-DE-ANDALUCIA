@@ -821,7 +821,8 @@ async function calcRoute() {
     const res = await fetch(url); if (!res.ok) throw new Error(`OSRM ${res.status}`);
     const data = await res.json(); if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.code);
     const r = data.routes[0]; const distKm = r.distance / 1000, timeMin = Math.round(r.duration / 60);
-    $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = timeMin + ' min';
+    const fmtTime = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
+    $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
     $('#route-status').textContent = '✅ ' + Math.round(distKm) + ' km';
     const legPts = decodePolyline(r.geometry); routing = L.polyline(legPts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
     map.fitBounds(routing.getBounds(), { padding: [30, 30] });
@@ -836,7 +837,7 @@ async function calcRoute() {
 
 function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; if (startTownMarker) { routeLayer.addLayer(startTownMarker); added[startTownMarker._fd._idx] = true; } if (endTownMarker && !added[endTownMarker._fd._idx]) { routeLayer.addLayer(endTownMarker); added[endTownMarker._fd._idx] = true; } waypoints.forEach(w => { if (!added[w._idx] && mm[w._idx]) { routeLayer.addLayer(mm[w._idx]); added[w._idx] = true; } }); markers.forEach(m => { const f = m._fd; if (!added[f._idx] && f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) { mcg.addLayer(m); added[f._idx] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
 
-function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHTML = legs.map((l, i) => { total += l.dist; const nm = l.name.length > 20 ? l.name.substring(0, 20) + '…' : l.name; return `<tr><td>${i + 1}</td><td class="leg-wp">${nm}</td><td>${(l.dist / 1000).toFixed(1)}km</td><td>${(total / 1000).toFixed(1)}km</td><td>${Math.round(l.time / 60)}min</td><td style="color:var(--sub);font-size:.55rem">${l.road.substring(0, 10)}</td></tr>`; }).join(''); }
+function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHTML = legs.map((l, i) => { total += l.dist; const nm = l.name.length > 20 ? l.name.substring(0, 20) + '…' : l.name; const legMin = Math.round(l.time / 60); const fmtLeg = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h' + (m ? m + 'min' : '') : m + 'min'; }; return `<tr><td>${i + 1}</td><td class="leg-wp">${nm}</td><td>${(l.dist / 1000).toFixed(1)}km</td><td>${(total / 1000).toFixed(1)}km</td><td>${fmtLeg(legMin)}</td><td style="color:var(--sub);font-size:.55rem">${l.road.substring(0, 10)}</td></tr>`; }).join(''); }
 
 /* === GPX Y COMPARTIR === */
 function exportGPX() {
