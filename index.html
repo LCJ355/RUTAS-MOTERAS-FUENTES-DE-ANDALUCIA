@@ -814,12 +814,11 @@ async function calcRoute() {
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
   const coords = rll.map(p => p.lng + ',' + p.lat).join(';');
-  const alternatives = routeProfile === 'c';
-  const url = `${CONFIG.OSRM}/${profile}/${coords}?overview=full&geometries=polyline&steps=true&alternatives=${alternatives}`;
+  const excl = routeProfile === 'c' ? '&exclude=motorway' : '';
+  const url = `${CONFIG.OSRM}/${profile}/${coords}?overview=full&geometries=polyline&steps=true&alternatives=false${excl}`;
   try {
     const res = await fetch(url); if (!res.ok) throw new Error(`OSRM ${res.status}`);
     const data = await res.json(); if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.code);
-    if (routeProfile === 'c' && data.routes.length > 1) data.routes.sort((a, b) => b.distance - a.distance);
     const r = data.routes[0]; const distKm = r.distance / 1000, timeMin = Math.round(r.duration / 60);
     const fmtTime = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
     $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
