@@ -474,7 +474,7 @@ $('#town-start').addEventListener('change', function () {
 });
 $('#town-dest').addEventListener('change', function () {
   const v = this.value; if (!v || !TC[v]) return;
-  currentTown = v; map.setView(TC[v], 15); renderList(); $('#route-status').textContent = '📍 Destino: ' + v;
+  currentTown = v; map.setView(TC[v], 15); renderList(); applyFilters(); $('#route-status').textContent = '📍 Destino: ' + v;
 });
 $('#town-end').addEventListener('change', function () {
   const v = this.value; if (!v || !TC[v]) return;
