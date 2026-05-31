@@ -354,6 +354,7 @@ select,input{font-size:16px;min-height:44px}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="fuentes_data.js"></script>
+<script src="pueblos_andalucia.js"></script>
 <script>
 /* === CONFIGURACIÓN Y UTILIDADES === */
 const CONFIG = {
@@ -439,8 +440,16 @@ let elevData = [], poiMarkers = [], weatherData = {};
 let _isAdmin = true;
 
 /* === PUEBLOS Y PROVINCIA === */
-const townList = Object.keys(TC).sort();
+// PED_DATA = pedanías de pueblos_andalucia.js (puede no existir)
+const PED_DATA = typeof PED !== 'undefined' ? PED : {};
+const townList = Object.keys(TC).concat(Object.keys(PED_DATA)).sort();
 const provKeys = Object.keys(PROVS).sort((a, b) => PROVS[a].localeCompare(PROVS[b]));
+
+function getPos(name) {
+  if (TC[name]) return { la: TC[name][0], lo: TC[name][1], p: name };
+  if (PED_DATA[name]) return { la: PED_DATA[name][0], lo: PED_DATA[name][1], p: PED_DATA[name][2] };
+  return null;
+}
 
 function fillProv(selId) {
   const s = document.getElementById(selId);
@@ -460,6 +469,15 @@ function provChange(provId, townId) {
   o.value = capital; o.textContent = `${capital} (${pv.toUpperCase()})`;
   ts.appendChild(o);
   otherTowns.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; ts.appendChild(o); });
+  // Añadir pedanías de este municipio
+  Object.keys(PED_DATA).forEach(name => {
+    const parent = PED_DATA[name][2];
+    if (TP[parent] === pv) {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = `  └ ${name}`;
+      ts.appendChild(o);
+    }
+  });
 }
 
 fillProv('prov-start'); fillProv('prov-dest'); fillProv('prov-end');
@@ -468,21 +486,24 @@ $('#prov-dest').addEventListener('change', () => provChange('prov-dest', 'town-d
 $('#prov-end').addEventListener('change', () => provChange('prov-end', 'town-end'));
 
 $('#town-start').addEventListener('change', function () {
-  const v = this.value; if (!v || !TC[v]) return;
-  startTown = { p: v, la: TC[v][0], lo: TC[v][1], n: v };
+  const v = this.value; const pos = getPos(v);
+  if (!v || !pos) return;
+  startTown = { p: pos.p, la: pos.la, lo: pos.lo, n: v };
   updTownMarkers(); updSum(); $('#route-status').textContent = '📍 Salida: ' + v;
 });
 $('#town-dest').addEventListener('change', function () {
-  const v = this.value; if (!v || !TC[v]) return;
-  currentTown = v; map.setView(TC[v], 15); renderList(); applyFilters(); $('#route-status').textContent = '📍 Destino: ' + v;
+  const v = this.value; const pos = getPos(v);
+  if (!v || !pos) return;
+  currentTown = pos.p; map.setView([pos.la, pos.lo], 15); renderList(); applyFilters(); $('#route-status').textContent = '📍 Destino: ' + v;
 });
 $('#town-end').addEventListener('change', function () {
-  const v = this.value; if (!v || !TC[v]) return;
-  endTown = { p: v, la: TC[v][0], lo: TC[v][1], n: v };
+  const v = this.value; const pos = getPos(v);
+  if (!v || !pos) return;
+  endTown = { p: pos.p, la: pos.la, lo: pos.lo, n: v };
   updTownMarkers(); updSum(); $('#route-status').textContent = '🏁 Final ruta: ' + v;
 });
 
-$('#stats').textContent = FD.length + ' fuentes, ' + townList.length + ' pueblos';
+$('#stats').textContent = FD.length + ' fuentes, ' + Object.keys(TC).length + ' municipios + ' + Object.keys(PED_DATA).length + ' pedanías';
 const aLbl = t => t === 'r' ? 'Asfaltada' : 'Sin asfaltar';
 
 /* === LISTA DE FUENTES === */
