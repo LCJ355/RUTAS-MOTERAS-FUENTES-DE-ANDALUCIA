@@ -318,8 +318,11 @@ select,input{font-size:16px;min-height:44px}
 <span id="save-photos-status" style="font-size:.62rem;color:var(--sec);flex:1"></span>
 <button class="btn btn-sm" id="btn-save-photos" style="display:none;background:var(--warn);color:#fff;border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite" onclick="exportPhotosToFile()" aria-label="Publicar fotos en repositorio">📸 Publicar fotos</button>
 </div>
+<div style="text-align:center;margin:8px 0">
+  <button class="btn btn-sec btn-sm" id="btn-traffic-dgt" style="width:100%">🚦 Tráfico DGT en tiempo real</button>
+</div>
 <div class="legal-links">
-<a href="#" id="link-legal" role="button">Aviso Legal</a> · <a href="#" id="link-privacy" role="button">Privacidad</a> · <a href="#" id="link-cookies" role="button">Cookies</a><br>
+<a href="#" id="link-legal" role="button">Aviso Legal</a> · <a href="#" id="link-privacy" role="button">Privacidad</a> · <a href="#" id="link-traffic" role="button">🚦 Tráfico DGT</a> · <a href="#" id="link-cookies" role="button">Cookies</a><br>
 <span style="color:var(--muted)">Idea original de Luciano CJ <span style="color:var(--accent)">❤️</span> <em style="font-size:.48rem">"no me copies sino es para mejorarme"</em></span>
 </div>
 <div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
@@ -348,6 +351,16 @@ select,input{font-size:16px;min-height:44px}
     <span class="modal-close" aria-label="Cerrar">&times;</span>
     <h2 id="legal-title">Información Legal</h2>
     <div id="legal-body"></div>
+  </div>
+</div>
+
+<div id="traffic-modal" class="modal" role="dialog" aria-modal="true" hidden>
+  <div class="modal-content" style="max-width:95%;width:95%;max-height:92vh;height:92vh;padding:0;overflow:hidden;position:relative;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;flex-shrink:0;padding:8px 44px 8px 14px;border-bottom:1px solid var(--border)">
+      <span style="font-size:.85rem;font-weight:700;color:var(--accent)">🚦 Tráfico DGT en tiempo real</span>
+    </div>
+    <button class="modal-close" aria-label="Cerrar" style="background:rgba(13,17,23,.7);border-radius:4px;line-height:1;z-index:10">&times;</button>
+    <iframe src="https://etraffic.dgt.es/etrafficWEB/" style="flex:1;width:100%;border:none;min-height:0" title="Mapa de tráfico DGT" allow="geolocation"></iframe>
   </div>
 </div>
 
@@ -414,6 +427,20 @@ layerControl.addTo(map);
 const gpsControl = L.control({ position: 'topleft' });
 gpsControl.onAdd = function () { const d = L.DomUtil.create('div', ''); d.style.cssText = 'display:flex;gap:2px'; const g = L.DomUtil.create('button', ''); g.innerHTML = '📍'; g.title = 'Usar mi ubicación GPS'; g.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:1rem;line-height:1;display:flex;align-items:center'; L.DomEvent.disableClickPropagation(g); g.addEventListener('click', useGpsLocation); d.appendChild(g); const p = L.DomUtil.create('button', ''); p.innerHTML = '📋'; p.title = 'Abrir panel'; p.id = 'btn-toggle-panel'; p.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:1rem;line-height:1;display:none;align-items:center'; L.DomEvent.disableClickPropagation(p); p.addEventListener('click', togglePanel); d.appendChild(p); return d; };
 gpsControl.addTo(map);
+const trafficControl = L.control({ position: 'topleft' });
+trafficControl.onAdd = function () {
+  const d = L.DomUtil.create('div', '');
+  d.style.cssText = 'display:flex;gap:2px;margin-top:4px';
+  const b = L.DomUtil.create('button', '');
+  b.innerHTML = '🚦';
+  b.title = 'Tráfico DGT en tiempo real';
+  b.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:1rem;line-height:1;display:flex;align-items:center';
+  L.DomEvent.disableClickPropagation(b);
+  b.addEventListener('click', function () { openModal('traffic-modal'); });
+  d.appendChild(b);
+  return d;
+};
+trafficControl.addTo(map);
 const fitControl = L.control({ position: 'topright' });
 fitControl.onAdd = function () { const b = L.DomUtil.create('button', ''); b.innerHTML = '🔍'; b.title = 'Ajustar vista'; b.style.cssText = 'background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:5px 7px;cursor:pointer;font-size:.9rem;line-height:1'; L.DomEvent.disableClickPropagation(b); b.addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30,30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); }); return b; };
 fitControl.addTo(map);
@@ -938,14 +965,30 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 
 /* === EVENTOS Y CONTROLADORES === */
 $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; updSum(); } else { currentAcc = b.dataset.v; renderList(); applyFilters(); } }); });
-$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation);
+$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
 $('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
 function applyFilters() { if (routing) return; mcg.clearLayers(); if (!currentTown) return; markers.forEach(m => { if (routeLayer.hasLayer(m)) return; const f = m._fd; if (f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
 
+/* === MODALES GENÉRICAS === */
+function openModal(id) { const m = document.getElementById(id); if (!m) return; m.style.display = 'block'; m.removeAttribute('hidden'); m.setAttribute('aria-hidden', 'false'); }
+function closeModal(id) { const m = document.getElementById(id); if (!m) return; m.style.display = 'none'; m.setAttribute('hidden', ''); m.setAttribute('aria-hidden', 'true'); document.activeElement?.blur(); }
+document.addEventListener('click', function (e) {
+  const close = e.target.closest('.modal-close');
+  if (close) { const m = close.closest('.modal'); if (m) closeModal(m.id); }
+  const modal = e.target.closest('.modal');
+  if (modal && e.target === modal) closeModal(modal.id);
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    const openModals = document.querySelectorAll('.modal[aria-hidden="false"]');
+    if (openModals.length) closeModal(openModals[openModals.length - 1].id);
+  }
+});
+
 /* === LEGAL Y FOCUS TRAP === */
-(function () { if (!safeLS.get('cb_accepted')) $('#cookie-banner').style.display = 'block'; $('#cb-accept').addEventListener('click', () => { safeLS.set('cb_accepted', '1'); $('#cookie-banner').style.display = 'none'; }); const lt = { aviso: '<h2>Aviso Legal</h2><p><strong>Responsable:</strong> Propietario de esta web (aficionado, sin ánimo de lucro).</p><p><strong>Finalidad:</strong> Planificación de rutas moteras por fuentes de Andalucía.</p><p><strong>Propiedad intelectual:</strong> Datos del inventario público "Inventario_Fuentes_Cadiz_Completo". Código de uso libre.</p><p><strong>Exención de responsabilidad:</strong> El usuario es responsable de cumplir con la normativa de tráfico y medio ambiente. El responsable no se hace responsable de daños derivados del uso de esta web.</p><p><strong>Legislación:</strong> Ley 34/2002 LSSI-CE.</p>', privacidad: '<h2>Política de Privacidad (RGPD)</h2><p>Esta web <strong>no recopila ni comparte datos personales</strong> en servidores externos.</p><h3>Datos locales</h3><p>Usamos localStorage del navegador para guardar:<br>• Fotos que añadas a las fuentes<br>• Notas personales<br>• Rutas guardadas<br>• Preferencia de cookies</p><p>Estos datos permanecen en tu dispositivo y puedes borrarlos desde la configuración del navegador.</p><h3>Terceros</h3><p>Consultamos APIs públicas gratuitas (OSRM, Open-Elevation, Overpass, Open-Meteo) que pueden registrar tu IP según sus propias políticas.</p><h3>Tus derechos</h3><p>Acceso, rectificación, supresión: borra los datos locales desde el navegador.</p>', cookies: '<h2>Política de Cookies</h2><p>Usamos <strong>localStorage</strong> como equivalente técnico a cookies:</p><h3>Necesario</h3><p>• <strong>cb_accepted</strong>: guarda si aceptaste el aviso</p><h3>Funcional</h3><p>• <strong>fp_*</strong>: fotos de fuentes<br>• <strong>fn_*</strong>: notas personales<br>• <strong>saved_routes</strong>: rutas guardadas</p><p>Puedes eliminar estos datos desde Configuración del navegador → Borrar datos locales.</p>' }; function showLegal(id) { $('#legal-body').innerHTML = lt[id]; $('#legal-modal').style.display = 'block'; setTimeout(() => $('#legal-modal .modal-content').focus(), 10); } function trapFocus(e) { const focusable = $('#legal-modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'); const first = focusable[0]; const last = focusable[focusable.length - 1]; if (e.key === 'Tab') { if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } } $('#link-legal').addEventListener('click', e => { e.preventDefault(); showLegal('aviso'); }); $('#link-privacy').addEventListener('click', e => { e.preventDefault(); showLegal('privacidad'); }); $('#link-cookies').addEventListener('click', e => { e.preventDefault(); showLegal('cookies'); }); $('#cb-info').addEventListener('click', () => showLegal('cookies')); $('#legal-modal .modal-close').addEventListener('click', () => { $('#legal-modal').style.display = 'none'; document.activeElement?.blur(); }); $('#legal-modal').addEventListener('click', e => { if (e.target === $('#legal-modal')) { $('#legal-modal').style.display = 'none'; document.activeElement?.blur(); } }); $('#legal-modal').addEventListener('keydown', trapFocus); $('#cookie-banner').addEventListener('keydown', e => { if (e.key === 'Escape') $('#cb-accept').click(); }); })();
+(function () { if (!safeLS.get('cb_accepted')) $('#cookie-banner').style.display = 'block'; $('#cb-accept').addEventListener('click', () => { safeLS.set('cb_accepted', '1'); $('#cookie-banner').style.display = 'none'; }); const lt = { aviso: '<h2>Aviso Legal</h2><p><strong>Responsable:</strong> Propietario de esta web (aficionado, sin ánimo de lucro).</p><p><strong>Finalidad:</strong> Planificación de rutas moteras por fuentes de Andalucía.</p><p><strong>Propiedad intelectual:</strong> Datos del inventario público "Inventario_Fuentes_Cadiz_Completo". Código de uso libre.</p><p><strong>Exención de responsabilidad:</strong> El usuario es responsable de cumplir con la normativa de tráfico y medio ambiente. El responsable no se hace responsable de daños derivados del uso de esta web.</p><p><strong>Legislación:</strong> Ley 34/2002 LSSI-CE.</p>', privacidad: '<h2>Política de Privacidad (RGPD)</h2><p>Esta web <strong>no recopila ni comparte datos personales</strong> en servidores externos.</p><h3>Datos locales</h3><p>Usamos localStorage del navegador para guardar:<br>• Fotos que añadas a las fuentes<br>• Notas personales<br>• Rutas guardadas<br>• Preferencia de cookies</p><p>Estos datos permanecen en tu dispositivo y puedes borrarlos desde la configuración del navegador.</p><h3>Terceros</h3><p>Consultamos APIs públicas gratuitas (OSRM, Open-Elevation, Overpass, Open-Meteo) que pueden registrar tu IP según sus propias políticas.</p><h3>Tus derechos</h3><p>Acceso, rectificación, supresión: borra los datos locales desde el navegador.</p>', cookies: '<h2>Política de Cookies</h2><p>Usamos <strong>localStorage</strong> como equivalente técnico a cookies:</p><h3>Necesario</h3><p>• <strong>cb_accepted</strong>: guarda si aceptaste el aviso</p><h3>Funcional</h3><p>• <strong>fp_*</strong>: fotos de fuentes<br>• <strong>fn_*</strong>: notas personales<br>• <strong>saved_routes</strong>: rutas guardadas</p><p>Puedes eliminar estos datos desde Configuración del navegador → Borrar datos locales.</p>' }; function showLegal(id) { $('#legal-body').innerHTML = lt[id]; openModal('legal-modal'); setTimeout(() => $('#legal-modal .modal-content').focus(), 10); } function trapFocus(e) { const focusable = $('#legal-modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'); const first = focusable[0]; const last = focusable[focusable.length - 1]; if (e.key === 'Tab') { if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } } $('#link-legal').addEventListener('click', e => { e.preventDefault(); showLegal('aviso'); }); $('#link-privacy').addEventListener('click', e => { e.preventDefault(); showLegal('privacidad'); }); $('#link-cookies').addEventListener('click', e => { e.preventDefault(); showLegal('cookies'); }); $('#cb-info').addEventListener('click', () => showLegal('cookies')); $('#legal-modal').addEventListener('keydown', trapFocus); $('#cookie-banner').addEventListener('keydown', e => { if (e.key === 'Escape') $('#cb-accept').click(); }); })();
 
 /* === INICIALIZACIÓN === */
 $('#route-status').textContent = 'Selecciona salida, destino y paradas';
