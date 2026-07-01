@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="es" dir="ltr">
 <head>
 <meta charset="UTF-8">
@@ -466,10 +466,14 @@ const icn = (c, s, a = '') => L.divIcon({ className: 'cm', html: `<svg width="${
 const I = { r: icn('#1976d2', 20), o: icn('#e67e22', 20), st: icn('#2ecc71', 28), en: icn('#e74c3c', 28), sel: icn('#90ee90', 24) };
 const _wpIcons = {};
 const wpIcon = num => { if (!_wpIcons[num]) _wpIcons[num] = L.divIcon({ className: 'cm', html: `<svg width="36" height="36" viewBox="0 0 24 24" style="animation:blink 1s ease-in-out infinite"><path fill="#ff0000" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9.5" r="4.5" fill="#fff"/><text x="12" y="12.5" text-anchor="middle" fill="#ff0000" font-size="10" font-weight="700">${num}</text></svg>`, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36] }); return _wpIcons[num]; };
+const _wpIconsG = {};
+const wpIconG = num => { if (!_wpIconsG[num]) _wpIconsG[num] = L.divIcon({ className: 'cm', html: `<svg width="36" height="36" viewBox="0 0 24 24" style="animation:blink 1s ease-in-out infinite"><path fill="#00aa00" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9.5" r="4.5" fill="#fff"/><text x="12" y="12.5" text-anchor="middle" fill="#00aa00" font-size="10" font-weight="700">${num}</text></svg>`, iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36] }); return _wpIconsG[num]; };
 
 let markers = [], mm = {};
 let startTown = null, endTown = null, waypoints = [];
 let routing = null, currentAcc = 'all', currentTown = '', routeProfile = 'r';
+let _gpxPending = null;
+let _gpxTempLayer = null;
 let elevData = [], poiMarkers = [], weatherData = {};
 let _isAdmin = true;
 
@@ -925,7 +929,7 @@ function handleGpxFile(e) {
 
 function importGPX() { $('#gpx-file').click(); }
 
-function parseGpxFile(xmlText) {
+async function parseGpxFile(xmlText, _destIdx) {
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
   if (doc.querySelector('parsererror')) { toast('⚠️ XML inválido', 'warn'); return; }
   const nameEl = doc.querySelector('trk > name, rte > name, gpx > name');
@@ -935,30 +939,133 @@ function parseGpxFile(xmlText) {
   const wptEls = doc.querySelectorAll('wpt');
   const wpts = []; wptEls.forEach(el => { const lat = parseFloat(el.getAttribute('lat')), lon = parseFloat(el.getAttribute('lon')); if (!isNaN(lat) && !isNaN(lon)) { const n = el.querySelector('name'); wpts.push({ la: lat, lo: lon, n: n ? n.textContent.trim() : 'WP' }); } });
   if (!pts.length && !wpts.length) { toast('⚠️ El GPX no contiene datos de ruta', 'warn'); return; }
+  let destIdx = -1, vueltaWpts = [];
+  if (wpts.length >= 3 && _destIdx === undefined) {
+    _gpxPending = { name, pts, wpts, xmlText };
+    showGpxDestMarkers(wpts);
+    return;
+  }
+  if (_destIdx !== undefined) destIdx = _destIdx;
   startTown = null; endTown = null; waypoints = [];
   if (routing) { const r = routing; routing = null; r.remove(); }
   $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
-  if (wpts.length) { startTown = wpts[0]; if (wpts.length > 1) waypoints = wpts.slice(1, -1); if (wpts.length >= 2) endTown = wpts[wpts.length - 1]; }
-  if (pts.length) {
-    const latlngs = pts.map(p => [p.lat, p.lon]);
-    routing = L.polyline(latlngs, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
-    map.fitBounds(routing.getBounds(), { padding: [30, 30] });
-    let totalDist = 0;
-    for (let i = 1; i < pts.length; i++) { const p1 = pts[i - 1], p2 = pts[i], R = 6371000; const dlat = (p2.lat - p1.lat) * Math.PI / 180, dlon = (p2.lon - p1.lon) * Math.PI / 180; const a = Math.sin(dlat / 2) ** 2 + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dlon / 2) ** 2; totalDist += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
-    const distKm = totalDist / 1000, timeMin = Math.round(distKm / 0.8);
-    $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = timeMin + ' min';
-    if (!wpts.length && pts.length >= 2) { startTown = { la: pts[0].lat, lo: pts[0].lon, n: 'Inicio' }; endTown = { la: pts[pts.length - 1].lat, lo: pts[pts.length - 1].lon, n: 'Destino' }; }
-    const hasEle = pts.some(p => p.ele !== null && !isNaN(p.ele));
-    if (hasEle) {
-      const elData = []; let cd = 0;
-      for (let i = 0; i < pts.length; i++) { if (i > 0) { const dx = pts[i].lat - pts[i - 1].lat, dy = pts[i].lon - pts[i - 1].lon; cd += Math.sqrt(dx * dx + dy * dy) * 111320; } elData.push({ dist: cd / 1000, lat: pts[i].lat, lon: pts[i].lon, ele: pts[i].ele || 0 }); }
-      drawElevation(elData);
-    } else if (pts.length > 1) { const step = Math.max(1, Math.floor(pts.length / 100)); const samples = []; for (let i = 0; i < pts.length; i += step) samples.push([pts[i].lat, pts[i].lon]); if (samples[samples.length - 1][0] !== pts[pts.length - 1].lat) samples.push([pts[pts.length - 1].lat, pts[pts.length - 1].lon]); calcElevation(samples, d => drawElevation(d)); }
-    const legs = [{ name: '🏁 ' + (startTown ? startTown.n : 'Inicio'), dist: 0, time: 0, road: '' }, { name: '🎯 ' + (endTown ? endTown.n : 'Destino'), dist: distKm * 1000, time: timeMin * 60, road: '' }];
-    renderLegs(legs);
+  routeLayer.clearLayers();
+  if (wpts.length) {
+    startTown = wpts[0];
+    if (destIdx >= 1) {
+      for (let i = 1; i < destIdx; i++) waypoints.push(wpts[i]);
+      endTown = wpts[destIdx];
+      for (let i = destIdx + 1; i < wpts.length; i++) vueltaWpts.push(wpts[i]);
+    } else {
+      if (wpts.length > 1) waypoints = wpts.slice(1, -1);
+      if (wpts.length >= 2) endTown = wpts[wpts.length - 1];
+    }
+    waypoints.forEach((w, i) => {
+      const mk = L.marker([w.la, w.lo], { icon: wpIcon(i + 1) }).addTo(routeLayer);
+      mk.bindPopup('<div class="p-title">📌 Parada ' + (i + 1) + ': ' + w.n + '</div>');
+    });
+    vueltaWpts.forEach((w, i) => {
+      const mk = L.marker([w.la, w.lo], { icon: wpIconG(i + 1) }).addTo(routeLayer);
+      mk.bindPopup('<div class="p-title">🟢 Vuelta ' + (i + 1) + ': ' + w.n + '</div>');
+    });
+  }
+  if (!wpts.length && pts.length >= 2) { startTown = { la: pts[0].lat, lo: pts[0].lon, n: 'Inicio' }; endTown = { la: pts[pts.length - 1].lat, lo: pts[pts.length - 1].lon, n: 'Destino' }; }
+  await drawGpxRoute(startTown, waypoints, endTown, vueltaWpts, pts, destIdx);
+  if (!pts.length && wpts.length >= 1) {
+    const allPts = [startTown, ...waypoints, ...vueltaWpts, endTown].filter(Boolean);
+    if (allPts.length >= 2) {
+      map.fitBounds(L.latLngBounds(allPts.map(p => [p.la, p.lo])), { padding: [30, 30] });
+    } else if (allPts.length === 1) {
+      map.setView([allPts[0].la, allPts[0].lo], 15);
+    }
   }
   updTownMarkers(); syncMm(); renderList(); updSum();
   toast('✅ ' + name + (pts.length ? ' (' + $('#r-dist').textContent + ')' : ' (' + wpts.length + ' waypoints)'));
+}
+
+function showGpxDestMarkers(wpts) {
+  if (_gpxTempLayer) _gpxTempLayer.clearLayers();
+  else { _gpxTempLayer = L.layerGroup().addTo(map); }
+  for (let i = 1; i < wpts.length - 1; i++) {
+    const mk = L.marker([wpts[i].la, wpts[i].lo], { icon: wpIconG(i + 1) }).addTo(_gpxTempLayer);
+    mk.bindPopup('<div class="p-title">' + wpts[i].n + '</div><button class="btn btn-pri btn-sm" onclick="applyGpxDest(' + i + ')">🎯 Hacer destino</button>');
+  }
+  map.fitBounds(L.latLngBounds(wpts.map(p => [p.la, p.lo])).pad(0.1));
+}
+function applyGpxDest(idx) {
+  if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }
+  const data = _gpxPending;
+  _gpxPending = null;
+  parseGpxFile(data.xmlText, idx);
+}
+
+async function drawGpxRoute(start, idaWps, dest, vueltaWps, rawPts, destIdx) {
+  const idaPts = [];
+  if (start?.la) idaPts.push(start);
+  idaWps.forEach(w => idaPts.push(w));
+  if (dest?.la) idaPts.push(dest);
+  
+  let totalDist = 0, totalTime = 0, allLegPts = [];
+  
+  // Helper to call OSRM
+  async function osrmRoute(pts, color) {
+    if (pts.length < 2) return null;
+    const coords = pts.map(p => p.lo + ',' + p.la).join(';');
+    const url = CONFIG.OSRM + '/driving/' + coords + '?overview=full&geometries=polyline';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.code !== 'Ok' || !data.routes?.length) return null;
+      const r = data.routes[0];
+      const legPts = decodePolyline(r.geometry);
+      const pl = L.polyline(legPts, { color: color, opacity: .7, weight: 4 }).addTo(map);
+      totalDist += r.distance;
+      totalTime += r.duration;
+      legPts.forEach(p => allLegPts.push(p));
+      return pl;
+    } catch (e) { return null; }
+  }
+  
+  if (destIdx >= 1 && dest?.la && vueltaWps.length) {
+    // Ida + Vuelta
+    const idaPl = await osrmRoute(idaPts, '#ff0000');
+    const vueltaPts = [dest, ...vueltaWps, start].filter(Boolean);
+    const vueltaPl = await osrmRoute(vueltaPts, '#00aa00');
+    if (!idaPl && !vueltaPl) routing = null;
+    else if (idaPl) routing = idaPl;
+    else if (vueltaPl) routing = vueltaPl;
+  } else if (idaPts.length >= 2) {
+    // Single route (ida only or no split)
+    const pl = await osrmRoute(idaPts, destIdx >= 1 ? '#ff0000' : '#1a73e8');
+    if (pl) routing = pl;
+  }
+  
+  // Fallback: draw raw track pts if OSRM failed
+  if (!routing && rawPts?.length >= 2) {
+    const latlngs = rawPts.map(p => [p.lat, p.lon]);
+    routing = L.polyline(latlngs, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
+    let cd = 0;
+    for (let i = 1; i < rawPts.length; i++) { const dx = rawPts[i].lat - rawPts[i - 1].lat, dy = rawPts[i].lon - rawPts[i - 1].lon; cd += Math.sqrt(dx * dx + dy * dy) * 111320; }
+    totalDist = cd;
+  }
+  
+  if (routing) {
+    map.fitBounds(routing.getBounds(), { padding: [30, 30] });
+    const distKm = totalDist / 1000, timeMin = Math.round(totalTime / 60 || distKm / 0.8);
+    $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = timeMin + ' min';
+    if (!rawPts?.length && allLegPts.length) rawPts = allLegPts.map(p => ({ lat: p[0], lon: p[1] }));
+    if (rawPts?.length) {
+      const hasEle = rawPts.some(p => p.ele !== null && !isNaN(p.ele));
+      if (hasEle) {
+        const elData = []; let cd = 0;
+        for (let i = 0; i < rawPts.length; i++) { if (i > 0) { const dx = rawPts[i].lat - rawPts[i - 1].lat, dy = rawPts[i].lon - rawPts[i - 1].lon; cd += Math.sqrt(dx * dx + dy * dy) * 111320; } elData.push({ dist: cd / 1000, lat: rawPts[i].lat, lon: rawPts[i].lon, ele: rawPts[i].ele || 0 }); }
+        drawElevation(elData);
+      } else if (rawPts.length > 1) { const step = Math.max(1, Math.floor(rawPts.length / 100)); const samples = []; for (let i = 0; i < rawPts.length; i += step) samples.push([rawPts[i].lat, rawPts[i].lon]); if (samples[samples.length - 1][0] !== rawPts[rawPts.length - 1].lat) samples.push([rawPts[rawPts.length - 1].lat, rawPts[rawPts.length - 1].lon]); calcElevation(samples, d => drawElevation(d)); }
+    }
+    const legs = [{ name: '🏁 ' + (start ? start.n : 'Inicio'), dist: 0, time: 0, road: '' }, { name: '🎯 ' + (dest ? dest.n : 'Destino'), dist: totalDist, time: totalTime, road: '' }];
+    renderLegs(legs);
+  }
 }
 
 
@@ -1028,7 +1135,7 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 /* === EVENTOS Y CONTROLADORES === */
 $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; updSum(); } else { currentAcc = b.dataset.v; renderList(); applyFilters(); } }); });
 $('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
-$('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
+$('#btn-clear').addEventListener('click', () => { if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }  startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
 function applyFilters() { if (routing) return; mcg.clearLayers(); if (!currentTown) return; markers.forEach(m => { if (routeLayer.hasLayer(m)) return; const f = m._fd; if (f.p === currentTown && (currentAcc === 'all' || f.t === currentAcc)) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
