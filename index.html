@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="es" dir="ltr">
 <head>
 <meta charset="UTF-8">
@@ -276,7 +276,14 @@ select,input{font-size:16px;min-height:44px}
 <div id="route-status" style="font-size:.64rem;color:var(--sub);margin:5px 0" aria-live="polite"></div>
 <div class="row" style="gap:4px;flex-wrap:wrap">
 <button class="btn btn-pri btn-sm" id="btn-calc" style="flex:2" aria-label="Calcular ruta">🛵 Calcular ruta</button>
-<button class="btn btn-sec btn-sm" id="btn-gpx" aria-label="Exportar GPX">📥 GPX</button>
+<div class="btn-group-gpx" style="position:relative;flex:1;min-width:0">
+<button class="btn btn-sec btn-sm" id="btn-gpx" aria-label="GPX" style="width:100%">📥 GPX ▾</button>
+<div id="gpx-menu" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--panel);border:1px solid var(--border);border-radius:4px;margin-top:2px;box-shadow:0 4px 12px rgba(0,0,0,.4);overflow:hidden">
+<button class="btn btn-sec btn-sm" id="btn-gpx-export" style="width:100%;border:none;border-radius:0;justify-content:flex-start;min-height:36px">📤 Exportar GPX</button>
+<button class="btn btn-sec btn-sm" id="btn-gpx-import" style="width:100%;border:none;border-radius:0;justify-content:flex-start;min-height:36px">📥 Importar GPX</button>
+</div>
+</div>
+<input type="file" accept=".gpx" id="gpx-file" style="display:none">
 <button class="btn btn-sec btn-sm" id="btn-share" aria-label="Compartir enlace">🔗</button>
 <button class="btn btn-sec btn-sm" id="btn-save" aria-label="Guardar ruta">💾</button>
 </div>
@@ -899,6 +906,61 @@ function exportGPX() {
   const blob = new Blob([xml], { type: 'application/gpx+xml' }); const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = 'ruta_motera_cadiz.gpx'; a.click(); URL.revokeObjectURL(url); toast('📥 GPX exportado');
 }
+function toggleGpxMenu() {
+  const menu = $('#gpx-menu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', function(e) {
+  const btn = $('#btn-gpx'); const menu = $('#gpx-menu');
+  if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) menu.style.display = 'none';
+});
+
+function handleGpxFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) { parseGpxFile(evt.target.result); };
+  reader.readAsText(file); e.target.value = '';
+  $('#gpx-menu').style.display = 'none';
+}
+
+function importGPX() { $('#gpx-file').click(); }
+
+function parseGpxFile(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+  if (doc.querySelector('parsererror')) { toast('⚠️ XML inválido', 'warn'); return; }
+  const nameEl = doc.querySelector('trk > name, rte > name, gpx > name');
+  const name = nameEl ? nameEl.textContent.trim() : 'Ruta importada';
+  const trkPts = doc.querySelectorAll('trkpt, rtept');
+  const pts = []; trkPts.forEach(el => { const lat = parseFloat(el.getAttribute('lat')), lon = parseFloat(el.getAttribute('lon')); if (!isNaN(lat) && !isNaN(lon)) { const ele = el.querySelector('ele'); pts.push({ lat, lon, ele: ele ? parseFloat(ele.textContent) : null }); } });
+  const wptEls = doc.querySelectorAll('wpt');
+  const wpts = []; wptEls.forEach(el => { const lat = parseFloat(el.getAttribute('lat')), lon = parseFloat(el.getAttribute('lon')); if (!isNaN(lat) && !isNaN(lon)) { const n = el.querySelector('name'); wpts.push({ la: lat, lo: lon, n: n ? n.textContent.trim() : 'WP' }); } });
+  if (!pts.length && !wpts.length) { toast('⚠️ El GPX no contiene datos de ruta', 'warn'); return; }
+  startTown = null; endTown = null; waypoints = [];
+  if (routing) { const r = routing; routing = null; r.remove(); }
+  $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
+  if (wpts.length) { startTown = wpts[0]; if (wpts.length > 1) waypoints = wpts.slice(1, -1); if (wpts.length >= 2) endTown = wpts[wpts.length - 1]; }
+  if (pts.length) {
+    const latlngs = pts.map(p => [p.lat, p.lon]);
+    routing = L.polyline(latlngs, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
+    map.fitBounds(routing.getBounds(), { padding: [30, 30] });
+    let totalDist = 0;
+    for (let i = 1; i < pts.length; i++) { const p1 = pts[i - 1], p2 = pts[i], R = 6371000; const dlat = (p2.lat - p1.lat) * Math.PI / 180, dlon = (p2.lon - p1.lon) * Math.PI / 180; const a = Math.sin(dlat / 2) ** 2 + Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * Math.sin(dlon / 2) ** 2; totalDist += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
+    const distKm = totalDist / 1000, timeMin = Math.round(distKm / 0.8);
+    $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = timeMin + ' min';
+    if (!wpts.length && pts.length >= 2) { startTown = { la: pts[0].lat, lo: pts[0].lon, n: 'Inicio' }; endTown = { la: pts[pts.length - 1].lat, lo: pts[pts.length - 1].lon, n: 'Destino' }; }
+    const hasEle = pts.some(p => p.ele !== null && !isNaN(p.ele));
+    if (hasEle) {
+      const elData = []; let cd = 0;
+      for (let i = 0; i < pts.length; i++) { if (i > 0) { const dx = pts[i].lat - pts[i - 1].lat, dy = pts[i].lon - pts[i - 1].lon; cd += Math.sqrt(dx * dx + dy * dy) * 111320; } elData.push({ dist: cd / 1000, lat: pts[i].lat, lon: pts[i].lon, ele: pts[i].ele || 0 }); }
+      drawElevation(elData);
+    } else if (pts.length > 1) { const step = Math.max(1, Math.floor(pts.length / 100)); const samples = []; for (let i = 0; i < pts.length; i += step) samples.push([pts[i].lat, pts[i].lon]); if (samples[samples.length - 1][0] !== pts[pts.length - 1].lat) samples.push([pts[pts.length - 1].lat, pts[pts.length - 1].lon]); calcElevation(samples, d => drawElevation(d)); }
+    const legs = [{ name: '🏁 ' + (startTown ? startTown.n : 'Inicio'), dist: 0, time: 0, road: '' }, { name: '🎯 ' + (endTown ? endTown.n : 'Destino'), dist: distKm * 1000, time: timeMin * 60, road: '' }];
+    renderLegs(legs);
+  }
+  updTownMarkers(); syncMm(); renderList(); updSum();
+  toast('✅ ' + name + (pts.length ? ' (' + $('#r-dist').textContent + ')' : ' (' + wpts.length + ' waypoints)'));
+}
+
 
 function shareLink() {
   const wpIds = waypoints.map(w => w._idx); let hash = 'r=' + routeProfile;
@@ -965,7 +1027,7 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 
 /* === EVENTOS Y CONTROLADORES === */
 $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; updSum(); } else { currentAcc = b.dataset.v; renderList(); applyFilters(); } }); });
-$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', exportGPX); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
+$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
 $('#btn-clear').addEventListener('click', () => { startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
