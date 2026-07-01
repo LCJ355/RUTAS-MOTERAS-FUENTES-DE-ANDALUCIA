@@ -1,4 +1,4 @@
-const CACHE = 'rm-cache-v1';
+﻿const CACHE = 'rm-cache-v1';
 const URLS = ['/', 'index.html', 'manifest.json', 'fuentes_data.js', 'photos_data.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(clients.claim()); });
