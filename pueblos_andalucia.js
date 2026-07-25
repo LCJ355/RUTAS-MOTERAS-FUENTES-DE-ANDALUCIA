@@ -28,6 +28,6 @@ var PED = {
 
 function getTownPos(name) {
   if (PED[name]) return { lat: PED[name][0], lon: PED[name][1], parent: PED[name][2] };
-  if (TC[name]) return { lat: TC[name][0], lon: TC[name][1], parent: null };
+  if (typeof TC !== 'undefined' && TC[name]) return { lat: TC[name][0], lon: TC[name][1], parent: null };
   return null;
 }
