@@ -36,6 +36,7 @@ Anadir fotos (solo admin):
   1. Pulsa "Admin" y escribe la contrasena: rutas2025
   2. Pulsa una fuente en el mapa, luego "camara"
   3. O pega una foto directamente con Ctrl+V
+  4. Las fotos se guardan automaticamente en el navegador
 
 Otras funciones:
   - Clima: despues de calcular la ruta
@@ -69,7 +70,7 @@ Provincias:           8 (Almeria, Cadiz, Cordoba, Granada,
 Total fuentes:        13.720
 Total pueblos:        742
 
-Version:              2.0 (Mayo 2026)
+Version:              2.1 (Julio 2026)
 
 
 ============================================================
@@ -78,7 +79,10 @@ ESTRUCTURA DE ARCHIVOS
 
 index.html            - La web (abrelo en el navegador)
 fuentes_data.js       - Datos de 13.720 fuentes (coordenadas)
+photos_data.js        - Fotos de fuentes (auto-generado)
 INSTRUCCIONES.txt     - Este archivo
+NO_OLVIDAR.txt        - Recordatorios tecnicos
+PARA-ACTUALIZAR.txt   - Enlace GitHub y tokens
 
 
 ============================================================
@@ -119,3 +123,8 @@ NOTAS TECNICAS
 - Los datos se almacenan en LocalStorage del navegador
 - La contrasena de admin esta visible en el codigo fuente
 - Para compartir la web, sube los archivos a cualquier hosting
+
+- Popups: fondo oscuro (#161b22), titulo dorado (#f5c842),
+  marcadores azul fuerte (#1976d2)
+- Las fotos se guardan en localStorage (Chrome/Edge/HTTPS)
+  o se exportan a photos_data.js (Firefox file://)
