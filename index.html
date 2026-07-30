@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" dir="ltr">
 <head>
 <meta charset="UTF-8">
@@ -639,16 +639,12 @@ function saveGithubToken() {
   const v = $('#github-token').value.trim();
   if (!v) { $('#github-token-status').textContent = '❌ Token vacío'; return; }
   if (!confirm('⚠️ El token se guardará en localStorage en texto plano.\n\nSi alguien accede a tu dispositivo, podrá modificar tu repositorio.\n\n¿Continuar?')) return;
-  localStorage.setItem('gh_token', v);
+  safeLS.set('gh_token', v);
   $('#github-token-status').textContent = '✅ Token guardado';
   toast('🔑 Token guardado (usa con precaución)');
 }
-function clearGithubToken() {
-  localStorage.removeItem('gh_token');
-  $('#github-token').value = ''; $('#github-token-status').textContent = '🔑 No configurado';
-  toast('🔑 Token eliminado');
-}
-function getGithubToken() { return localStorage.getItem('gh_token') || ''; }
+function clearGithubToken() { safeLS.set('gh_token', ''); $('#github-token').value = ''; $('#github-token-status').textContent = '🔑 No configurado'; toast('🔑 Token eliminado'); }
+function getGithubToken() { return safeLS.get('gh_token') || ''; }
 
 async function exportPhotosToFile() {
   if (!_savedPhotos) _savedPhotos = {};
@@ -753,10 +749,10 @@ function updPop(mk) {
   let h = `<div class="p-title">${f.n}</div><div class="p-town">📍 ${f.p}</div>`;
   h += `<div class="p-acc ${f.t}">${aLbl(f.t)}</div>`;
   if (isWp) h += `<div class="p-status">📍 Parada ${wpI + 1}</div>`;
-  if (note) h += `<div class="p-note">📝 ${note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  if (note) h += `<div class="p-note">📝 ${escapeHtml(note)}</div>`;
   if (photo) h += `<div style="margin:4px 0"><img src="${photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" /></div>`;
   const cap = getCaption(f._idx);
-  if (photo && cap) h += `<div class="p-caption">📷 ${cap.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  if (photo && cap) h += `<div class="p-caption">📷 ${escapeHtml(cap)}</div>`;
   h += '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">';
   if (startTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🏁 Inicio</button>';
   else if (endTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🎯 Destino</button>';
@@ -788,7 +784,7 @@ function updTownMarkers() {
 }
 
 /* === WAYPOINTS === */
-function toggleWp(f) { const idx = waypoints.findIndex(w => w._idx === f._idx); if (idx >= 0) { waypoints.splice(idx, 1); const mk = mm[f._idx]; if (mk && routeLayer.hasLayer(mk)) routeLayer.removeLayer(mk); if (!routing) applyFilters(); } else { if (startTown?._idx === f._idx) startTown = null; if (endTown?._idx === f._idx) endTown = null; waypoints.push(f); const mk = mm[f._idx]; if (mk) { if (mcg.hasLayer(mk)) mcg.removeLayer(mk); routeLayer.addLayer(mk); mk.openPopup(); mk.off('popupclose'); mk.on('popupclose', () => { if (waypoints.some(w => w._idx === f._idx)) mk.openPopup(); }); } } syncMm(); renderList(); updSum(); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
+function toggleWp(f) { const idx = waypoints.findIndex(w => w._idx === f._idx); if (idx >= 0) { waypoints.splice(idx, 1); const mk = mm[f._idx]; if (mk && routeLayer.hasLayer(mk)) { routeLayer.removeLayer(mk); if (routing) mcg.addLayer(mk); } if (!routing) applyFilters(); } else { if (startTown?._idx === f._idx) startTown = null; if (endTown?._idx === f._idx) endTown = null; waypoints.push(f); const mk = mm[f._idx]; if (mk) { if (mcg.hasLayer(mk)) mcg.removeLayer(mk); routeLayer.addLayer(mk); mk.openPopup(); mk.off('popupclose'); mk.on('popupclose', () => { if (waypoints.some(w => w._idx === f._idx)) mk.openPopup(); }); } } syncMm(); renderList(); updSum(); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
 function openRoutePopups() { if (startTownMarker && !startTownMarker.isPopupOpen()) startTownMarker.openPopup(); if (endTownMarker && !endTownMarker.isPopupOpen()) endTownMarker.openPopup(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && !mk.isPopupOpen()) mk.openPopup(); }); }
 function useGpsLocation() { btnLoading('#btn-gps', '⏳ GPS...'); navigator.geolocation.getCurrentPosition(p => { btnLoading('#btn-gps'); startTown = { la: p.coords.latitude, lo: p.coords.longitude, n: '📍 Mi ubicación', p: '📍 Mi ubicación' }; $('#prov-start').value = ''; $('#town-start').value = ''; updTownMarkers(); updSum(); toast('📍 GPS: ubicación actual como salida'); }, e => { btnLoading('#btn-gps'); toast('⚠️ GPS: ' + (e.code === 1 ? 'permiso denegado' : e.code === 2 ? 'señal no disponible' : 'timeout'), 'warn'); }, { enableHighAccuracy: true, timeout: 10000 }); }
 function togglePanel() { const sb = $('#sidebar'); sb.classList.toggle('open'); const btn = $('#btn-toggle-panel'); if (btn) btn.textContent = sb.classList.contains('open') ? '✕' : '📋'; }
@@ -806,7 +802,7 @@ function renderList() {
     const wpIdx = waypoints.findIndex(w => w._idx === x._idx); const isWp = wpIdx >= 0;
     const hasNote = safeLS.get('fn_' + x._idx); const hasPhoto = getPhoto(x._idx); const hasCap = safeLS.get('fc_' + x._idx);
     const d = document.createElement('div'); d.className = 'fi';
-    d.innerHTML = `<div class="fi-i"><div class="fi-n">${x.n}${hasNote ? ' <span class="note-dot"></span>' : ''}${hasPhoto ? ' <span class="photo-dot"></span>' : ''}${hasCap ? ' <span class="cap-dot"></span>' : ''}</div><div class="fi-t">${x.p} · ${aLbl(x.t)}</div></div>`;
+    d.innerHTML = `<div class="fi-i"><div class="fi-n">${escapeHtml(x.n)}${hasNote ? ' <span class="note-dot"></span>' : ''}${hasPhoto ? ' <span class="photo-dot"></span>' : ''}${hasCap ? ' <span class="cap-dot"></span>' : ''}</div><div class="fi-t">${escapeHtml(x.p)} · ${aLbl(x.t)}</div></div>`;
     const bw = document.createElement('button'); bw.className = 'fi-btn wp' + (isWp ? ' on' : ''); bw.textContent = isWp ? wpIdx + 1 : '+'; bw.title = 'Parada';
     bw.addEventListener('click', e => { e.stopPropagation(); toggleWp(x); });
     const bn = document.createElement('button'); bn.className = 'fi-btn nt' + (hasNote ? ' on' : ''); bn.textContent = '📝';
@@ -827,7 +823,7 @@ function renderList() {
 function updSum() {
   $('#r-start').textContent = startTown?.n?.substring(0, 18) || '—'; $('#r-end').textContent = endTown?.n?.substring(0, 18) || '—'; $('#r-wps').textContent = waypoints.length;
   const mini = $('#waypoints-mini');
-  mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${w.n.substring(0, 12)}</span>`).join('');
+  mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${(w.n || 'WP').substring(0, 12)}</span>`).join('');
   const modeLabel = { r: 'Rápido', c: 'Curvas' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
 }
 
@@ -861,7 +857,7 @@ function drawElevation(data) {
   for (let i = 1; i < data.length; i++) { const diff = data[i].ele - data[i - 1].ele; if (diff > 0) gain += diff; else loss -= diff; }
   $('#el-max').textContent = Math.round(maxE) + 'm'; $('#el-min').textContent = Math.round(minE) + 'm'; $('#el-gain').textContent = Math.round(gain) + 'm'; $('#el-loss').textContent = Math.round(loss) + 'm';
   elevData = data;
-  const W = 600, H = 80, pad = 10, maxD = data[data.length - 1].dist, rangeE = maxE - minE || 1;
+  const W = 600, H = 80, pad = 10, maxD = data[data.length - 1].dist || 1, rangeE = maxE - minE || 1;
   const pts = data.map(d => `${pad + (d.dist / maxD) * (W - 2 * pad)},${H - pad - ((d.ele - minE) / rangeE) * (H - 2 * pad)}`).join(' ');
   const area = `M${pad},${H}L${pts}L${W - pad},${H}Z`;
   svg.innerHTML = '';
@@ -1072,7 +1068,7 @@ async function drawGpxRoute(start, idaWps, dest, vueltaWps, rawPts, destIdx) {
         const elData = []; let cd = 0;
         for (let i = 0; i < rawPts.length; i++) { if (i > 0) { const dx = rawPts[i].lat - rawPts[i - 1].lat, dy = rawPts[i].lon - rawPts[i - 1].lon; cd += Math.sqrt(dx * dx + dy * dy) * 111320; } elData.push({ dist: cd / 1000, lat: rawPts[i].lat, lon: rawPts[i].lon, ele: rawPts[i].ele || 0 }); }
         drawElevation(elData);
-      } else if (rawPts.length > 1) { const step = Math.max(1, Math.floor(rawPts.length / 100)); const samples = []; for (let i = 0; i < rawPts.length; i += step) samples.push([rawPts[i].lat, rawPts[i].lon]); if (samples[samples.length - 1][0] !== rawPts[rawPts.length - 1].lat) samples.push([rawPts[rawPts.length - 1].lat, rawPts[rawPts.length - 1].lon]); calcElevation(samples, d => drawElevation(d)); }
+      } else if (rawPts.length > 1) { const step = Math.max(1, Math.floor(rawPts.length / 100)); const samples = []; for (let i = 0; i < rawPts.length; i += step) samples.push([rawPts[i].lat, rawPts[i].lon]); if (samples[samples.length - 1][0] !== rawPts[rawPts.length - 1].lat) samples.push([rawPts[rawPts.length - 1].lat, rawPts[rawPts.length - 1].lon]); await calcElevation(samples).then(d => drawElevation(d)); }
     }
     const legs = [{ name: '🏁 ' + (start ? start.n : 'Inicio'), dist: 0, time: 0, road: '' }, { name: '🎯 ' + (dest ? dest.n : 'Destino'), dist: totalDist, time: totalTime, road: '' }];
     renderLegs(legs);
@@ -1082,7 +1078,9 @@ async function drawGpxRoute(start, idaWps, dest, vueltaWps, rawPts, destIdx) {
 
 function shareLink() {
   const wpIds = waypoints.map(w => w._idx); let hash = 'r=' + routeProfile;
-  if (startTown) hash += '&s=' + encodeURIComponent(startTown.p) + '|' + startTown.n; if (endTown) hash += '&e=' + encodeURIComponent(endTown.p) + '|' + endTown.n; if (wpIds.length) hash += '&w=' + wpIds.join(',');
+  if (startTown) hash += '&s=' + encodeURIComponent(startTown.p) + '|' + encodeURIComponent(startTown.n);
+  if (endTown) hash += '&e=' + encodeURIComponent(endTown.p) + '|' + encodeURIComponent(endTown.n);
+  if (wpIds.length) hash += '&w=' + wpIds.join(',');
   const url = location.href.split('#')[0] + '#' + hash;
   navigator.clipboard.writeText(url).then(() => toast('✅ Enlace copiado')).catch(() => prompt('Copia este enlace:', url));
 }
@@ -1183,11 +1181,8 @@ function getScrollEl() { const active = document.querySelector('.tab-panel.activ
 function onStart(e) { startY = e.touches[0].clientY; moved = false; scrollLocked = false; }
 function onMove(e) { if (window.innerWidth > 768) return; const dy = e.touches[0].clientY - startY; if (Math.abs(dy) < 10) return; moved = true; const scrollEl = getScrollEl(); if (sb.classList.contains('open')) { if (scrollEl.scrollTop <= 0 && dy > 70) { sb.classList.remove('open'); $('#btn-toggle-panel').textContent = '📋'; } else if (dy > 70) scrollLocked = true; } else { if (dy < -50) { sb.classList.add('open'); $('#btn-toggle-panel').textContent = '✕'; } } }
 function onEnd() { moved = false; scrollLocked = false; }
-hd.addEventListener('touchstart', onStart, { passive: true });
-hd.addEventListener('touchmove', onMove, { passive: true });
-hd.addEventListener('touchend', onEnd, { passive: true });
-hd.addEventListener('click', function(e) { e.stopPropagation(); if (window.innerWidth <= 768) togglePanel(); });
-['touchstart','touchmove','touchend'].forEach(ev => hd.addEventListener(ev, ev === 'touchstart' ? onStart : ev === 'touchmove' ? onMove : onEnd, { passive: true })); })();
+['touchstart','touchmove','touchend'].forEach(ev => hd.addEventListener(ev, ev === 'touchstart' ? onStart : ev === 'touchmove' ? onMove : onEnd, { passive: true }));
+hd.addEventListener('click', function(e) { e.stopPropagation(); if (window.innerWidth <= 768) togglePanel(); }); })();
 // Tab switching
 $$('.tab-btn').forEach(btn => { btn.addEventListener('click', function() { if (window.innerWidth > 768) return; $$('.tab-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); $$('.tab-panel').forEach(p => p.classList.remove('active')); const p = document.querySelector(`.tab-panel[data-tab="${this.dataset.tab}"]`); if (p) p.classList.add('active'); }); });
 // D: close panel on fountain select (mobile)
