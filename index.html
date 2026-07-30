@@ -235,7 +235,7 @@ select,input{font-size:16px;min-height:44px}
 <div class="lbl">🛣 Modo ruta</div>
 <div class="btn-grp" role="radiogroup" aria-label="Modo de ruta">
 <button class="active" data-v="r" role="radio" aria-checked="true">🏎 Rápido</button>
-<button data-v="c" role="radio" aria-checked="false">🌀 Curvas</button>
+<button data-v="c" role="radio" aria-checked="false">🚫 Sin Autovías</button>
 </div>
 
 <div class="lbl">Tipo de acceso</div>
@@ -824,7 +824,7 @@ function updSum() {
   $('#r-start').textContent = startTown?.n?.substring(0, 18) || '—'; $('#r-end').textContent = endTown?.n?.substring(0, 18) || '—'; $('#r-wps').textContent = waypoints.length;
   const mini = $('#waypoints-mini');
   mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${(w.n || 'WP').substring(0, 12)}</span>`).join('');
-  const modeLabel = { r: 'Rápido', c: 'Curvas' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
+  const modeLabel = { r: 'Rápido', c: 'Sin Autovías' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
 }
 
 /* === POLYLINE DECODE === */
