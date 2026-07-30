@@ -824,7 +824,7 @@ function updSum() {
   $('#r-start').textContent = startTown?.n?.substring(0, 18) || '—'; $('#r-end').textContent = endTown?.n?.substring(0, 18) || '—'; $('#r-wps').textContent = waypoints.length;
   const mini = $('#waypoints-mini');
   mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${(w.n || 'WP').substring(0, 12)}</span>`).join('');
-  const modeLabel = { r: 'Rápido', c: 'Sin Autovías' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
+  const modeLabel = { r: 'Rápido', c: 'Sin Autovías' }; const accLabel = { all: '', r: ' · Asfaltada', o: ' · Off-road' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]}${accLabel[currentAcc]})`;
 }
 
 /* === POLYLINE DECODE === */
@@ -875,7 +875,7 @@ async function calcRoute() {
   waypoints.forEach(w => rll.push(L.latLng(w.la, w.lo))); if (endTown?.la) rll.push(L.latLng(endTown.la, endTown.lo));
   $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#leg-body').innerHTML = ''; $('#route-status').textContent = '';
   if (rll.length < 2) { $('#route-status').textContent = '⚠ Selecciona inicio, paradas y destino'; return; }
-  const profiles = { r: 'driving', c: 'driving' }; const profile = profiles[routeProfile] || 'driving';
+  const profile = currentAcc === 'o' ? 'cycling' : 'driving';
   $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true); btnLoading('#btn-calc', '⏳ Calculando...');
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
