@@ -881,44 +881,57 @@ async function calcRoute() {
   if (endTown?.la) pts.push(endTown);
   $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#leg-body').innerHTML = ''; $('#route-status').textContent = '';
   if (pts.length < 2) { $('#route-status').textContent = '⚠ Selecciona inicio, paradas y destino'; return; }
-  const useBike = currentAcc === 'o';
-  const body = {
-    locations: pts.map(p => ({ lat: p.la, lon: p.lo })),
-    costing: useBike ? 'bicycle' : 'auto',
-    costing_options: {},
-    units: 'kilometers'
-  };
-  if (routeProfile === 'c' && !useBike) body.costing_options.auto = { exclude: ['motorway', 'trunk'] };
   $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true); btnLoading('#btn-calc', '⏳ Calculando...');
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
+  let routeEngine = null, shape = null, totalKm = 0, totalSec = 0, legData = [];
   try {
-    const res = await fetch('https://valhalla1.openstreetmap.de/route', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error(`Valhalla ${res.status}`);
-    const data = await res.json();
-    if (!data.trip || !data.trip.legs?.length) throw new Error('No route');
-    const t = data.trip;
-    const distKm = t.summary.distance, timeMin = Math.round(t.summary.time / 60);
-    const fmtTime = t2 => { const h = Math.floor(t2 / 60), m = t2 % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
-    $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
-    $('#route-status').textContent = '✅ ' + Math.round(distKm) + ' km';
-    const legPts = decodePolyline(t.legs[0].shape);
-    routing = L.polyline(legPts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
-    map.fitBounds(routing.getBounds(), { padding: [30, 30] });
-    const legs = []; let accDist = 0;
-    t.legs.forEach((leg, i) => {
-      const d = (leg.summary.distance || 0) * 1000, tim = leg.summary.time || 0;
-      accDist += d;
-      legs.push({
-        name: pts[i]?.n ? pts[i].n.substring(0, 20) : (i === 0 ? '🏁 Inicio' : '📍 ' + (i + 1)),
-        dist: d, time: tim, road: leg.maneuvers?.[0]?.street_names?.[0] || '—'
-      });
-    });
-    const elData = await calcElevation(legPts); drawElevation(elData);
-    if (elData?.length > 1) { $('#el-max').textContent = Math.round(Math.max(...elData.map(d => d.ele))); $('#el-min').textContent = Math.round(Math.min(...elData.map(d => d.ele))); let gn = 0, ls = 0; for (let i = 1; i < elData.length; i++) { const d = elData[i].ele - elData[i - 1].ele; if (d > 0) gn += d; else ls -= d; } $('#el-gain').textContent = Math.round(gn) + 'm'; $('#el-loss').textContent = Math.round(ls) + 'm'; }
-    renderLegs(legs); showRouteMarkers();
+    // Try 1: Valhalla GET (JSON param) — soporta exclude=motorway de verdad
+    try {
+    const vb = {
+      locations: pts.map(p => ({ lat: p.la, lon: p.lo })),
+      costing: currentAcc === 'o' ? 'bicycle' : 'auto',
+      costing_options: {},
+      units: 'kilometers'
+    };
+    if (routeProfile === 'c' && currentAcc !== 'o') vb.costing_options.auto = { exclude: ['motorway', 'trunk'] };
+    const r1 = await fetch('https://valhalla1.openstreetmap.de/route?json=' + encodeURIComponent(JSON.stringify(vb)));
+    if (r1.ok) {
+      const d1 = await r1.json();
+      if (d1.trip?.legs?.length) {
+        routeEngine = 'valhalla'; shape = d1.trip.legs[0].shape; totalKm = d1.trip.summary.distance; totalSec = d1.trip.summary.time;
+        d1.trip.legs.forEach((leg, i) => legData.push({ dist: (leg.summary.distance || 0) * 1000, time: leg.summary.time || 0, name: pts[i]?.n?.substring(0, 20) || (i === 0 ? '🏁 Inicio' : '📍 ' + (i + 1)), road: leg.maneuvers?.[0]?.street_names?.[0] || '—' }));
+      }
+    }
+  } catch {}
+  // Try 2: OSRM fallback
+  if (!routeEngine) {
+    try {
+      const coords = pts.map(p => p.lo + ',' + p.la).join(';');
+      const excl = routeProfile === 'c' ? '&exclude=motorway' : '';
+      const r2 = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=polyline&steps=true&alternatives=false${excl}`);
+      if (r2.ok) {
+        const d2 = await r2.json();
+        if (d2.code === 'Ok' && d2.routes?.length) {
+          const r = d2.routes[0]; routeEngine = 'osrm'; shape = r.geometry; totalKm = r.distance / 1000; totalSec = r.duration;
+          let wpIdx = 0, segD = 0, segT = 0;
+          (r.legs?.[0]?.steps || []).forEach((s, j, arr) => { segD += s.distance; segT += s.duration; if (s.type === 1 || j === arr.length - 1) { legData.push({ dist: segD, time: segT, name: wpIdx < pts.length ? (wpIdx === 0 ? '🏁 Inicio' : wpIdx === pts.length - 1 ? '🎯 Destino' : '📍 ' + (wpIdx + 1)) : s.name || '—', road: s.name || '—' }); segD = 0; segT = 0; wpIdx++; } });
+          if (!legData.length) legData.push({ dist: totalKm * 1000, time: totalSec, name: pts[0]?.n || 'Inicio', road: '—' });
+        }
+      }
+    } catch (e2) { throw new Error(e2.message); }
+  }
+  if (!routeEngine) throw new Error('No se pudo calcular ruta');
+  const distKm = totalKm, timeMin = Math.round(totalSec / 60);
+  const fmtTime = t2 => { const h = Math.floor(t2 / 60), m = t2 % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
+  $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
+  $('#route-status').textContent = '✅ ' + Math.round(distKm) + ' km';
+  const legPts = decodePolyline(shape);
+  routing = L.polyline(legPts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
+  map.fitBounds(routing.getBounds(), { padding: [30, 30] });
+  const elData = await calcElevation(legPts); drawElevation(elData);
+  if (elData?.length > 1) { $('#el-max').textContent = Math.round(Math.max(...elData.map(d => d.ele))); $('#el-min').textContent = Math.round(Math.min(...elData.map(d => d.ele))); let gn = 0, ls = 0; for (let i = 1; i < elData.length; i++) { const d = elData[i].ele - elData[i - 1].ele; if (d > 0) gn += d; else ls -= d; } $('#el-gain').textContent = Math.round(gn) + 'm'; $('#el-loss').textContent = Math.round(ls) + 'm'; }
+  renderLegs(legData); showRouteMarkers();
   } catch (e) { $('#route-status').textContent = '❌ ' + (e.message || 'Error de conexión'); }
   finally { setLoading(false); btnLoading('#btn-calc'); }
 }
