@@ -56,8 +56,10 @@ select option{background:var(--bg)}
 .btn-grp button.active{font-weight:700;border-color:currentColor}
 .btn-grp button.active[data-v="r"]{background:#66bb6a;color:#fff;border-color:#66bb6a}
 .btn-grp button.active[data-v="m"]{background:#e74c3c;color:#fff;border-color:#e74c3c}
-.btn-grp button.active[data-v="o"]{background:#a67c52;color:#fff;border-color:#a67c52}
-.btn-grp button.active[data-v="all"]{background:var(--accent);color:#0d1117;border-color:var(--accent)}
+.acc-info{display:flex;gap:6px;flex-wrap:wrap}
+.acc-badge{display:flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:.66rem;min-height:32px;flex:1;justify-content:center}
+.acc-badge b{color:var(--accent);font-size:.78rem}
+.acc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
 #btn-draw.active{background:#e74c3c;color:#fff;border-color:#e74c3c}
 .map-layer-btn{flex:1;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;font-size:.6rem;text-align:center;min-height:28px}
 .map-layer-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700}
@@ -241,10 +243,9 @@ select,input{font-size:16px;min-height:44px}
 </div>
 
 <div class="lbl">Tipo de acceso</div>
-<div class="btn-grp" role="radiogroup" aria-label="Tipo de acceso">
-<button class="active" data-v="all" role="radio" aria-checked="true">Ambos</button>
-<button data-v="r" role="radio" aria-checked="false">🛣 Asfaltada</button>
-<button data-v="o" role="radio" aria-checked="false">🛤 Sin asfaltar</button>
+<div class="acc-info">
+<span class="acc-badge"><span class="acc-dot" style="background:var(--pri)"></span>🛣 Asfaltadas <b id="acc-r-count">0</b></span>
+<span class="acc-badge"><span class="acc-dot" style="background:var(--sec)"></span>🛤 Sin asfaltar <b id="acc-o-count">0</b></span>
 </div>
 <div style="display:flex;gap:7px;font-size:.6rem;color:var(--sub);margin-top:3px">
 <span><span style="color:var(--pri)">●</span> Asfaltada</span>
@@ -479,7 +480,7 @@ const wpIconG = num => { if (!_wpIconsG[num]) _wpIconsG[num] = L.divIcon({ class
 
 let markers = [], mm = {};
 let startTown = null, endTown = null, waypoints = [];
-let routing = null, currentAcc = 'all', currentTown = '', routeProfile = 'r';
+let routing = null, currentTown = '', routeProfile = 'r';
 let drawMode = false, drawPoints = [], drawLayer = null;
 let _gpxPending = null;
 let _gpxTempLayer = null;
@@ -794,10 +795,16 @@ function togglePanel() { const sb = $('#sidebar'); sb.classList.toggle('open'); 
 function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if (mk === _selMk) return; const wi = waypoints.findIndex(w => w._idx === f._idx); mk.setIcon(wi >= 0 ? wpIcon(wi + 1) : (I[f.t] || I.r)); if (mk.isPopupOpen()) updPop(mk); }); }
 
 /* === RENDER LIST === */
+function updAccCounts() {
+  const townF = currentTown ? FD.filter(x => x.p === currentTown) : [];
+  $('#acc-r-count').textContent = townF.filter(x => x.t === 'r').length;
+  $('#acc-o-count').textContent = townF.filter(x => x.t === 'o').length;
+}
 function renderList() {
   const el = $('#fountain-list'); el.innerHTML = '';
+  updAccCounts();
   if (!currentTown) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Selecciona un destino</div>'; return; }
-  const f = FD.filter(x => x.p === currentTown && (currentAcc === 'all' || x.t === currentAcc));
+  const f = FD.filter(x => x.p === currentTown);
   $('#fountain-count').textContent = `(${f.length})`;
   if (!f.length) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Sin coincidencias</div>'; return; }
   const fragment = document.createDocumentFragment();
@@ -827,7 +834,7 @@ function updSum() {
   $('#r-start').textContent = startTown?.n?.substring(0, 18) || '—'; $('#r-end').textContent = endTown?.n?.substring(0, 18) || '—'; $('#r-wps').textContent = waypoints.length;
   const mini = $('#waypoints-mini');
   mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${(w.n || 'WP').substring(0, 12)}</span>`).join('');
-  const modeLabel = { r: 'Rápido', m: 'Manual' }; const accLabel = { all: '', r: ' · Asfaltada', o: ' · Sin asfaltar' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]}${accLabel[currentAcc]})`;
+  const modeLabel = { r: 'Rápido', m: 'Manual' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
 }
 
 /* === POLYLINE DECODE === */
@@ -874,11 +881,9 @@ function drawElevation(data) {
 
 /* === RUTA (OSRM) === */
 async function calcRoute() {
-  // Sync profile/access from DOM buttons before calculating
+  // Sync profile from DOM buttons before calculating
   const activeProfile = $('.btn-grp:first-of-type button.active');
   if (activeProfile) routeProfile = activeProfile.dataset.v;
-  const activeAcc = $('.btn-grp:last-of-type button.active');
-  if (activeAcc) currentAcc = activeAcc.dataset.v;
   const rll = []; if (startTown?.la) rll.push(L.latLng(startTown.la, startTown.lo));
   waypoints.forEach(w => rll.push(L.latLng(w.la, w.lo))); if (endTown?.la) rll.push(L.latLng(endTown.la, endTown.lo));
   $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#leg-body').innerHTML = ''; $('#route-status').textContent = '';
@@ -887,14 +892,8 @@ async function calcRoute() {
     $('#route-status').textContent = '✏️ Dibuja la ruta en el mapa — click para puntos, arrastra para dibujo libre, doble click para terminar';
     toggleDraw(); setLoading(false); btnLoading('#btn-calc'); return;
   }
-  const isOffRoad = currentAcc === 'o';
-  const profile = isOffRoad ? 'cycling' : 'driving';
-  const base = isOffRoad
-    ? 'https://routing.openstreetmap.de/routed-bike/route/v1'
-    : 'https://routing.openstreetmap.de/routed-car/route/v1';
-  const excl = isOffRoad ? '&exclude=motorway' : '';
   const coords = rll.map(p => p.lng + ',' + p.lat).join(';');
-  const url = `${base}/${profile}/${coords}?overview=full&geometries=polyline&steps=true&alternatives=false${excl}`;
+  const url = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coords}?overview=full&geometries=polyline&steps=true&alternatives=false`;
   $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true); btnLoading('#btn-calc', '⏳ Calculando...');
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
@@ -1243,7 +1242,7 @@ function wmoIcon(code) { if (code === 0) return '☀️'; if (code <= 3) return 
 function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(--accent);font-weight:700;margin-bottom:5px">🌤 Clima — ' + $('#weather-date').value + '</div>'; html += '<table style="width:100%;font-size:.68rem;border-collapse:collapse"><tr style="color:var(--muted)"><th>Punto</th><th>🌡</th><th>💧</th><th>☁️</th></tr>'; let hasData = false; pts.forEach((p, i) => { const w = weatherData[i]; if (w) { hasData = true; html += `<tr><td style="padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;border-bottom:1px solid var(--border)">${p.name}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.temperature_2m_min !== undefined ? Math.round(w.temperature_2m_min) + '°/' + Math.round(w.temperature_2m_max) + '°' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.precipitation_sum !== undefined && w.precipitation_sum > 0 ? w.precipitation_sum + 'mm' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${wmoIcon(w.weather_code)}</td></tr>`; } }); html += '</table>'; const el = $('#weather-container'); if (hasData) { el.innerHTML = html; el.style.display = 'block'; $('#sidebar').scrollTo({ top: el.offsetTop, behavior: 'smooth' }); toast('✅ Clima cargado'); } else { el.style.display = 'none'; toast('⚠️ No se pudo obtener el clima', 'warn'); } }
 
 /* === EVENTOS Y CONTROLADORES === */
-$$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; } else { currentAcc = b.dataset.v; } updSum(); renderList(); applyFilters(); if (startTown && endTown) calcRoute(); }); });
+  $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) routeProfile = b.dataset.v; updSum(); renderList(); applyFilters(); if (startTown && endTown) calcRoute(); }); });
 $('#btn-calc').addEventListener('click', calcRoute); $('#btn-draw').addEventListener('click', toggleDraw); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
 $('#btn-clear').addEventListener('click', () => { if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }  if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; } drawMode = false; drawPoints = []; startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
