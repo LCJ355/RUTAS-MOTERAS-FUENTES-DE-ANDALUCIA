@@ -990,8 +990,7 @@ function drawElevation(data) {
 /* === RUTA (OSRM) === */
 function resetRouteCalc() {
   if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }
-  if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
-  drawMode = false; drawPoints = [];
+  clearDraw();
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
   $('#poi-list').style.display = 'none';
@@ -1008,7 +1007,7 @@ async function calcRoute() {
   waypoints.forEach(w => rll.push(L.latLng(w.la, w.lo))); if (endTown?.la) rll.push(L.latLng(endTown.la, endTown.lo));
   if (rll.length < 2) { $('#route-status').textContent = '⚠ Selecciona inicio, paradas y destino'; return; }
   if (routeProfile === 'm') {
-    $('#route-status').textContent = '✏️ Dibuja la ruta en el mapa — click para puntos, arrastra para dibujo libre, doble click para terminar';
+    $('#route-status').textContent = '✏️ Pulsa "Calcular ruta" para dibujar, o clic aquí para activar el modo dibujo';
     toggleDraw(); setLoading(false); btnLoading('#btn-calc'); return;
   }
   const coords = rll.map(p => p.lng + ',' + p.lat).join(';');
@@ -1033,39 +1032,42 @@ async function calcRoute() {
 }
 
 /* === DIBUJAR RUTA MANUAL === */
-let _drawDragging = false, _onDrawMove = null;
+const MAX_DRAW_PTS = 10;
+let _drawMarkers = [];
+const ptIcn = num => L.divIcon({ className: 'cm', html: `<svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#e74c3c" stroke="#fff" stroke-width="1.5"/><text x="13" y="18" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">${num}</text></svg>`, iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -13] });
+function clearDraw() {
+  if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
+  _drawMarkers.forEach(m => map.removeLayer(m)); _drawMarkers = [];
+  drawPoints = []; drawMode = false;
+}
+function drawDist() { let td = 0; for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]); return td; }
 function toggleDraw() {
   drawMode = !drawMode;
   $('#btn-draw').classList.toggle('active', drawMode);
   if (drawMode) {
     map.getContainer().style.cursor = 'crosshair';
-    $('#route-status').textContent = '✏️ Click para punto | Arrastra dibujo libre | Doble click fin';
-    if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
-    drawPoints = [];
+    clearDraw();
     if (routing) { map.removeLayer(routing); routing = null; }
     $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
+    $('#route-status').textContent = `✏️ Click en el mapa para añadir puntos (máx ${MAX_DRAW_PTS}) — doble click para terminar`;
   } else { map.getContainer().style.cursor = ''; finishDraw(); }
 }
 function finishDraw() {
-  drawMode = false; _drawDragging = false;
+  drawMode = false;
   map.getContainer().style.cursor = '';
   $('#btn-draw').classList.remove('active');
-  if (drawPoints.length < 2) {
-    if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
-    drawPoints = [];
-  } else {
-    let td = 0;
-    for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
-    $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
-    $('#route-status').textContent = '✅ Ruta dibujada — haz click cerca de la línea para añadir puntos';
+  if (drawPoints.length < 2) clearDraw();
+  else {
+    $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
+    $('#route-status').textContent = '✅ Ruta manual guardada — click cerca de la línea para añadir más puntos';
   }
 }
 map.on('click', function (e) {
   if (drawMode) {
-    if (_drawDragging) { _drawDragging = false; return; }
-    if (e.originalEvent?.detail === 2) return; // Ignorar clicks de doble click
+    if (e.originalEvent?.detail === 2) return; // Ignorar clicks del doble click
+    if (drawPoints.length >= MAX_DRAW_PTS) { $('#route-status').textContent = `⚠ Máximo de ${MAX_DRAW_PTS} puntos alcanzado — doble click para terminar`; return; }
     drawPoints.push(e.latlng); updDrawLine();
-    if (drawPoints.length > 1) map.fitBounds(drawLayer.getBounds(), { padding: [20, 20] });
+    if (drawPoints.length >= 2 && drawLayer) map.fitBounds(drawLayer.getBounds(), { padding: [20, 20] });
     return;
   }
   // Editar ruta manual existente: añadir punto al segmento más cercano
@@ -1080,46 +1082,41 @@ map.on('click', function (e) {
     if (minDist < tol) {
       drawPoints.splice(insertIdx, 0, e.latlng);
       updDrawLine();
-      let td = 0;
-      for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
-      $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
+      $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
       $('#route-status').textContent = '✅ Punto añadido — click para más';
     }
   }
 });
 map.on('dblclick', function (e) { if (drawMode) { L.DomEvent.stop(e); finishDraw(); } });
 map.on('contextmenu', function (e) {
-  if (drawMode || !(drawPoints.length >= 2 && drawLayer)) return;
   L.DomEvent.preventDefault(e);
-  drawPoints.pop();
-  if (drawPoints.length < 2) { map.removeLayer(drawLayer); drawLayer = null; drawPoints = []; $('#r-dist').textContent = '0 km'; $('#route-status').textContent = 'Ruta manual borrada — vuelve a dibujar'; return; }
-  updDrawLine();
-  let td = 0;
-  for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
-  $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
-  $('#route-status').textContent = 'Punto eliminado — click derecho para quitar el último';
+  if (drawPoints.length === 0) return;
+  if (drawMode || (drawPoints.length >= 2 && drawLayer)) {
+    drawPoints.pop();
+    if (drawPoints.length < 2) { clearDraw(); $('#r-dist').textContent = '0 km'; $('#route-status').textContent = 'Ruta manual borrada — pulsa ✏️ Dibujar para volver a dibujar'; return; }
+    updDrawLine();
+    $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
+    $('#route-status').textContent = 'Punto eliminado — click derecho para quitar el último';
+  }
 });
 function updDrawLine() {
   if (drawLayer) map.removeLayer(drawLayer);
-  if (drawPoints.length < 2) return;
-  drawLayer = L.polyline(drawPoints, { color: '#e74c3c', weight: 3, opacity: .8 }).addTo(map);
+  _drawMarkers.forEach(m => map.removeLayer(m)); _drawMarkers = [];
+  if (drawPoints.length < 1) { $('#r-dist').textContent = '0 km'; return; }
+  drawPoints.forEach((p, i) => {
+    const mk = L.marker(p, { icon: ptIcn(i + 1) }).addTo(map);
+    mk.on('click', L.DomEvent.stopPropagation);
+    _drawMarkers.push(mk);
+  });
+  if (drawPoints.length >= 2) {
+    drawLayer = L.polyline(drawPoints, { color: '#e74c3c', weight: 3, opacity: .8 }).addTo(map);
+    $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
+    $('#route-status').textContent = `Punto ${drawPoints.length}/${MAX_DRAW_PTS} — doble click para terminar`;
+  } else {
+    $('#r-dist').textContent = '0 km';
+    $('#route-status').textContent = `Punto 1/${MAX_DRAW_PTS} — sigue haciendo click o doble click para terminar`;
+  }
 }
-map.on('mousedown', function (e) {
-  if (!drawMode) return;
-  _drawDragging = false;
-  drawPoints.push(e.latlng); updDrawLine();
-  map.dragging.disable();
-  _onDrawMove = function (ev) {
-    _drawDragging = true;
-    drawPoints.push(ev.latlng); updDrawLine();
-  };
-  map.on('mousemove', _onDrawMove);
-});
-document.addEventListener('mouseup', function () {
-  if (!drawMode) return;
-  if (_onDrawMove) { map.off('mousemove', _onDrawMove); _onDrawMove = null; }
-  map.dragging.enable();
-});
 function distToSegment(p, a, b) {
   const dx = b.lat - a.lat, dy = b.lng - a.lng;
   const len2 = dx * dx + dy * dy;
