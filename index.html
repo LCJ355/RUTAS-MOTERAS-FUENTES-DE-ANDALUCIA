@@ -800,7 +800,7 @@ function updAccCounts() {
   $('#acc-r-count').textContent = townF.filter(x => x.t === 'r').length;
   $('#acc-o-count').textContent = townF.filter(x => x.t === 'o').length;
   const u = townF.filter(x => x.t !== 'r' && x.t !== 'o').length;
-  $('#fountain-count').textContent = `(${townF.length})` + (u > 0 ? ` · ❓ Sin Información (${u})` : '');
+  $('#fountain-count').textContent = u > 0 ? `❓ Sin Información (${u})` : '';
 }
 function renderList() {
   const el = $('#fountain-list'); el.innerHTML = '';
