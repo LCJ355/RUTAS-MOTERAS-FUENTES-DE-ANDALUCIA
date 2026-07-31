@@ -876,9 +876,12 @@ async function calcRoute() {
   waypoints.forEach(w => rll.push(L.latLng(w.la, w.lo))); if (endTown?.la) rll.push(L.latLng(endTown.la, endTown.lo));
   $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#leg-body').innerHTML = ''; $('#route-status').textContent = '';
   if (rll.length < 2) { $('#route-status').textContent = '⚠ Selecciona inicio, paradas y destino'; return; }
-  const profile = 'driving';
-  const base = 'https://routing.openstreetmap.de/routed-car/route/v1';
-  const excl = routeProfile === 'c' ? '&exclude=motorway' : '';
+  const isOffRoad = currentAcc === 'o' || routeProfile === 'c';
+  const profile = isOffRoad ? 'cycling' : 'driving';
+  const base = isOffRoad
+    ? 'https://routing.openstreetmap.de/routed-bike/route/v1'
+    : 'https://routing.openstreetmap.de/routed-car/route/v1';
+  const excl = isOffRoad ? '&exclude=motorway' : '';
   const coords = rll.map(p => p.lng + ',' + p.lat).join(';');
   const url = `${base}/${profile}/${coords}?overview=full&geometries=polyline&steps=true&alternatives=false${excl}`;
   $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true); btnLoading('#btn-calc', '⏳ Calculando...');
