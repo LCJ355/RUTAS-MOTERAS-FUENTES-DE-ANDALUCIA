@@ -1015,7 +1015,7 @@ async function calcRoute() {
 }
 
 /* === DIBUJAR RUTA MANUAL === */
-let _drawDragging = false;
+let _drawDragging = false, _onDrawMove = null;
 function toggleDraw() {
   drawMode = !drawMode;
   $('#btn-draw').classList.toggle('active', drawMode);
@@ -1039,7 +1039,7 @@ function finishDraw() {
     let td = 0;
     for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
     $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
-    $('#route-status').textContent = '✅ Ruta dibujada — click en la línea para añadir puntos, doble click para terminar';
+    $('#route-status').textContent = '✅ Ruta dibujada — haz click cerca de la línea para añadir puntos';
   }
 }
 map.on('click', function (e) {
@@ -1051,13 +1051,15 @@ map.on('click', function (e) {
     return;
   }
   // Editar ruta manual existente: añadir punto al segmento más cercano
-  if (routeProfile === 'm' && drawPoints.length >= 2 && drawLayer) {
+  if (drawPoints.length >= 2 && drawLayer) {
+    const mpp = 156543.03392 * Math.cos(e.latlng.lat * Math.PI / 180) / Math.pow(2, map.getZoom());
+    const tol = 25 * mpp; // ~25 px de tolerancia
     let minDist = Infinity, insertIdx = 0;
     for (let i = 0; i < drawPoints.length - 1; i++) {
       const d = distToSegment(e.latlng, drawPoints[i], drawPoints[i + 1]);
       if (d < minDist) { minDist = d; insertIdx = i + 1; }
     }
-    if (minDist < 50) {
+    if (minDist < tol) {
       drawPoints.splice(insertIdx, 0, e.latlng);
       updDrawLine();
       let td = 0;
@@ -1068,6 +1070,17 @@ map.on('click', function (e) {
   }
 });
 map.on('dblclick', function (e) { if (drawMode) { L.DomEvent.stop(e); finishDraw(); } });
+map.on('contextmenu', function (e) {
+  if (drawMode || !(drawPoints.length >= 2 && drawLayer)) return;
+  L.DomEvent.preventDefault(e);
+  drawPoints.pop();
+  if (drawPoints.length < 2) { map.removeLayer(drawLayer); drawLayer = null; drawPoints = []; $('#r-dist').textContent = '0 km'; $('#route-status').textContent = 'Ruta manual borrada — vuelve a dibujar'; return; }
+  updDrawLine();
+  let td = 0;
+  for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
+  $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
+  $('#route-status').textContent = 'Punto eliminado — click derecho para quitar el último';
+});
 function updDrawLine() {
   if (drawLayer) map.removeLayer(drawLayer);
   if (drawPoints.length < 2) return;
@@ -1078,23 +1091,24 @@ map.on('mousedown', function (e) {
   _drawDragging = false;
   drawPoints.push(e.latlng); updDrawLine();
   map.dragging.disable();
+  _onDrawMove = function (ev) {
+    _drawDragging = true;
+    drawPoints.push(ev.latlng); updDrawLine();
+  };
   map.on('mousemove', _onDrawMove);
 });
-function _onDrawMove(e) {
-  _drawDragging = true;
-  drawPoints.push(e.latlng); updDrawLine();
-}
-document.addEventListener('mouseup', function _onDrawUp() {
+document.addEventListener('mouseup', function () {
   if (!drawMode) return;
-  map.off('mousemove', _onDrawMove);
+  if (_onDrawMove) { map.off('mousemove', _onDrawMove); _onDrawMove = null; }
   map.dragging.enable();
-  document.removeEventListener('mouseup', _onDrawUp);
 });
 function distToSegment(p, a, b) {
-  const ab = L.latLng(b).distanceTo(a);
-  if (ab === 0) return L.latLng(p).distanceTo(a);
-  const t = Math.max(0, Math.min(1, ((p.lat - a.lat) * (b.lat - a.lat) + (p.lng - a.lng) * (b.lng - a.lng)) / (ab * ab)));
-  const proj = L.latLng(a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng));
+  const dx = b.lat - a.lat, dy = b.lng - a.lng;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return L.latLng(p).distanceTo(a);
+  let t = ((p.lat - a.lat) * dx + (p.lng - a.lng) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const proj = L.latLng(a.lat + t * dx, a.lng + t * dy);
   return L.latLng(p).distanceTo(proj);
 }
 
