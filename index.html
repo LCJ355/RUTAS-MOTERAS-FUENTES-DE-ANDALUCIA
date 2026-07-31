@@ -60,7 +60,6 @@ select option{background:var(--bg)}
 .acc-badge{display:flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:.66rem;min-height:32px;flex:1;justify-content:center}
 .acc-badge b{color:var(--accent);font-size:.78rem}
 .acc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
-#btn-draw.active{background:#e74c3c;color:#fff;border-color:#e74c3c}
 .map-layer-btn{flex:1;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;font-size:.6rem;text-align:center;min-height:28px}
 .map-layer-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700}
 .map-layer-ctrl{background:var(--panel);border-radius:var(--radius);padding:5px;border:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
@@ -303,7 +302,6 @@ select,input{font-size:16px;min-height:44px}
 <div id="weather-container" role="region" aria-label="Pronóstico meteorológico"></div>
 <div class="row" style="gap:4px">
 <button class="btn btn-sec btn-sm" id="btn-saved-toggle" style="flex:1" aria-label="Mis rutas guardadas">📁 Mis rutas</button>
-<button class="btn btn-sec btn-sm" id="btn-draw" aria-label="Dibujar ruta manual">✏️ Dibujar</button>
 <button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
 </div>
 </div>
@@ -1007,7 +1005,6 @@ async function calcRoute() {
   waypoints.forEach(w => rll.push(L.latLng(w.la, w.lo))); if (endTown?.la) rll.push(L.latLng(endTown.la, endTown.lo));
   if (rll.length < 2) { $('#route-status').textContent = '⚠ Selecciona inicio, paradas y destino'; return; }
   if (routeProfile === 'm') {
-    $('#route-status').textContent = '✏️ Pulsa "Calcular ruta" para dibujar, o clic aquí para activar el modo dibujo';
     toggleDraw(); setLoading(false); btnLoading('#btn-calc'); return;
   }
   const coords = rll.map(p => p.lng + ',' + p.lat).join(';');
@@ -1043,7 +1040,6 @@ function clearDraw() {
 function drawDist() { let td = 0; for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]); return td; }
 function toggleDraw() {
   drawMode = !drawMode;
-  $('#btn-draw').classList.toggle('active', drawMode);
   if (drawMode) {
     map.getContainer().style.cursor = 'crosshair';
     clearDraw();
@@ -1055,7 +1051,6 @@ function toggleDraw() {
 function finishDraw() {
   drawMode = false;
   map.getContainer().style.cursor = '';
-  $('#btn-draw').classList.remove('active');
   if (drawPoints.length < 2) clearDraw();
   else {
     $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
@@ -1093,7 +1088,7 @@ map.on('contextmenu', function (e) {
   if (drawPoints.length === 0) return;
   if (drawMode || (drawPoints.length >= 2 && drawLayer)) {
     drawPoints.pop();
-    if (drawPoints.length < 2) { clearDraw(); drawMode = false; $('#btn-draw').classList.remove('active'); map.getContainer().style.cursor = ''; $('#r-dist').textContent = '0 km'; $('#route-status').textContent = 'Ruta manual borrada — pulsa ✏️ Dibujar para volver a dibujar'; return; }
+    if (drawPoints.length < 2) { clearDraw(); drawMode = false; map.getContainer().style.cursor = ''; $('#r-dist').textContent = '0 km'; $('#route-status').textContent = 'Ruta manual borrada — pulsa "Calcular ruta" para volver a dibujar'; return; }
     updDrawLine();
     $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
     $('#route-status').textContent = 'Punto eliminado — click derecho para quitar el último';
@@ -1371,7 +1366,7 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 
 /* === EVENTOS Y CONTROLADORES === */
   $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) routeProfile = b.dataset.v; updSum(); renderList(); applyFilters(); if (startTown && endTown) calcRoute(); }); });
-$('#btn-calc').addEventListener('click', calcRoute); $('#btn-draw').addEventListener('click', toggleDraw); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
+$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
 
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
