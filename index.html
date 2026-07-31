@@ -195,6 +195,13 @@ select,input{font-size:16px;min-height:44px}
 .poi-item,.sr-item{font-size:.68rem}
 #poi-list,#saved-routes-panel,#waypoints-mini{max-height:none!important}
 }
+@media(max-width:768px){
+.mobile-only{display:block}
+.btn-grp:not(.mobile-only .btn-grp){display:none}
+}
+@media(min-width:769px){
+.mobile-only{display:none}
+}
 @media(max-width:500px){
 #sidebar{width:100%;min-width:unset;height:80vh;padding:8px 8px;font-size:.85rem}
 #sidebar h1{font-size:1.05rem}
@@ -256,6 +263,13 @@ select,input{font-size:16px;min-height:44px}
 
 </div>
 <div class="tab-panel" data-tab="ruta">
+<div class="mobile-only" style="margin-bottom:8px">
+<div class="lbl">🛣 MODO Cálculo Ruta</div>
+<div class="btn-grp" role="radiogroup" aria-label="Modo de ruta">
+<button class="active" data-v="r" role="radio" aria-checked="true">🏎 Rápido</button>
+<button data-v="m" role="radio" aria-checked="false">✏️ Modificación manual</button>
+</div>
+</div>
 <div id="elevation-chart" role="region" aria-label="Gráfico de elevación">
 <svg id="el-svg" viewBox="0 0 600 80" preserveAspectRatio="none"><polyline id="el-line" fill="none" stroke="#f5c842" stroke-width="1.5"/></svg>
 <div class="el-stats"><span>▲ <strong id="el-max">-</strong></span><span>▼ <strong id="el-min">-</strong></span><span>↗ <strong id="el-gain">-</strong></span><span>⬇ <strong id="el-loss">-</strong></span></div>
@@ -1452,8 +1466,7 @@ function wmoIcon(code) { if (code === 0) return '☀️'; if (code <= 3) return 
 function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(--accent);font-weight:700;margin-bottom:5px">🌤 Clima — ' + $('#weather-date').value + '</div>'; html += '<table style="width:100%;font-size:.68rem;border-collapse:collapse"><tr style="color:var(--muted)"><th>Punto</th><th>🌡</th><th>💧</th><th>☁️</th></tr>'; let hasData = false; pts.forEach((p, i) => { const w = weatherData[i]; if (w) { hasData = true; html += `<tr><td style="padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;border-bottom:1px solid var(--border)">${p.name}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.temperature_2m_min !== undefined ? Math.round(w.temperature_2m_min) + '°/' + Math.round(w.temperature_2m_max) + '°' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.precipitation_sum !== undefined && w.precipitation_sum > 0 ? w.precipitation_sum + 'mm' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${wmoIcon(w.weather_code)}</td></tr>`; } }); html += '</table>'; const el = $('#weather-container'); if (hasData) { el.innerHTML = html; el.style.display = 'block'; $('#sidebar').scrollTo({ top: el.offsetTop, behavior: 'smooth' }); toast('✅ Clima cargado'); } else { el.style.display = 'none'; toast('⚠️ No se pudo obtener el clima', 'warn'); } }
 
 /* === EVENTOS Y CONTROLADORES === */
-  const _profileBtnGroup = $('.btn-grp');
-  $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === _profileBtnGroup) { const newProfile = b.dataset.v; if (newProfile === 'm' && routeProfile !== 'm' && routing) { const pts = routing.getLatLngs(); const flat = Array.isArray(pts[0]) ? pts.flat() : pts; if (flat.length >= 2) { routeProfile = newProfile; toggleDraw(); drawPoints = simplifyPolyline(flat.map(p => L.latLng(p.lat, p.lng)), 30); updDrawLine(); calcManualRouteDebounced(); $('#route-status').textContent = '✏️ Ruta convertida a manual — arrastra puntos o añade más (máx ' + MAX_DRAW_PTS + ')'; } else { routeProfile = newProfile; } } else { routeProfile = newProfile; } updSum(); renderList(); applyFilters(); if (startTown && endTown && routeProfile !== 'm') calcRoute(); } }); });
+  $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent.classList.contains('btn-grp')) { const newProfile = b.dataset.v; if (newProfile === 'm' && routeProfile !== 'm' && routing) { const pts = routing.getLatLngs(); const flat = Array.isArray(pts[0]) ? pts.flat() : pts; if (flat.length >= 2) { routeProfile = newProfile; toggleDraw(); drawPoints = simplifyPolyline(flat.map(p => L.latLng(p.lat, p.lng)), 30); updDrawLine(); calcManualRouteDebounced(); $('#route-status').textContent = '✏️ Ruta convertida a manual — arrastra puntos o añade más (máx ' + MAX_DRAW_PTS + ')'; } else { routeProfile = newProfile; } } else { routeProfile = newProfile; } updSum(); renderList(); applyFilters(); if (startTown && endTown && routeProfile !== 'm') calcRoute(); } }); });
 $('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
 
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
