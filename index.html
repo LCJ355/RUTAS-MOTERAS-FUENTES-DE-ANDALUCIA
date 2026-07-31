@@ -941,16 +941,39 @@ function finishDraw() {
     let td = 0;
     for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
     $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
-    $('#route-status').textContent = '✅ Ruta dibujada: ' + (td / 1000).toFixed(1) + ' km';
+    $('#route-status').textContent = '✅ Ruta dibujada — click en la línea para añadir puntos, doble click para terminar';
   }
 }
+map.on('click', function (e) {
+  if (drawMode) {
+    if (_drawDragging) { _drawDragging = false; return; }
+    if (e.originalEvent?.detail === 2) return; // Ignorar clicks de doble click
+    drawPoints.push(e.latlng); updDrawLine();
+    if (drawPoints.length > 1) map.fitBounds(drawLayer.getBounds(), { padding: [20, 20] });
+    return;
+  }
+  // Editar ruta manual existente: añadir punto al segmento más cercano
+  if (routeProfile === 'm' && drawPoints.length >= 2 && drawLayer) {
+    let minDist = Infinity, insertIdx = 0;
+    for (let i = 0; i < drawPoints.length - 1; i++) {
+      const d = distToSegment(e.latlng, drawPoints[i], drawPoints[i + 1]);
+      if (d < minDist) { minDist = d; insertIdx = i + 1; }
+    }
+    if (minDist < 50) {
+      drawPoints.splice(insertIdx, 0, e.latlng);
+      updDrawLine();
+      let td = 0;
+      for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
+      $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
+      $('#route-status').textContent = '✅ Punto añadido — click para más';
+    }
+  }
+});
+map.on('dblclick', function (e) { if (drawMode) { L.DomEvent.stop(e); finishDraw(); } });
 function updDrawLine() {
   if (drawLayer) map.removeLayer(drawLayer);
   if (drawPoints.length < 2) return;
   drawLayer = L.polyline(drawPoints, { color: '#e74c3c', weight: 3, opacity: .8 }).addTo(map);
-  let td = 0;
-  for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
-  $('#r-dist').textContent = (td / 1000).toFixed(2) + ' km';
 }
 map.on('mousedown', function (e) {
   if (!drawMode) return;
@@ -969,12 +992,13 @@ document.addEventListener('mouseup', function _onDrawUp() {
   map.dragging.enable();
   document.removeEventListener('mouseup', _onDrawUp);
 });
-map.on('click', function (e) {
-  if (!drawMode || _drawDragging) { _drawDragging = false; return; }
-  drawPoints.push(e.latlng); updDrawLine();
-  if (drawPoints.length > 1) map.fitBounds(drawLayer.getBounds(), { padding: [20, 20] });
-});
-map.on('dblclick', function (e) { if (drawMode) { L.DomEvent.stop(e); finishDraw(); } });
+function distToSegment(p, a, b) {
+  const ab = L.latLng(b).distanceTo(a);
+  if (ab === 0) return L.latLng(p).distanceTo(a);
+  const t = Math.max(0, Math.min(1, ((p.lat - a.lat) * (b.lat - a.lat) + (p.lng - a.lng) * (b.lng - a.lng)) / (ab * ab)));
+  const proj = L.latLng(a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng));
+  return L.latLng(p).distanceTo(proj);
+}
 
 function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; if (startTownMarker) { routeLayer.addLayer(startTownMarker); added[startTownMarker._fd._idx] = true; } if (endTownMarker && !added[endTownMarker._fd._idx]) { routeLayer.addLayer(endTownMarker); added[endTownMarker._fd._idx] = true; } waypoints.forEach(w => { if (!added[w._idx] && mm[w._idx]) { routeLayer.addLayer(mm[w._idx]); added[w._idx] = true; } }); markers.forEach(m => { const f = m._fd; if (!added[f._idx] && f.p === currentTown) { mcg.addLayer(m); added[f._idx] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
 
