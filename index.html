@@ -990,7 +990,7 @@ function drawElevation(data) {
 /* === RUTA (OSRM) === */
 function resetRouteCalc() {
   if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }
-  clearDraw();
+  clearDraw(); drawMode = false;
   if (routing) { map.removeLayer(routing); routing = null; }
   poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
   $('#poi-list').style.display = 'none';
@@ -1038,7 +1038,7 @@ const ptIcn = num => L.divIcon({ className: 'cm', html: `<svg width="26" height=
 function clearDraw() {
   if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
   _drawMarkers.forEach(m => map.removeLayer(m)); _drawMarkers = [];
-  drawPoints = []; drawMode = false;
+  drawPoints = [];
 }
 function drawDist() { let td = 0; for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]); return td; }
 function toggleDraw() {
@@ -1093,7 +1093,7 @@ map.on('contextmenu', function (e) {
   if (drawPoints.length === 0) return;
   if (drawMode || (drawPoints.length >= 2 && drawLayer)) {
     drawPoints.pop();
-    if (drawPoints.length < 2) { clearDraw(); $('#r-dist').textContent = '0 km'; $('#route-status').textContent = 'Ruta manual borrada — pulsa ✏️ Dibujar para volver a dibujar'; return; }
+    if (drawPoints.length < 2) { clearDraw(); drawMode = false; $('#btn-draw').classList.remove('active'); map.getContainer().style.cursor = ''; $('#r-dist').textContent = '0 km'; $('#route-status').textContent = 'Ruta manual borrada — pulsa ✏️ Dibujar para volver a dibujar'; return; }
     updDrawLine();
     $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
     $('#route-status').textContent = 'Punto eliminado — click derecho para quitar el último';
