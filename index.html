@@ -871,6 +871,11 @@ function drawElevation(data) {
 
 /* === RUTA (OSRM) === */
 async function calcRoute() {
+  // Sync profile/access from DOM buttons before calculating
+  const activeProfile = $('.btn-grp:first-of-type button.active');
+  if (activeProfile) routeProfile = activeProfile.dataset.v;
+  const activeAcc = $('.btn-grp:last-of-type button.active');
+  if (activeAcc) currentAcc = activeAcc.dataset.v;
   const rll = []; if (startTown?.la) rll.push(L.latLng(startTown.la, startTown.lo));
   waypoints.forEach(w => rll.push(L.latLng(w.la, w.lo))); if (endTown?.la) rll.push(L.latLng(endTown.la, endTown.lo));
   $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#leg-body').innerHTML = ''; $('#route-status').textContent = '';
