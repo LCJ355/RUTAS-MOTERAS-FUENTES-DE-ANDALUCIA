@@ -795,18 +795,18 @@ function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if
 
 /* === RENDER LIST === */
 function updAccCounts() {
-  const townF = currentTown ? FD.filter(x => x.p === currentTown) : [];
+  const townF = currentTown ? FD.filter(x => x.p === currentTown) : FD;
   $('#acc-t-count').textContent = townF.length;
   $('#acc-r-count').textContent = townF.filter(x => x.t === 'r').length;
   $('#acc-o-count').textContent = townF.filter(x => x.t === 'o').length;
+  const u = townF.filter(x => x.t !== 'r' && x.t !== 'o').length;
+  $('#fountain-count').textContent = `(${townF.length})` + (u > 0 ? ` · ❓ Sin Información (${u})` : '');
 }
 function renderList() {
   const el = $('#fountain-list'); el.innerHTML = '';
   updAccCounts();
   if (!currentTown) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Selecciona un destino</div>'; return; }
   const f = FD.filter(x => x.p === currentTown);
-  const u = f.filter(x => x.t !== 'r' && x.t !== 'o').length;
-  $('#fountain-count').textContent = `(${f.length})` + (u > 0 ? ` · ❓ Sin Información (${u})` : '');
   if (!f.length) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Sin coincidencias</div>'; return; }
   const fragment = document.createDocumentFragment();
   f.forEach(x => {
