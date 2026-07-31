@@ -428,6 +428,9 @@ function initLayers() {
   tileLayers.topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { ...opts, attribution: '&copy; OpenTopoMap', maxZoom: 17 });
   tileLayers.cyclo = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', { ...opts, attribution: '&copy; CyclOSM', maxZoom: 18 });
   tileLayers.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...opts, attribution: '&copy; Esri', maxZoom: 18 });
+  tileLayers.free = L.tileLayer('https://tiles.openfreemap.org/streets/{z}/{x}/{y}.png', { ...opts, attribution: '&copy; OpenFreeMap', maxZoom: 19 });
+  tileLayers.voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { ...opts, attribution: '&copy; CARTO', maxZoom: 19, subdomains: 'abcd' });
+  tileLayers.hikebike = L.tileLayer('https://tiles.wmflabs.org/hikebike/{z}/{x}/{y}.png', { ...opts, attribution: '&copy; HikeBike', maxZoom: 18 });
   tileLayers.osm.addTo(map);
 }
 initLayers();
@@ -437,7 +440,7 @@ layerControl.onAdd = function () {
   const d = L.DomUtil.create('div', 'map-layer-ctrl');
   d.setAttribute('role', 'radiogroup');
   d.setAttribute('aria-label', 'Capas del mapa');
-  d.innerHTML = '<button class="map-layer-btn active" data-layer="osm" role="radio" aria-checked="true">OSM</button><button class="map-layer-btn" data-layer="topo" role="radio" aria-checked="false">Topo</button><button class="map-layer-btn" data-layer="cyclo" role="radio" aria-checked="false">CyclOSM</button><button class="map-layer-btn" data-layer="sat" role="radio" aria-checked="false">Satélite</button>';
+  d.innerHTML = '<button class="map-layer-btn active" data-layer="osm" role="radio" aria-checked="true">OSM</button><button class="map-layer-btn" data-layer="topo" role="radio" aria-checked="false">Topo</button><button class="map-layer-btn" data-layer="cyclo" role="radio" aria-checked="false">CyclOSM</button><button class="map-layer-btn" data-layer="sat" role="radio" aria-checked="false">Satélite</button><button class="map-layer-btn" data-layer="free" role="radio" aria-checked="false">Libre</button><button class="map-layer-btn" data-layer="voyager" role="radio" aria-checked="false">Voyager</button><button class="map-layer-btn" data-layer="hikebike" role="radio" aria-checked="false">Hike&Bike</button>';
   L.DomEvent.disableClickPropagation(d);
   return d;
 };
