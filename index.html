@@ -58,6 +58,7 @@ select option{background:var(--bg)}
 .btn-grp button.active[data-v="c"]{background:#e67e22;color:#fff;border-color:#e67e22}
 .btn-grp button.active[data-v="o"]{background:#a67c52;color:#fff;border-color:#a67c52}
 .btn-grp button.active[data-v="all"]{background:var(--accent);color:#0d1117;border-color:var(--accent)}
+#btn-draw.active{background:#e74c3c;color:#fff;border-color:#e74c3c}
 .map-layer-btn{flex:1;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;font-size:.6rem;text-align:center;min-height:28px}
 .map-layer-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700}
 .map-layer-ctrl{background:var(--panel);border-radius:var(--radius);padding:5px;border:1px solid var(--border);display:flex;gap:3px;flex-wrap:wrap}
@@ -303,6 +304,7 @@ select,input{font-size:16px;min-height:44px}
 <div id="weather-container" role="region" aria-label="Pronóstico meteorológico"></div>
 <div class="row" style="gap:4px">
 <button class="btn btn-sec btn-sm" id="btn-saved-toggle" style="flex:1" aria-label="Mis rutas guardadas">📁 Mis rutas</button>
+<button class="btn btn-sec btn-sm" id="btn-draw" aria-label="Dibujar ruta manual">✏️ Dibujar</button>
 <button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
 </div>
 </div>
@@ -478,6 +480,7 @@ const wpIconG = num => { if (!_wpIconsG[num]) _wpIconsG[num] = L.divIcon({ class
 let markers = [], mm = {};
 let startTown = null, endTown = null, waypoints = [];
 let routing = null, currentAcc = 'all', currentTown = '', routeProfile = 'r';
+let drawMode = false, drawPoints = [], drawLayer = null;
 let _gpxPending = null;
 let _gpxTempLayer = null;
 let elevData = [], poiMarkers = [], weatherData = {};
@@ -909,6 +912,66 @@ async function calcRoute() {
   finally { setLoading(false); btnLoading('#btn-calc'); }
 }
 
+/* === DIBUJAR RUTA MANUAL === */
+let _drawDragging = false;
+function toggleDraw() {
+  drawMode = !drawMode;
+  $('#btn-draw').classList.toggle('active', drawMode);
+  if (drawMode) {
+    map.getContainer().style.cursor = 'crosshair';
+    $('#route-status').textContent = '✏️ Click para punto | Arrastra dibujo libre | Doble click fin';
+    if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
+    drawPoints = [];
+    if (routing) { map.removeLayer(routing); routing = null; }
+    $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
+  } else { map.getContainer().style.cursor = ''; finishDraw(); }
+}
+function finishDraw() {
+  drawMode = false; _drawDragging = false;
+  map.getContainer().style.cursor = '';
+  $('#btn-draw').classList.remove('active');
+  if (drawPoints.length < 2) {
+    if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
+    drawPoints = [];
+  } else {
+    let td = 0;
+    for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
+    $('#r-dist').textContent = (td / 1000).toFixed(1) + ' km';
+    $('#route-status').textContent = '✅ Ruta dibujada: ' + (td / 1000).toFixed(1) + ' km';
+  }
+}
+function updDrawLine() {
+  if (drawLayer) map.removeLayer(drawLayer);
+  if (drawPoints.length < 2) return;
+  drawLayer = L.polyline(drawPoints, { color: '#e74c3c', weight: 3, opacity: .8 }).addTo(map);
+  let td = 0;
+  for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]);
+  $('#r-dist').textContent = (td / 1000).toFixed(2) + ' km';
+}
+map.on('mousedown', function (e) {
+  if (!drawMode) return;
+  _drawDragging = false;
+  drawPoints.push(e.latlng); updDrawLine();
+  map.dragging.disable();
+  map.on('mousemove', _onDrawMove);
+});
+function _onDrawMove(e) {
+  _drawDragging = true;
+  drawPoints.push(e.latlng); updDrawLine();
+}
+document.addEventListener('mouseup', function _onDrawUp() {
+  if (!drawMode) return;
+  map.off('mousemove', _onDrawMove);
+  map.dragging.enable();
+  document.removeEventListener('mouseup', _onDrawUp);
+});
+map.on('click', function (e) {
+  if (!drawMode || _drawDragging) { _drawDragging = false; return; }
+  drawPoints.push(e.latlng); updDrawLine();
+  if (drawPoints.length > 1) map.fitBounds(drawLayer.getBounds(), { padding: [20, 20] });
+});
+map.on('dblclick', function (e) { if (drawMode) { L.DomEvent.stop(e); finishDraw(); } });
+
 function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; if (startTownMarker) { routeLayer.addLayer(startTownMarker); added[startTownMarker._fd._idx] = true; } if (endTownMarker && !added[endTownMarker._fd._idx]) { routeLayer.addLayer(endTownMarker); added[endTownMarker._fd._idx] = true; } waypoints.forEach(w => { if (!added[w._idx] && mm[w._idx]) { routeLayer.addLayer(mm[w._idx]); added[w._idx] = true; } }); markers.forEach(m => { const f = m._fd; if (!added[f._idx] && f.p === currentTown) { mcg.addLayer(m); added[f._idx] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
 
 function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHTML = legs.map((l, i) => { total += l.dist; const nm = escapeHtml(l.name.length > 20 ? l.name.substring(0, 20) + '…' : l.name); const legMin = Math.round(l.time / 60); const fmtLeg = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h' + (m ? m + 'min' : '') : m + 'min'; }; return `<tr><td>${i + 1}</td><td class="leg-wp">${nm}</td><td>${(l.dist / 1000).toFixed(1)}km</td><td>${(total / 1000).toFixed(1)}km</td><td>${fmtLeg(legMin)}</td><td style="color:var(--sub);font-size:.55rem">${escapeHtml(l.road.substring(0, 10))}</td></tr>`; }).join(''); }
@@ -1153,8 +1216,8 @@ function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(-
 
 /* === EVENTOS Y CONTROLADORES === */
 $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent === $('.btn-grp:first-of-type')) { routeProfile = b.dataset.v; } else { currentAcc = b.dataset.v; } updSum(); renderList(); applyFilters(); if (startTown && endTown) calcRoute(); }); });
-$('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
-$('#btn-clear').addEventListener('click', () => { if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }  startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
+$('#btn-calc').addEventListener('click', calcRoute); $('#btn-draw').addEventListener('click', toggleDraw); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
+$('#btn-clear').addEventListener('click', () => { if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }  if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; } drawMode = false; drawPoints = []; startTown = endTown = null; waypoints = []; $('#town-start').value = ''; $('#town-dest').value = ''; $('#town-end').value = ''; currentTown = ''; const r = routing; routing = null; r?.remove(); syncMm(); updTownMarkers(); routeLayer.clearLayers(); renderList(); updSum(); $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = ''; $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; $('#poi-list').style.display = 'none'; applyFilters(); toast('🗑 Ruta limpiada'); });
 $('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
 function applyFilters() { if (routing) return; if (!currentTown) { if (!map.hasLayer(mcg)) map.addLayer(mcg); return; } mcg.clearLayers(); markers.forEach(m => { if (routeLayer.hasLayer(m)) return; if (m._fd.p === currentTown) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
