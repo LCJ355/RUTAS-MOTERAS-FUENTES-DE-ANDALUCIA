@@ -246,7 +246,7 @@ select,input{font-size:16px;min-height:44px}
 <div class="acc-info">
 <span class="acc-badge"><span class="acc-dot" style="background:var(--pri)"></span>🛣 Asfaltadas <b id="acc-r-count">0</b></span>
 <span class="acc-badge"><span class="acc-dot" style="background:var(--sec)"></span>🛤 Sin asfaltar <b id="acc-o-count">0</b></span>
-<span class="acc-badge"><span class="acc-dot" style="background:#9e9e9e"></span>❓ Sin Información <b id="acc-u-count">0</b></span>
+<span class="acc-badge" id="acc-u-badge" style="display:none"><span class="acc-dot" style="background:#9e9e9e"></span>❓ Sin Información <b id="acc-u-count">0</b></span>
 </div>
 <div style="display:flex;gap:7px;font-size:.6rem;color:var(--sub);margin-top:3px">
 <span><span style="color:var(--pri)">●</span> Asfaltada</span>
@@ -800,7 +800,9 @@ function updAccCounts() {
   const townF = currentTown ? FD.filter(x => x.p === currentTown) : [];
   $('#acc-r-count').textContent = townF.filter(x => x.t === 'r').length;
   $('#acc-o-count').textContent = townF.filter(x => x.t === 'o').length;
-  $('#acc-u-count').textContent = townF.filter(x => x.t !== 'r' && x.t !== 'o').length;
+  const u = townF.filter(x => x.t !== 'r' && x.t !== 'o').length;
+  $('#acc-u-count').textContent = u;
+  $('#acc-u-badge').style.display = u > 0 ? '' : 'none';
 }
 function renderList() {
   const el = $('#fountain-list'); el.innerHTML = '';
