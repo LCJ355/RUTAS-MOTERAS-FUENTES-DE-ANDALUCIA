@@ -3,7 +3,7 @@
 ═══════════════════════════════════════════════
 
 1. CÓMO PUBLICAR CAMBIOS
-   - Editar index.html en E:\-IA-\Rutas Moteras -Fuentes de Andalucía-
+   - Editar index.html en G:\-IA-\Rutas Moteras -Fuentes de Andalucía-
    - git add -A
    - git commit -m "descripción"
    - git push
