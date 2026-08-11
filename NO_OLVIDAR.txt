@@ -3,7 +3,7 @@
 ═══════════════════════════════════════════════
 
 1. CÓMO PUBLICAR CAMBIOS
-   - Editar index.html en D:\-IA-\Rutas Moteras -Fuentes de Andalucía-
+   - Editar index.html en E:\-IA-\Rutas Moteras -Fuentes de Andalucía-
    - git add -A
    - git commit -m "descripción"
    - git push
@@ -11,7 +11,7 @@
      https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
 
 2. SI SE AÑADEN NUEVAS FUENTES (datos)
-   - Los datos están en D:\-IA-\Rutas Moteras -Fuentes de Cadiz-
+   - Los datos están en E:\-IA-\Rutas Moteras -Fuentes de Cadiz-
    - El pipeline: CSV → _merge.py → _combinado.json
    - _combinado.json → _geoloc.py → _coords_fuentes.json (coordenadas)
    - _combinado.json + _coords_pueblos.json → _build_andalucia.py → index_andalucia.html
@@ -24,17 +24,14 @@
    - TP (provincia por pueblo) se construye desde _coords_pueblos.json
 
 4. ERRORES COMUNES
-   - 39 pueblos con acentos corruptos (Alan�s, Bay�rcal...) no tienen
-     coordenadas en TC. Aparecen en dropdown pero al seleccionarlos no pasa nada.
-     Solución: corregir nombres en _combinado.json y re-ejecutar build.
    - Si los botones Modo Ruta o Acceso no responden:
      Los selectores deben usar :first-of-type no :first-child
      Ver document.querySelector('.btn-grp:first-of-type')
 
 5. CLAVES TÉCNICAS
-   - FD: array de fuentes (13676). Campos: p(pueblo), n(nombre), la(lat),
+   - FD: array de fuentes (13720). Campos: p(pueblo), n(nombre), la(lat),
      lo(lng), t(tipo r=asfaltada o=off-road)
-   - TC: coordinate de pueblos {nombre: [lat, lng]} (733 entries)
+   - TC: coordenadas de pueblos {nombre: [lat, lng]} (733 entries)
    - TP: provincia por pueblo {nombre: provincia} (desde _coords_pueblos.json)
    - PROVS: provincias con tilde {Almeria, Cadiz, Cordoba, Granada, Huelva,
      Jaen, Malaga, Sevilla}
@@ -43,6 +40,8 @@
    - routeProfile: modo ruta ('r', 'c', 'o')
    - mcg: markerClusterGroup (disableClusteringAtZoom:15)
    - startTownMarker / endTownMarker: marcadores separados (NO en mcg)
+   - _isAdmin: modo admin activo (contraseña rutas2025)
+   - _savedPhotos: fotos en memoria (para persistencia en Firefox file://)
 
 6. LAYOUT SIDEBAR (orden actual)
    1. Título centrado + subtítulo verde centrado
@@ -57,6 +56,8 @@
   10. Contador + Lista de fuentes (flex:1, scrollable)
   11. Información de ruta
   12. Botones (Calcular ruta, GPX, Compartir, Guardar, etc.)
+  13. Links legales (Aviso Legal, Privacidad, Cookies)
+  14. Indicador fotos guardadas (solo visible en Admin)
 
 7. MAPA: controles
    - Zoom +/- : esquina superior derecha (topright)
@@ -69,8 +70,10 @@
    - Al limpiar ruta: se restauran todos los marcadores
    - applyFilters() respeta rutas activas (no interfiere)
 
-9. FOTOS (publicación automática)
-   - Al añadir foto se guarda en localStorage del navegador actual
+9. FOTOS
+   - Chrome/Edge (HTTPS): se guardan en localStorage automáticamente
+   - Firefox (file://): no soporta localStorage, se auto-descarga photos_data.js
+     El usuario debe guardarlo en la misma carpeta que index.html
    - Para que se vea en TODOS los navegadores:
      a) Configurar token GitHub clásico con scope "repo" (una vez):
         https://github.com/settings/tokens → Generate classic token → repo
@@ -78,14 +81,33 @@
      b) Añadir foto → pulsar "📸 Publicar fotos" (rojo parpadeante)
      c) Esperar 1-2 min, recargar → visible en todos los navegadores
    - Sin token: el botón descarga photos_data.js para subirlo manualmente
+   - Los visitantes ven la foto en el popup si la tienen
+   - El indicador de fotos guardadas solo se ve en modo Admin
 
-10. SEGURIDAD
-   - Admin password por defecto: rutas2025
-   - Para cambiar: buscar 'rutas2025' en index.html
-   - Los visitantes no ven botones de admin, foto ni nota
+10. DISEÑO POPUPS
+    - Fondo: #161b22 (oscuro)
+    - Título: #f5c842 (dorado)
+    - Marcadores de fuente: #1976d2 (azul fuerte)
+    - Badge tipo acceso: azul (#1976d2) para asfaltada, naranja (#e67e22) para off-road
+    - Tamaño fuente popup: .85rem (más grande que antes)
 
-11. RESPALDO
+11. SEGURIDAD
+    - Admin password por defecto: rutas2025
+    - Para cambiar: buscar 'rutas2025' en index.html
+    - Los visitantes no ven botones de admin, foto ni nota
+    - El indicador de fotos solo se ve en Admin
+
+12. RESPALDO
     - index.html y NO_OLVIDAR.txt en la carpeta Andalucía
     - Scripts .py y CSVs/JSONs en la carpeta Cádiz
     - Ambos repositorios GitHub: RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA
       y RUTAS-MOTERAS-FUENTES-DE-CADIZ
+    - fuentes_data.js.bak: backup antes de corrección de tildes
+
+13. CAMBIOS RECIENTES (25 julio 2026)
+    - Corregidas 164 tildes rotas en nombres de fuentes (U+FFFD)
+    - Popups cambiados a azul fuerte (#1976d2) y más grandes
+    - Añadido meta referrer para OSM en Firefox
+    - Fotos: guardado dual (localStorage + photos_data.js)
+    - Indicador de fotos guardadas en Admin
+    - Error handlers en compresión de fotos

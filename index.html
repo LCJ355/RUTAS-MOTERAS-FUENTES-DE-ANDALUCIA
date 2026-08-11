@@ -8,6 +8,7 @@
 <meta name="description" content="Planificador interactivo de rutas moteras por fuentes y manantiales de Andalucía. Mapas Leaflet, perfiles de elevación, POIs, clima, exportación GPX y fotos locales.">
 <meta name="theme-color" content="#0d1117">
 <meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https:; connect-src 'self' https:; frame-src https:; object-src 'none'; base-uri 'self'">
 <link rel="manifest" href="manifest.json">
 <meta property="og:title" content="Rutas Moteras · Fuentes de Andalucía">
 <meta property="og:description" content="Diseña rutas moteras con elevación, clima, puntos de interés y compartir directo. Exporta a GPX.">
@@ -398,18 +399,66 @@ select,input{font-size:16px;min-height:44px}
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="fuentes_data.js"></script>
-<script src="pueblos_andalucia.js"></script>
-<script>
-/* === CONFIGURACIÓN Y UTILIDADES === */
-const CONFIG = {
-  OSRM: 'https://routing.openstreetmap.de/routed-car/route/v1',
-  OVERPASS: ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'],
-  METEO: 'https://api.open-meteo.com/v1/forecast',
-  ELEVATION: 'https://api.open-elevation.com/api/v1/lookup',
-  GH: { owner: 'LCJ355', repo: 'RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA', path: 'photos_data.js' },
-  ADMIN_MSG: '⚠️ Modo editor activado. Los datos se almacenan localmente en tu navegador.'
-};
+  <script>
+    // Data loading with Promise-based loading and error handling
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve(src);
+        script.onerror = () => reject(new Error('Failed to load ' + src));
+        document.head.appendChild(script);
+      });
+    }
+
+    // Load all data files in parallel with error handling
+    Promise.all([
+      loadScript('fuentes_data.js').catch(e => { console.error('Failed to load fuentes_data.js:', e); throw e; }),
+      loadScript('pueblos_andalucia.js').catch(e => { console.error('Failed to load pueblos_andalucia.js:', e); throw e; }),
+      loadScript('photos_data.js').catch(e => { console.warn('Failed to load photos_data.js:', e); }),
+      loadScript('access_data.js').catch(e => { console.warn('Failed to load access_data.js:', e); })
+    ]).then(() => {
+      // Initialize app after all data files are loaded
+      initializeApp();
+    }).catch(err => {
+      console.error('Critical data loading failed:', err);
+      document.body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--warn)">' +
+        '<h2>⚠️ Error cargando datos</h2>' +
+        '<p>No se pudieron cargar los datos necesarios.</p>' +
+        '<button class="btn btn-pri" onclick="location.reload()" style="margin-top:10px">Reintentar</button>' +
+        '</div>';
+    });
+
+    // Main app initialization - runs after data files are loaded
+function initializeApp() {
+  /* === CONFIGURACIÓN Y UTILIDADES === */
+  const CONFIG = {
+    OSRM: 'https://routing.openstreetmap.de/routed-car/route/v1',
+    OVERPASS: ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'],
+    METEO: 'https://api.open-meteo.com/v1/forecast',
+    ELEVATION: 'https://api.open-elevation.com/api/v1/lookup',
+    GH: { owner: 'LCJ355', repo: 'RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA', path: 'photos_data.js' },
+    ADMIN_MSG: '⚠️ Modo editor activado. Los datos se almacenan localmente en tu navegador.'
+  };
+
+  /* === FETCH CON TIMEOUT Y REINTENTOS === */
+  async function fetchJSON(url, { timeout = 15000, retries = 2, headers = {}, method = 'GET', body } = {}) {
+    let lastErr;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), timeout);
+      try {
+        const res = await fetch(url, { method, headers, body, signal: ac.signal });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      } catch (e) {
+        lastErr = e;
+        if (e.name === 'AbortError') lastErr = new Error('Timeout ' + timeout + 'ms');
+        if (attempt < retries) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+      } finally { clearTimeout(timer); }
+    }
+    throw lastErr;
+  }
 
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
@@ -696,13 +745,13 @@ function updateSaveStatus() {
 function saveGithubToken() {
   const v = $('#github-token').value.trim();
   if (!v) { $('#github-token-status').textContent = '❌ Token vacío'; return; }
-  if (!confirm('⚠️ El token se guardará en localStorage en texto plano.\n\nSi alguien accede a tu dispositivo, podrá modificar tu repositorio.\n\n¿Continuar?')) return;
-  safeLS.set('gh_token', v);
-  $('#github-token-status').textContent = '✅ Token guardado';
-  toast('🔑 Token guardado (usa con precaución)');
+  if (!confirm('⚠️ El token se guardará en sessionStorage (se borra al cerrar el navegador).\n\nSi alguien accede a tu dispositivo, podrá modificar tu repositorio.\n\n¿Continuar?')) return;
+  try { sessionStorage.setItem('gh_token', v); } catch (e) { $('#github-token-status').textContent = '❌ No se pudo guardar'; return; }
+  $('#github-token-status').textContent = '✅ Token guardado (sesión)';
+  toast('🔑 Token guardado (sesión)');
 }
-function clearGithubToken() { safeLS.set('gh_token', ''); $('#github-token').value = ''; $('#github-token-status').textContent = '🔑 No configurado'; toast('🔑 Token eliminado'); }
-function getGithubToken() { return safeLS.get('gh_token') || ''; }
+function clearGithubToken() { try { sessionStorage.removeItem('gh_token'); } catch (e) {} $('#github-token').value = ''; $('#github-token-status').textContent = '🔑 No configurado'; toast('🔑 Token eliminado'); }
+function getGithubToken() { try { return sessionStorage.getItem('gh_token') || ''; } catch (e) { return ''; } }
 
 async function exportPhotosToFile() {
   if (!_savedPhotos) _savedPhotos = {};
@@ -729,18 +778,17 @@ async function publishToGithub(content, path, msg) {
   const { owner, repo } = CONFIG.GH;
   path = path || CONFIG.GH.path; msg = msg || '📸 Actualizar fotos';
   const token = getGithubToken();
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-  });
-  if (!res.ok && res.status !== 404) throw new Error(`GitHub API ${res.status}`);
-  const sha = res.status === 200 ? (await res.json()).sha : undefined;
-  const base64 = btoa(new TextEncoder().encode(content).reduce((s, b) => s + String.fromCharCode(b), ''));
-  const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg, content: base64, sha })
-  });
-  if (!putRes.ok) throw new Error((await putRes.json()).message || 'Error desconocido');
-  toast('✅ Publicado: ' + path); updateSaveStatus(); $('#github-token-status').textContent = '✅ Publicado';
+  const ghOpts = (method) => ({ method, headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' } });
+  const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), 20000);
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { ...ghOpts('GET'), signal: ac.signal });
+    if (!res.ok && res.status !== 404) throw new Error(`GitHub API ${res.status}`);
+    const sha = res.status === 200 ? (await res.json().catch(() => null))?.sha : undefined;
+    const base64 = btoa(new TextEncoder().encode(content).reduce((s, b) => s + String.fromCharCode(b), ''));
+    const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { ...ghOpts('PUT'), signal: ac.signal, body: JSON.stringify({ message: msg, content: base64, sha }) });
+    if (!putRes.ok) { let em = 'Error desconocido'; try { em = (await putRes.json()).message || em; } catch { } throw new Error(em); }
+    toast('✅ Publicado: ' + path); updateSaveStatus(); $('#github-token-status').textContent = '✅ Publicado';
+  } finally { clearTimeout(timer); }
 }
 
 function loadPhotosFile() {
@@ -954,7 +1002,7 @@ function renderList() {
 function updSum() {
   $('#r-start').textContent = startTown?.n?.substring(0, 18) || '—'; $('#r-end').textContent = endTown?.n?.substring(0, 18) || '—'; $('#r-wps').textContent = waypoints.length;
   const mini = $('#waypoints-mini');
-  mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${(w.n || 'WP').substring(0, 12)}</span>`).join('');
+  mini.innerHTML = waypoints.map((w, i) => `<span class="wp-mini">${i + 1}. ${escapeHtml((w.n || 'WP').substring(0, 12))}</span>`).join('');
   const modeLabel = { r: 'Rápido', m: 'Manual' }; $('#r-mode').textContent = `(${modeLabel[routeProfile]})`;
 }
 
@@ -968,17 +1016,13 @@ async function calcElevation(pts) {
     for (let i = 0; i < pts.length; i += step) sample.push(pts[i]);
     if (sample[sample.length - 1] !== pts[pts.length - 1]) sample.push(pts[pts.length - 1]);
     const locs = sample.map(p => p[0] + ',' + p[1]).join('|');
-    const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), 15000);
-    try {
-      const res = await fetch(`${CONFIG.ELEVATION}?locations=${locs}`, { signal: ac.signal });
-      if (!res.ok) return null;
-      const data = await res.json(); const results = data.results || [];
-      let total = 0;
-      return results.map((x, i) => {
-        if (i > 0) { const p1 = sample[i - 1], p2 = sample[i]; const R = 6371000; const dlat = (p2[0] - p1[0]) * Math.PI / 180; const dlon = (p2[1] - p1[1]) * Math.PI / 180; const a = Math.sin(dlat / 2) * Math.sin(dlat / 2) + Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.sin(dlon / 2) * Math.sin(dlon / 2); total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
-        return { dist: total / 1000, lat: sample[i][0], lon: sample[i][1], ele: x.elevation };
-      });
-    } finally { clearTimeout(timer); }
+    const data = await fetchJSON(CONFIG.ELEVATION + '?locations=' + locs, { timeout: 15000, retries: 1 });
+    const results = data.results || [];
+    let total = 0;
+    return results.map((x, i) => {
+      if (i > 0) { const p1 = sample[i - 1], p2 = sample[i]; const R = 6371000; const dlat = (p2[0] - p1[0]) * Math.PI / 180; const dlon = (p2[1] - p1[1]) * Math.PI / 180; const a = Math.sin(dlat / 2) * Math.sin(dlat / 2) + Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.sin(dlon / 2) * Math.sin(dlon / 2); total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
+      return { dist: total / 1000, lat: sample[i][0], lon: sample[i][1], ele: x.elevation };
+    });
   } catch { return null; }
 }
 
@@ -1020,10 +1064,8 @@ async function osrmRoute(coords, opts = {}) {
   try {
     const cc = coords.map(p => p.lng + ',' + p.lat).join(';');
     const url = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${cc}?overview=full&geometries=polyline&steps=true&alternatives=false`;
-    const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), 15000);
-    try {
-      const res = await fetch(url, { signal: ac.signal }); if (!res.ok) throw new Error(`OSRM ${res.status}`);
-      const data = await res.json(); if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.code);
+    const data = await fetchJSON(url, { timeout: 15000, retries: 1 });
+    if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.code);
       const r = data.routes[0]; const distKm = r.distance / 1000, timeMin = Math.round(r.duration / 60);
       const fmtTime = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
       $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
@@ -1036,10 +1078,11 @@ async function osrmRoute(coords, opts = {}) {
       if (elData?.length > 1) { $('#el-max').textContent = Math.round(Math.max(...elData.map(d => d.ele))); $('#el-min').textContent = Math.round(Math.min(...elData.map(d => d.ele))); let gn = 0, ls = 0; for (let i = 1; i < elData.length; i++) { const d = elData[i].ele - elData[i - 1].ele; if (d > 0) gn += d; else ls -= d; } $('#el-gain').textContent = Math.round(gn) + 'm'; $('#el-loss').textContent = Math.round(ls) + 'm'; }
       renderLegs(legs);
       return r;
-    } finally { clearTimeout(timer); setLoading(false); }
   } catch (e) {
-    if (e.name === 'AbortError') { $('#route-status').textContent = '⏱️ Timeout OSRM (15s) — se muestra ruta en línea recta'; }
+    if (e.name === 'AbortError' || /Timeout/.test(e.message)) { $('#route-status').textContent = '⏱️ Timeout OSRM (15s) — se muestra ruta en línea recta'; }
     throw e;
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -1319,9 +1362,7 @@ async function drawGpxRoute(start, idaWps, dest, vueltaWps, rawPts, destIdx) {
     const coords = pts.map(p => p.lo + ',' + p.la).join(';');
     const url = CONFIG.OSRM + '/driving/' + coords + '?overview=full&geometries=polyline';
     try {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const data = await res.json();
+      const data = await fetchJSON(url, { timeout: 15000, retries: 1 });
       if (data.code !== 'Ok' || !data.routes?.length) return null;
       const r = data.routes[0];
       const legPts = decodePolyline(r.geometry);
@@ -1432,7 +1473,7 @@ async function searchPOIs() { const rll = []; if (startTown?.la) rll.push([start
   rll.forEach(p => { if (p[0] < minLat) minLat = p[0]; if (p[0] > maxLat) maxLat = p[0]; if (p[1] < minLon) minLon = p[1]; if (p[1] > maxLon) maxLon = p[1]; });
   const pad = 0.03, bbox = (minLat - pad) + ',' + (minLon - pad) + ',' + (maxLat + pad) + ',' + (maxLon + pad);
   const query = '[out:json][timeout:15];(node["amenity"="fuel"](' + bbox + ');node["amenity"="car_repair"](' + bbox + ');node["tourism"="viewpoint"](' + bbox + ');node["tourism"="hotel"](' + bbox + ');node["tourism"="camp_site"](' + bbox + ');node["shop"="motorcycle"](' + bbox + ');node["shop"="motorcycle_repair"](' + bbox + '););out body;';
-  let elements = []; for (let i = 0; i < CONFIG.OVERPASS.length; i++) { try { const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), 20000); const res = await fetch(CONFIG.OVERPASS[i], { method: 'POST', signal: ac.signal, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(query) }); clearTimeout(timer); if (res.ok) { const data = await res.json(); if (data.elements?.length) { elements = data.elements; break; } } } catch { } }
+  let elements = []; for (let i = 0; i < CONFIG.OVERPASS.length; i++) { try { const data = await fetchJSON(CONFIG.OVERPASS[i], { method: 'POST', timeout: 20000, retries: 1, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(query) }); if (data.elements?.length) { elements = data.elements; break; } } catch { } }
   setLoading(false); btnLoading('#btn-poi');
   if (!elements?.length) { $('#route-status').textContent = '⏱️ Tiempo de espera agotado. Inténtalo de nuevo.'; return; }
   showPOIs(elements);
@@ -1457,13 +1498,13 @@ function showPOIs(elements) { poiMarkers.forEach(m => map.removeLayer(m)); poiMa
     mk.bindPopup(`<div class="p-title">${POI_LABELS[type] || type}</div><div class="p-town">${name}</div>${webHtml}`); poiMarkers.push(mk); const d = document.createElement('div'); d.className = 'poi-item'; d.innerHTML = `<span class="poi-icon">${(POI_LABELS[type] || '📍').charAt(0)}</span><span>${name}${safeWeb ? ' 🔗' : ''}</span><span class="poi-dist">${POI_LABELS[type] || type}</span>`; d.addEventListener('click', () => { if (safeWeb) { window.open(safeWeb, '_blank'); } else { map.setView([el.lat, el.lon], 15, {animate:false,duration:0}); setTimeout(() => mk.openPopup(), 50); } }); list.appendChild(d); }); list.style.display = 'block'; $('#route-status').textContent = '✅ ' + poiMarkers.length + ' POIs encontrados (≈5km ruta)'; }
 
 async function getWeather() { const pts = []; if (startTown?.la) pts.push({ name: '🏁 ' + startTown.n, lat: startTown.la, lon: startTown.lo }); waypoints.forEach((w, i) => pts.push({ name: '📍 ' + (i + 1) + '. ' + w.n, lat: w.la, lon: w.lo })); if (endTown?.la) pts.push({ name: '🎯 ' + endTown.n, lat: endTown.la, lon: endTown.lo }); if (!pts.length) { toast('⚠️ No hay puntos en la ruta', 'warn'); return; } const dateInput = $('#weather-date'); let date = dateInput.value; if (!date) { const d = new Date(); d.setDate(d.getDate() + 1); date = d.toISOString().split('T')[0]; dateInput.value = date; } $('#route-status').textContent = '⏳ Consultando clima para ' + date + '...'; setLoading(true); btnLoading('#btn-weather', '⏳ Clima...');
-  weatherData = {}; const results = await Promise.allSettled(pts.map(p => fetch(`${CONFIG.METEO}?latitude=${p.lat}&longitude=${p.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=auto&start_date=${date}&end_date=${date}`).then(r => r.json()).catch(() => null)));
+  weatherData = {}; const results = await Promise.allSettled(pts.map(p => fetchJSON(`${CONFIG.METEO}?latitude=${p.lat}&longitude=${p.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=auto&start_date=${date}&end_date=${date}`, { timeout: 15000, retries: 1 }).catch(() => null)));
   setLoading(false); btnLoading('#btn-weather');
   results.forEach((res, i) => { if (res.status === 'fulfilled' && res.value.daily) weatherData[i] = res.value.daily; });
   showWeather(pts);
 }
 function wmoIcon(code) { if (code === 0) return '☀️'; if (code <= 3) return '⛅'; if (code <= 48) return '🌫'; if (code <= 57) return '🌦'; if (code <= 67) return '🌧'; if (code <= 77) return '❄️'; if (code <= 82) return '🌦'; if (code <= 86) return '❄️'; return '🌧'; }
-function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(--accent);font-weight:700;margin-bottom:5px">🌤 Clima — ' + $('#weather-date').value + '</div>'; html += '<table style="width:100%;font-size:.68rem;border-collapse:collapse"><tr style="color:var(--muted)"><th>Punto</th><th>🌡</th><th>💧</th><th>☁️</th></tr>'; let hasData = false; pts.forEach((p, i) => { const w = weatherData[i]; if (w) { hasData = true; html += `<tr><td style="padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;border-bottom:1px solid var(--border)">${p.name}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.temperature_2m_min !== undefined ? Math.round(w.temperature_2m_min) + '°/' + Math.round(w.temperature_2m_max) + '°' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.precipitation_sum !== undefined && w.precipitation_sum > 0 ? w.precipitation_sum + 'mm' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${wmoIcon(w.weather_code)}</td></tr>`; } }); html += '</table>'; const el = $('#weather-container'); if (hasData) { el.innerHTML = html; el.style.display = 'block'; $('#sidebar').scrollTo({ top: el.offsetTop, behavior: 'smooth' }); toast('✅ Clima cargado'); } else { el.style.display = 'none'; toast('⚠️ No se pudo obtener el clima', 'warn'); } }
+function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(--accent);font-weight:700;margin-bottom:5px">🌤 Clima — ' + escapeHtml($('#weather-date').value) + '</div>'; html += '<table style="width:100%;font-size:.68rem;border-collapse:collapse"><tr style="color:var(--muted)"><th>Punto</th><th>🌡</th><th>💧</th><th>☁️</th></tr>'; let hasData = false; pts.forEach((p, i) => { const w = weatherData[i]; if (w) { hasData = true; html += `<tr><td style="padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;border-bottom:1px solid var(--border)">${escapeHtml(p.name)}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.temperature_2m_min !== undefined ? Math.round(w.temperature_2m_min) + '°/' + Math.round(w.temperature_2m_max) + '°' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.precipitation_sum !== undefined && w.precipitation_sum > 0 ? w.precipitation_sum + 'mm' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${wmoIcon(w.weather_code)}</td></tr>`; } }); html += '</table>'; const el = $('#weather-container'); if (hasData) { el.innerHTML = html; el.style.display = 'block'; $('#sidebar').scrollTo({ top: el.offsetTop, behavior: 'smooth' }); toast('✅ Clima cargado'); } else { el.style.display = 'none'; toast('⚠️ No se pudo obtener el clima', 'warn'); } }
 
 /* === EVENTOS Y CONTROLADORES === */
   $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const parent = b.parentElement; parent.querySelectorAll('button').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('active'); b.setAttribute('aria-checked', 'true'); if (parent.classList.contains('btn-grp')) { const newProfile = b.dataset.v; if (newProfile === 'm' && routeProfile !== 'm' && routing) { const pts = routing.getLatLngs(); const flat = Array.isArray(pts[0]) ? pts.flat() : pts; if (flat.length >= 2) { routeProfile = newProfile; toggleDraw(); drawPoints = simplifyPolyline(flat.map(p => L.latLng(p.lat, p.lng)), 30); updDrawLine(); calcManualRouteDebounced(); $('#route-status').textContent = '✏️ Ruta convertida a manual — arrastra puntos o añade más (máx ' + MAX_DRAW_PTS + ')'; } else { routeProfile = newProfile; } } else { routeProfile = newProfile; } updSum(); renderList(); applyFilters(); if (startTown && endTown && routeProfile !== 'm') calcRoute(); } }); });
@@ -1512,6 +1553,8 @@ $$('.tab-btn').forEach(btn => { btn.addEventListener('click', function() { if (w
 document.addEventListener('click', function(e) { const fi = e.target.closest('.fi'); if (fi && window.innerWidth <= 768) { const sb = $('#sidebar'); sb.classList.remove('open'); $('#btn-toggle-panel').textContent = '📋'; } });
 parseHash(); loadPhotosFile(); loadAccessFile(); updateAccessStatus(); const ghToken = getGithubToken(); if (ghToken) { $('#github-token').value = ghToken; $('#github-token-status').textContent = '✅ Token configurado'; }
 renderList(); updSum(); if (mcg.getLayers().length > 0) try { map.fitBounds(mcg.getBounds().pad(0.08)); } catch {} renderSaved(); updateSaveStatus();
+} // End of initializeApp
+
 if ('serviceWorker' in navigator) {
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
