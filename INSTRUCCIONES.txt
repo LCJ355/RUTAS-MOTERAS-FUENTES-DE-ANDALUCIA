@@ -102,10 +102,10 @@ CARPETA DE DESARROLLO
 ============================================================
 
 Los scripts y datos fuente estan en la carpeta:
-  E:\-IA-\FUENTES-Access\
+  G:\-IA-\FUENTES-Access\
 
 Base de datos Access completa:
-  E:\-IA-\FUENTES-Access\FUENTES_Andalucia.accdb (13.720 registros)
+  G:\-IA-\FUENTES-Access\FUENTES_Andalucia.accdb (13.720 registros)
 
 Para regenerar fuentes_data.js desde la DB:
   python export_rutas.py

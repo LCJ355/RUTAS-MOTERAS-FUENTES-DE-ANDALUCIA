@@ -11,17 +11,14 @@
      https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
 
 2. SI SE AÑADEN NUEVAS FUENTES (datos)
-   - Los datos están en E:\-IA-\Rutas Moteras -Fuentes de Cadiz-
-   - El pipeline: CSV → _merge.py → _combinado.json
-   - _combinado.json → _geoloc.py → _coords_fuentes.json (coordenadas)
-   - _combinado.json + _coords_pueblos.json → _build_andalucia.py → index_andalucia.html
-   - Luego copiar el JS generado al index.html del proyecto Andalucía
-   - No re-ejecutar _build_andalucia.py sin antes respaldar los cambios de layout
+   - Datos y scripts en: G:\-IA-\FUENTES-Access\
+   - Pipeline actual: FUENTES_Andalucia.accdb → export_rutas.py → fuentes_data.js
+   - export_rutas.py genera PROVS, TC, TP y FD directamente desde la DB Access
+   - Copiar el fuentes_data.js generado a la carpeta de este proyecto
 
 3. SI SE AÑADEN NUEVOS PUEBLOS
-   - _geo_pueblos.py genera _coords_pueblos.json (usando Nominatim)
-   - _coords_pueblos.json es la fuente ÚNICA de provincias (NO el CSV)
-   - TP (provincia por pueblo) se construye desde _coords_pueblos.json
+   - TC y TP se generan desde la DB Access con export_rutas.py (no hay CSV)
+   - Añadir el pueblo en la tabla Fuentes de la DB y re-ejecutar export_rutas.py
 
 4. ERRORES COMUNES
    - Si los botones Modo Ruta o Acceso no responden:
@@ -32,7 +29,7 @@
    - FD: array de fuentes (13720). Campos: p(pueblo), n(nombre), la(lat),
      lo(lng), t(tipo r=asfaltada o=off-road)
    - TC: coordenadas de pueblos {nombre: [lat, lng]} (733 entries)
-   - TP: provincia por pueblo {nombre: provincia} (desde _coords_pueblos.json)
+   - TP: provincia por pueblo {nombre: provincia} (generado por export_rutas.py desde la DB)
    - PROVS: provincias con tilde {Almeria, Cadiz, Cordoba, Granada, Huelva,
      Jaen, Malaga, Sevilla}
    - currentTown: pueblo seleccionado en DESTINO
@@ -99,7 +96,7 @@
 
 12. RESPALDO
     - index.html y NO_OLVIDAR.txt en la carpeta Andalucía
-    - Scripts .py y CSVs/JSONs en la carpeta Cádiz
+    - Scripts .py y la DB Access en G:\-IA-\FUENTES-Access\
     - Ambos repositorios GitHub: RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA
       y RUTAS-MOTERAS-FUENTES-DE-CADIZ
     - fuentes_data.js.bak: backup antes de corrección de tildes
