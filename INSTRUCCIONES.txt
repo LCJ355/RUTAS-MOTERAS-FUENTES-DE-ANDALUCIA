@@ -1,12 +1,13 @@
-RUTAS MOTERAS - FUENTES DE ANDALUCIA    VERSION 2.0
+RUTAS MOTERAS - FUENTES DE ANDALUCIA
 INSTRUCCIONES
 ============================================================
 
-Este archivo es una web completa de mapa interactivo.
-Abrelo con cualquier navegador (Chrome, Firefox, Edge...).
+Esta es una aplicacion web de mapa interactivo solo online.
+Abrela desde la URL publicada con un navegador actualizado.
 
-No necesita internet para ver el mapa (usa OpenStreetMap),
-pero si para calcular rutas (OSRM), el clima y los POIs.
+Se necesita Internet para cargar los mapas y para consultar las APIs
+de rutas (OSRM), elevacion (Open-Elevation), puntos de interes
+(Overpass), meteorologia (Open-Meteo) y, cuando se usa, GitHub.
 
 
 ============================================================
@@ -20,11 +21,11 @@ La web tiene 3 lineas de seleccion:
      (al seleccionarlo, se filtran las fuentes en mapa y lista)
   3. FINAL RUTA    - Pueblo donde termina la ruta
 
-Planificar ruta:
+Planificar una ruta:
   1. Elige SALIDA, DESTINO y FINAL RUTA
   2. Pulsa en una fuente del mapa para ver detalles
   3. Pulsa "+" para anadirla como parada
-  4. Pulsa "Calcular ruta" - aparece la linea azul
+  4. Pulsa "Calcular ruta"
 
 Filtrar fuentes:
   - Selecciona provincia y pueblo en DESTINO
@@ -32,18 +33,13 @@ Filtrar fuentes:
   - La lista lateral se actualiza automaticamente
   - El boton "Ajustar" centra el mapa en las fuentes visibles
 
-Anadir fotos (solo admin):
-  1. Pulsa "Admin" y escribe la contrasena: rutas2025
-  2. Pulsa una fuente en el mapa, luego "camara"
-  3. O pega una foto directamente con Ctrl+V
-  4. Las fotos se guardan automaticamente en el navegador
-
 Otras funciones:
-  - Clima: despues de calcular la ruta
-  - POIs: gasolineras, hoteles, talleres...
+  - Consultar clima y POIs con sus APIs online
+  - Crear tramos manuales en el mapa
+  - Importar y exportar GPX
   - Guardar/Cargar rutas
-  - Exportar HTML con fotos incluidas
-  - Capas: mapa, topo, ciclismo, satelite
+  - Compartir la ruta con Google Maps o WhatsApp
+  - Elegir capas de mapa disponibles
 
 
 ============================================================
@@ -54,7 +50,7 @@ Cada fuente tiene en su popup:
   - Maps: abre Google Maps con las coordenadas exactas
   - WhatsApp: comparte nombre, pueblo y coordenadas
 
-Despues de calcular una ruta aparecen botones para:
+Despues de calcular una ruta aparecen opciones para:
   - Google Maps: abre la ruta completa con todos los waypoints
   - WhatsApp: mensaje con inicio, paradas, destino,
     distancia, tiempo y enlace a Google Maps
@@ -67,22 +63,23 @@ DATOS DEL PROYECTO
 Provincias:           8 (Almeria, Cadiz, Cordoba, Granada,
                        Huelva, Jaen, Malaga, Sevilla)
 
-Total fuentes:        13.720
-Total pueblos:        742
-
-Version:              2.1 (Julio 2026)
+FD (fuentes):         13,719
+TC (coordenadas):        712
+TP (pueblo-provincia):   711
 
 
 ============================================================
 ESTRUCTURA DE ARCHIVOS
 ============================================================
 
-index.html            - La web (abrelo en el navegador)
-fuentes_data.js       - Datos de 13.720 fuentes (coordenadas)
-photos_data.js        - Fotos de fuentes (auto-generado)
+index.html            - Aplicacion web
+fuentes_data.js       - PROVS, TC, TP y FD
+photos_data.js        - Fotos publicadas
+access_data.js        - Tipos de acceso publicados
+manifest.json         - Metadatos de instalacion
+sw.js                 - Retira el antiguo servicio offline
 INSTRUCCIONES.txt     - Este archivo
 NO_OLVIDAR.txt        - Recordatorios tecnicos
-PARA-ACTUALIZAR.txt   - Enlace GitHub y tokens
 
 
 ============================================================
@@ -92,9 +89,16 @@ VERSION WEB (GITHUB PAGES)
 URL publica: https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
 
 Para actualizar:
-  1. Ve a https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/upload/main
-  2. Sube index.html y fuentes_data.js
-  3. GitHub Pages se actualiza en ~1 minuto
+  1. Revisa los cambios con Git
+  2. Crea un commit y subelo al repositorio
+  3. Espera al despliegue de GitHub Pages
+
+Publicacion temporal desde el navegador:
+  - Utiliza solo un token fine-grained limitado a este repositorio.
+  - Concede unicamente el permiso de contenido necesario.
+  - El token se conserva en sessionStorage y se elimina al cerrar la sesion.
+  - Eliminalo tambien desde la interfaz al terminar.
+  - No uses nunca un token clasico con permisos amplios.
 
 
 ============================================================
@@ -104,14 +108,12 @@ CARPETA DE DESARROLLO
 Los scripts y datos fuente estan en la carpeta:
   G:\-IA-\FUENTES-Access\
 
-Base de datos Access completa:
-  G:\-IA-\FUENTES-Access\FUENTES_Andalucia.accdb (13.720 registros)
+Pipeline actual:
+  FUENTES_Andalucia.accdb -> export_rutas.py -> fuentes_data.js
 
-Para regenerar fuentes_data.js desde la DB:
-  python export_rutas.py
-
-Para subir a GitHub:
-  python upload_correct.py
+export_rutas.py genera PROVS, TC, TP y FD directamente desde Access.
+Despues se copia el fuentes_data.js generado a este proyecto y se
+verifican los recuentos: FD 13,719, TC 712 y TP 711.
 
 
 ============================================================
@@ -120,11 +122,11 @@ NOTAS TECNICAS
 
 - Las coordenadas de las fuentes son reales (UTM ETRS89
   convertidas a WGS84 desde la DB de conocetusfuentes.com)
-- Los datos se almacenan en LocalStorage del navegador
-- La contrasena de admin esta visible en el codigo fuente
-- Para compartir la web, sube los archivos a cualquier hosting
+- Las preferencias, rutas y datos locales se almacenan en el navegador
+- Las APIs publicas pueden registrar la IP segun sus propias politicas
+- La aplicacion no ofrece funcionamiento offline
+- Para compartir la web, publica los archivos mediante HTTPS
 
 - Popups: fondo oscuro (#161b22), titulo dorado (#f5c842),
   marcadores azul fuerte (#1976d2)
-- Las fotos se guardan en localStorage (Chrome/Edge/HTTPS)
-  o se exportan a photos_data.js (Firefox file://)
+- La disponibilidad y los limites de las APIs dependen de terceros

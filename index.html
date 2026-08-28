@@ -158,7 +158,7 @@ select option{background:var(--bg)}
 .admin-only{display:none!important}
 .visitor .fi-btn.pt,.visitor .admin-only{display:none!important}
 #loading-overlay{position:fixed;inset:0;z-index:10001;background:rgba(13,17,23,.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px}
-#offline-banner{position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--warn);color:#fff;text-align:center;padding:6px 10px;font-size:.7rem;display:none}
+
 .loader{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;border-top-color:var(--accent)}
 .toast{position:fixed;bottom:24px;right:24px;z-index:10002;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:11px 15px;font-size:.72rem;color:var(--text);box-shadow:0 5px 20px rgba(0,0,0,.5);transform:translateX(120%);transition:transform .25s cubic-bezier(.2,.8,.2,1);max-width:320px;pointer-events:auto}
 .toast.show{transform:translateX(0)}
@@ -211,7 +211,7 @@ select,input{font-size:16px;min-height:44px}
 #sidebar{width:100%;min-width:unset;height:80vh;padding:8px 8px;font-size:.85rem}
 #sidebar h1{font-size:1.05rem}
 .row{gap:4px}
-.btn{padding:6px 9px;font-size:.68rem;min-height:34px}
+.btn{padding:6px 9px;font-size:.68rem;min-height:44px;min-width:44px}
 }
 @media(max-width:375px){
 #sidebar{height:80vh;padding:6px 6px 0}
@@ -224,13 +224,12 @@ select,input{font-size:16px;min-height:44px}
 </style>
 </head>
 <body>
-<div id="offline-banner" role="alert">📡 Sin conexión — algunos datos pueden no estar disponibles</div>
 <div id="app">
 <div id="sidebar">
-<div id="sidebar-handle" role="button" aria-label="Abrir/cerrar panel" tabindex="0"></div>
+<button id="sidebar-handle" aria-expanded="false" aria-controls="sidebar-content" aria-label="Abrir/cerrar panel" style="background:none;border:none;padding:0;cursor:pointer;display:block;pointer-events:auto"></button>
 <div id="sidebar-content">
-<div id="tab-bar" role="tablist"><button class="tab-btn active" data-tab="fuentes" role="tab" aria-selected="true">📍 Fuentes</button><button class="tab-btn" data-tab="ruta" role="tab" aria-selected="false">🛵 Ruta</button><button class="tab-btn" data-tab="ajustes" role="tab" aria-selected="false">⚙️ Ajustes</button></div>
-<div class="tab-panel active" data-tab="fuentes">
+<div id="tab-bar" role="tablist"><button class="tab-btn active" id="tab-fuentes" data-tab="fuentes" role="tab" aria-selected="true" aria-controls="panel-fuentes" tabindex="0">📍 Fuentes</button><button class="tab-btn" id="tab-ruta" data-tab="ruta" role="tab" aria-selected="false" aria-controls="panel-ruta" tabindex="-1">🛵 Ruta</button><button class="tab-btn" id="tab-ajustes" data-tab="ajustes" role="tab" aria-selected="false" aria-controls="panel-ajustes" tabindex="-1">⚙️ Ajustes</button></div>
+<div class="tab-panel active" id="panel-fuentes" role="tabpanel" aria-labelledby="tab-fuentes" tabindex="0" data-tab="fuentes">
 <h1 style="text-align:center">🏍 RUTAS MOTERAS 🏍</h1><div style="color:#66bb6a;font-size:1.15rem;text-align:center;margin-bottom:2px">Fuentes/Manantiales de Andalucía</div>
 <div class="sub">Selecciona salida/destino (pueblos) y paradas (fuentes)</div>
 <div id="stats"></div>
@@ -267,7 +266,7 @@ select,input{font-size:16px;min-height:44px}
 </div>
 
 </div>
-<div class="tab-panel" data-tab="ruta">
+<div class="tab-panel" id="panel-ruta" role="tabpanel" aria-labelledby="tab-ruta" tabindex="0" data-tab="ruta">
 <div class="mobile-only" style="margin-bottom:8px">
 <div class="lbl">🛣 MODO Cálculo Ruta</div>
 <div class="btn-grp" role="radiogroup" aria-label="Modo de ruta">
@@ -290,7 +289,7 @@ select,input{font-size:16px;min-height:44px}
 <span>⏱ <strong id="r-time">0 min</strong></span>
 <span id="r-mode" style="color:var(--muted)"></span>
 </div>
-<div style="max-height:130px;overflow-y:auto"><table id="leg-table" aria-label="Detalle de tramos"><thead><tr><th>#</th><th>Parada</th><th>Dist</th><th>Acum</th><th>Alt</th><th></th></tr></thead><tbody id="leg-body"></tbody></table></div>
+<div style="max-height:130px;overflow-y:auto"><table id="leg-table" aria-label="Detalle de tramos"><thead><tr><th>#</th><th>Parada</th><th>Dist</th><th>Acum</th><th>Tiempo</th><th>Carretera</th></tr></thead><tbody id="leg-body"></tbody></table></div>
 <div id="waypoints-mini"></div>
 <div id="poi-list" role="listbox" aria-label="Puntos de interés cercanos"></div>
 <div id="route-status" style="font-size:.64rem;color:var(--sub);margin:5px 0" aria-live="polite"></div>
@@ -317,16 +316,17 @@ select,input{font-size:16px;min-height:44px}
 <div class="row" style="gap:4px">
 <button class="btn btn-sec btn-sm" id="btn-poi">⛽ POIs</button>
 <button class="btn btn-sec btn-sm" id="btn-weather">🌤 Clima</button>
-<input type="date" id="weather-date" style="font-size:.62rem;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:115px">
+<input type="date" id="weather-date" aria-label="Fecha del pronóstico meteorológico" style="font-size:.62rem;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:115px">
 </div>
 <div id="weather-container" role="region" aria-label="Pronóstico meteorológico"></div>
 <div class="row" style="gap:4px">
 <button class="btn btn-sec btn-sm" id="btn-saved-toggle" style="flex:1" aria-label="Mis rutas guardadas">📁 Mis rutas</button>
 <button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
 </div>
+<div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
 </div>
 </div>
-<div class="tab-panel" data-tab="ajustes">
+<div class="tab-panel" id="panel-ajustes" role="tabpanel" aria-labelledby="tab-ajustes" tabindex="0" data-tab="ajustes">
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0;font-size:.7rem;color:var(--text)">
 <span id="fountain-count" style="color:var(--sub);font-size:.62rem"></span>
 <span><span style="color:#f5c842">●</span> Total <b id="acc-t-count">0</b></span>
@@ -337,7 +337,7 @@ select,input{font-size:16px;min-height:44px}
 <details style="margin-top:5px;font-size:.62rem;color:var(--muted)">
 <summary style="cursor:pointer;padding:4px;color:var(--muted);font-size:.65rem">🔐 Configuración GitHub</summary>
 <div style="margin-top:5px">
-<input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo)" style="width:100%;padding:5px;font-size:.62rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-bottom:3px">
+<input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo)" aria-label="Token clásico de GitHub (scope repo)" style="width:100%;padding:5px;font-size:.62rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-bottom:3px">
 <div style="display:flex;gap:4px;align-items:center">
 <span id="github-token-status" style="color:var(--sub)">🔑 No configurado</span>
 <button class="btn btn-sec btn-sm" onclick="saveGithubToken()" style="font-size:.55rem" aria-label="Guardar token GitHub">Guardar</button>
@@ -345,7 +345,7 @@ select,input{font-size:16px;min-height:44px}
 </div>
 </div>
 <hr style="border:none;border-top:1px solid var(--border);margin:6px 0">
-<button class="btn btn-red btn-sm" id="btn-reset-all" onclick="if(confirm('¿Borrar TODOS los datos locales (fotos, notas, rutas guardadas)?')){_savedPhotos={};_savedCaptions={};window.__ACCESS={};localStorage.clear();renderList();updateSaveStatus();updateAccessStatus();toast('🗑 Datos locales borrados');}" style="width:100%;font-size:.6rem;padding:4px">🗑 Reset completo</button>
+<button class="btn btn-red btn-sm" id="btn-reset-all" onclick="if(confirm('¿Borrar TODOS los datos locales (fotos, notas, rutas guardadas)?')){resetLocalData();}" style="width:100%;font-size:.6rem;padding:4px">🗑 Reset completo</button>
 </details>
 <div class="row" style="gap:4px;margin-top:5px" id="save-photos-row">
 <span id="save-photos-status" style="font-size:.62rem;color:var(--sec);flex:1"></span>
@@ -362,7 +362,6 @@ select,input{font-size:16px;min-height:44px}
 <a href="#" id="link-legal" role="button">Aviso Legal</a> · <a href="#" id="link-privacy" role="button">Privacidad</a> · <a href="#" id="link-traffic" role="button">🚦 Tráfico DGT</a> · <a href="#" id="link-cookies" role="button">Cookies</a><br>
 <span style="color:var(--muted)">Idea original de Luciano CJ <span style="color:var(--accent)">❤️</span> <em style="font-size:.48rem">"no me copies sino es para mejorarme"</em></span>
 </div>
-<div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
 </div>
 </div>
 </div>
@@ -385,7 +384,7 @@ select,input{font-size:16px;min-height:44px}
 
 <div id="legal-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="legal-title" hidden>
   <div class="modal-content">
-    <span class="modal-close" aria-label="Cerrar" role="button" tabindex="0">&times;</span>
+    <button class="modal-close" aria-label="Cerrar" style="background:none;border:none;padding:6px">&times;</button>
     <h2 id="legal-title">Información Legal</h2>
     <div id="legal-body"></div>
   </div>
@@ -396,7 +395,7 @@ select,input{font-size:16px;min-height:44px}
     <div style="display:flex;align-items:center;flex-shrink:0;padding:8px 44px 8px 14px;border-bottom:1px solid var(--border)">
       <span style="font-size:.85rem;font-weight:700;color:var(--accent)">🚦 Tráfico DGT en tiempo real</span>
     </div>
-    <button class="modal-close" aria-label="Cerrar" style="background:rgba(13,17,23,.7);border-radius:4px;line-height:1;z-index:10">&times;</button>
+    <button class="modal-close" aria-label="Cerrar" style="background:rgba(13,17,23,.7);border-radius:4px;line-height:1;z-index:10;border:none;padding:6px">&times;</button>
     <iframe src="https://etraffic.dgt.es/etrafficWEB/" style="flex:1;width:100%;border:none;min-height:0" title="Mapa de tráfico DGT" allow="geolocation"></iframe>
   </div>
 </div>
@@ -473,12 +472,28 @@ const toast = (msg, type = 'success') => {
   t.className = `toast show ${type}`;
   setTimeout(() => t.classList.remove('show'), 3000);
 };
-const setLoading = on => { $('#loading-overlay').style.display = on ? 'flex' : 'none'; };
+const setLoading = on => { const o = $('#loading-overlay'); o.style.display = on ? 'flex' : 'none'; o.setAttribute('aria-hidden', on ? 'false' : 'true'); o.setAttribute('aria-busy', on ? 'true' : 'false'); };
 const btnLoading = (id, text) => { const b = $(id); if (text) { b.dataset.restore = b.textContent; b.disabled = true; b.textContent = text; } else { b.disabled = false; b.textContent = b.dataset.restore || b.textContent; } };
 const safeLS = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { if (e.name === 'QuotaExceededError') toast('⚠️ Almacén lleno. Exporta datos.', 'warn'); return false; } }
+  set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { if (e.name === 'QuotaExceededError') toast('⚠️ Almacén lleno. Exporta datos.', 'warn'); return false; } },
+  remove: k => { try { localStorage.removeItem(k); } catch { } }
 };
+const KEYS = { migrated: 'rm:migration:v2', cookie: 'rm:cookie-accepted', routes: 'rm:routes', token: 'rm:github-token' };
+const idKey = (type, id) => 'rm:' + type + ':' + id;
+function migrateLegacyStorage() {
+  if (safeLS.get(KEYS.migrated)) return;
+  const map = { fp_: 'photo', fc_: 'caption', fn_: 'note', fa_: 'access' };
+  FD.forEach((f, index) => {
+    for (const pref in map) {
+      const old = safeLS.get(pref + index);
+      if (old !== null) { safeLS.set(idKey(map[pref], f.id), old); safeLS.remove(pref + index); }
+    }
+  });
+  if (safeLS.get('cb_accepted') !== null) { safeLS.set(KEYS.cookie, safeLS.get('cb_accepted')); safeLS.remove('cb_accepted'); }
+  if (safeLS.get('rm_routes') !== null) { safeLS.set(KEYS.routes, safeLS.get('rm_routes')); safeLS.remove('rm_routes'); }
+  safeLS.set(KEYS.migrated, '1');
+}
 
 /* === ICONOS SVG === */
 (function(){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.style.display='none';s.id='icon-sprite';s.innerHTML='<symbol id="i-loc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.5" fill="none"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 21V3h12l1 5-1 5H4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-wp" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><text x="12" y="15" font-size="9" text-anchor="middle" fill="currentColor">1</text></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/></symbol><symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M8 8h8M8 12h6M8 16h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><path d="M4 20h4l10-16h4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol><symbol id="i-gps" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2v3m0 14v3m10-10h-3M5 12H2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>';
@@ -571,6 +586,73 @@ let _gpxPending = null;
 let _gpxTempLayer = null;
 let elevData = [], poiMarkers = [], weatherData = {};
 let _isAdmin = true;
+let _publishedPhotos = Object.freeze({}), _publishedCaptions = Object.freeze({}), _publishedAccess = Object.freeze({});
+let routeGeneration = 0, _osrmAbort = null, _combinedRouteGeometry = [], _routePointCount = 0;
+const computedRouteLayers = L.layerGroup().addTo(map);
+
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+function serializeEndpoint(ep) {
+  if (!ep) return null;
+  const kind = ep.kind;
+  if (kind === 'town' || kind === 'gps' || kind === 'gpx') return { kind, p: ep.p, la: ep.la, lo: ep.lo, n: ep.n };
+  if (kind === 'fountain') return { kind: 'fountain', id: ep.id, p: ep.p, la: ep.la, lo: ep.lo, n: ep.n };
+  if (ep.id != null) return { kind: 'fountain', id: ep.id, p: ep.p, la: ep.la, lo: ep.lo, n: ep.n };
+  return { kind: 'gps', p: ep.p, la: ep.la, lo: ep.lo, n: ep.n };
+}
+function restoreEndpoint(ep) {
+  if (!ep) return null;
+  if (ep.kind === 'fountain') { const f = FD.find(x => x.id === ep.id); return f ? f : null; }
+  if (ep.kind === 'town') { const pos = getPos(ep.p); if (!pos) return null; return { kind: 'town', p: pos.p, la: pos.la, lo: pos.lo, n: ep.n || pos.p }; }
+  if (ep.kind === 'gps' || ep.kind === 'gpx') return { kind: ep.kind, p: ep.p, la: ep.la, lo: ep.lo, n: ep.n };
+  return ep;
+}
+const fountainId = f => (f && (f.id != null)) ? f.id : null;
+const wpMarker = w => (w && w.id != null) ? mm[w.id] : null;
+function collectOverrides(prefix) {
+  const out = {};
+  FD.forEach(f => {
+    const key = idKey(prefix, f.id);
+    if (safeLS.get(key + '-del')) { out[f.id] = null; }
+    else { const v = safeLS.get(key); if (v !== null) out[f.id] = v; }
+  });
+  return out;
+}
+function photoOverrideCount() {
+  const ov = collectOverrides('photo');
+  let c = 0;
+  for (const id in ov) { const pub = hasOwn(_publishedPhotos, id) ? _publishedPhotos[id] : undefined; if (ov[id] === null) { if (pub !== undefined) c++; } else if (pub !== ov[id]) c++; }
+  return c;
+}
+function capOverrideCount() {
+  const ov = collectOverrides('caption');
+  let c = 0;
+  for (const id in ov) { const pub = hasOwn(_publishedCaptions, id) ? _publishedCaptions[id] : undefined; if (ov[id] === null) { if (pub !== undefined) c++; } else if (pub !== ov[id]) c++; }
+  return c;
+}
+function accOverrideCount() {
+  const ov = collectOverrides('access');
+  let c = 0;
+  for (const id in ov) { const pub = hasOwn(_publishedAccess, id) ? _publishedAccess[id] : undefined; if (ov[id] === null) { if (pub !== undefined) c++; } else if (pub !== ov[id]) c++; }
+  return c;
+}
+function mergedPhotoState() {
+  const ph = {}, cap = {};
+  for (const k in _publishedPhotos) ph[k] = _publishedPhotos[k];
+  for (const k in _publishedCaptions) cap[k] = _publishedCaptions[k];
+  const ovP = collectOverrides('photo'), ovC = collectOverrides('caption');
+  for (const id in ovP) { if (ovP[id] === null) delete ph[id]; else ph[id] = ovP[id]; }
+  for (const id in ovC) { if (ovC[id] === null) delete cap[id]; else cap[id] = ovC[id]; }
+  for (const id in cap) if (!ph[id]) delete cap[id];
+  return { ph, cap };
+}
+function mergedAccessState() {
+  const st = {};
+  for (const k in _publishedAccess) st[k] = _publishedAccess[k];
+  const ov = collectOverrides('access');
+  for (const id in ov) { if (ov[id] === null) delete st[id]; else st[id] = ov[id]; }
+  return st;
+}
+function routeDepth() { return _combinedRouteGeometry.length; }
 
 /* === PUEBLOS Y PROVINCIA === */
 // PED_DATA = pedanías de pueblos_andalucia.js (puede no existir)
@@ -639,21 +721,22 @@ $('#town-end').addEventListener('change', function () {
 $('#stats').textContent = FD.length + ' fuentes, ' + Object.keys(TC).length + ' municipios + ' + Object.keys(PED_DATA).length + ' pedanías';
 const aLbl = t => t === 'r' ? 'Asfaltada' : t === 'o' ? 'Sin asfaltar' : 'Sin información';
 function getAccType(f) {
-  const ov = safeLS.get('fa_' + f._idx);
-  return ov !== null ? ov : (f.t || '');
+  if (!f) return '';
+  const id = fountainId(f); if (id == null) return f.t || '';
+  if (safeLS.get(idKey('access', id) + '-del')) return f.t || '';
+  const ov = safeLS.get(idKey('access', id));
+  if (ov !== null) return ov;
+  if (hasOwn(_publishedAccess, id)) return _publishedAccess[id];
+  return f.t || '';
 }
 const accBtnTxt = t => t === 'r' ? '🚗' : t === 'o' ? '🛤' : '❓';
 function cycleAcc(f) {
-  const ov = safeLS.get('fa_' + f._idx);
-  const cur = getAccType(f);
-  let next;
-  if (ov === null) next = (f.t || '') === 'r' ? 'o' : (f.t || '') === 'o' ? '' : 'r';
-  else if (cur === 'r') next = 'o';
-  else if (cur === 'o') next = '';
-  else next = 'base';
-  if (next === 'base') { try { localStorage.removeItem('fa_' + f._idx); } catch { } }
-  else safeLS.set('fa_' + f._idx, next);
-  const mk = mm[f._idx];
+  const id = fountainId(f); const base = f.t || ''; const key = idKey('access', id);
+  const order = ['r', 'o', '']; let idx = order.indexOf(getAccType(f)); if (idx < 0) idx = 0;
+  const next = order[(idx + 1) % 3];
+  if (next === base) { safeLS.remove(key); safeLS.remove(key + '-del'); }
+  else { safeLS.set(key, next); safeLS.remove(key + '-del'); }
+  const mk = mm[id];
   if (mk) { mk.setIcon(I[getAccType(f) || 'u']); if (mk.isPopupOpen()) updPop(mk); }
   renderList(); updateAccessStatus();
   toast('🚧 Acceso: ' + aLbl(getAccType(f)));
@@ -663,7 +746,7 @@ function cycleAcc(f) {
 let _selMk = null;
 function selMk(mk) {
   if (_selMk && _selMk !== mk) {
-    const wi = waypoints.findIndex(w => w._idx === _selMk._fd._idx);
+    const wi = waypoints.findIndex(w => fountainId(w) === fountainId(_selMk._fd));
     _selMk.setIcon(wi >= 0 ? wpIcon(wi + 1) : (I[getAccType(_selMk._fd) || 'u']));
     if (_selMk._icon) _selMk._icon.classList.remove('blink');
   }
@@ -674,12 +757,12 @@ function selMk(mk) {
 
 const mcg = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false, zoomToBoundsOnClick: true, disableClusteringAtZoom: 15 });
 FD.forEach((f, i) => {
-  f._idx = i; const mk = L.marker([f.la, f.lo], { icon: I[getAccType(f) || 'u'] });
+  const mk = L.marker([f.la, f.lo], { icon: I[getAccType(f) || 'u'], title: f.n + ' · ' + f.p });
   mk._fd = f; mk.bindPopup(''); mk.bindTooltip(escapeHtml(f.n) + ' · ' + escapeHtml(f.p), { sticky: true });
-  mk.on('click', () => { map.setView(mk.getLatLng(), 15, {animate:false,duration:0}); setTimeout(() => { mk.openPopup(); _activePhotoIdx = mk._fd._idx; focusPaste(); updPop(mk); }, 50); });
-  mk.on('popupopen', () => { _activePhotoIdx = mk._fd._idx; focusPaste(); updPop(mk); selMk(mk); });
+  mk.on('click', () => { map.setView(mk.getLatLng(), 15, {animate:false,duration:0}); setTimeout(() => { mk.openPopup(); _activePhotoIdx = f.id; focusPaste(); updPop(mk); }, 50); });
+  mk.on('popupopen', () => { _activePhotoIdx = f.id; focusPaste(); updPop(mk); selMk(mk); });
   mk.on('popupclose', () => { _activePhotoIdx = -1; if (_pasteTarget) _pasteTarget.blur(); selMk(null); });
-  markers.push(mk); mm[i] = mk; mcg.addLayer(mk);
+  markers.push(mk); mm[f.id] = mk; mcg.addLayer(mk);
 });
 map.addLayer(mcg);
 const routeLayer = L.layerGroup().addTo(map);
@@ -712,35 +795,27 @@ function initPhotoInput() {
     toast('⚠️ No se detectó imagen en el portapapeles', 'warn');
   });
 }
-let _savedPhotos = null, _savedCaptions = null;
-function getPhoto(idx) {
-  if (_savedPhotos?.[idx] !== undefined) return _savedPhotos[idx];
-  const p = safeLS.get('fp_' + idx);
-  if (p) { if (!_savedPhotos) _savedPhotos = {}; _savedPhotos[idx] = p; }
-  return p;
+function getPhoto(id) {
+  if (safeLS.get(idKey('photo', id) + '-del')) return null;
+  const p = safeLS.get(idKey('photo', id));
+  if (p !== null) return p;
+  return hasOwn(_publishedPhotos, id) ? _publishedPhotos[id] : undefined;
 }
-function getCaption(idx) { 
-  if (_savedCaptions?.[idx] !== undefined) return _savedCaptions[idx];
-  const c = safeLS.get('fc_' + idx);
-  if (c) { if (!_savedCaptions) _savedCaptions = {}; _savedCaptions[idx] = c; }
-  return c || '';
+function getCaption(id) {
+  if (safeLS.get(idKey('caption', id) + '-del')) return '';
+  const c = safeLS.get(idKey('caption', id));
+  if (c !== null) return c;
+  return hasOwn(_publishedCaptions, id) ? _publishedCaptions[id] : '';
 }
 function updateSaveStatus() {
-  if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) {
-    for (let i = 0; i < FD.length; i++) { const p = safeLS.get('fp_' + i); if (p) { if (!_savedPhotos) _savedPhotos = {}; _savedPhotos[i] = p; } }
-  }
   const el = $('#save-photos-status'); const btn = $('#btn-save-photos');
-  if (!_savedPhotos || Object.keys(_savedPhotos).length === 0) {
-    el.textContent = '📷 Sin fotos'; btn.style.display = 'none'; return;
-  }
-  const saved = window.__PHOTOS || {};
-  const unsaved = Object.keys(_savedPhotos).filter(k => !saved[k]).length;
+  const unsaved = photoOverrideCount() + capOverrideCount();
+  const totalPub = Object.keys(_publishedPhotos).length;
   if (unsaved > 0) {
-    el.innerHTML = `<span class="blink" style="color:var(--accent);font-weight:700">📷 ${unsaved} foto${unsaved > 1 ? 's' : ''} sin publicar</span>`;
+    el.innerHTML = `<span class="blink" style="color:var(--accent);font-weight:700">📷 ${unsaved} cambio${unsaved > 1 ? 's' : ''} en fotos/leyendas sin publicar</span>`;
     btn.style.display = 'inline-block';
   } else {
-    const totalPub = Object.keys(window.__PHOTOS || {}).length;
-    el.textContent = `📷 ${totalPub} fotos publicadas`;
+    el.textContent = totalPub ? `📷 ${totalPub} fotos publicadas` : '📷 Sin fotos';
     btn.style.display = 'none';
   }
 }
@@ -748,32 +823,47 @@ function saveGithubToken() {
   const v = $('#github-token').value.trim();
   if (!v) { $('#github-token-status').textContent = '❌ Token vacío'; return; }
   if (!confirm('⚠️ El token se guardará en sessionStorage (se borra al cerrar el navegador).\n\nSi alguien accede a tu dispositivo, podrá modificar tu repositorio.\n\n¿Continuar?')) return;
-  try { sessionStorage.setItem('gh_token', v); } catch (e) { $('#github-token-status').textContent = '❌ No se pudo guardar'; return; }
+  try { sessionStorage.setItem(KEYS.token, v); } catch (e) { $('#github-token-status').textContent = '❌ No se pudo guardar'; return; }
   $('#github-token-status').textContent = '✅ Token guardado (sesión)';
   toast('🔑 Token guardado (sesión)');
 }
-function clearGithubToken() { try { sessionStorage.removeItem('gh_token'); } catch (e) {} $('#github-token').value = ''; $('#github-token-status').textContent = '🔑 No configurado'; toast('🔑 Token eliminado'); }
-function getGithubToken() { try { return sessionStorage.getItem('gh_token') || ''; } catch (e) { return ''; } }
+function clearGithubToken() { try { sessionStorage.removeItem(KEYS.token); } catch (e) {} $('#github-token').value = ''; $('#github-token-status').textContent = '🔑 No configurado'; toast('🔑 Token eliminado'); }
+function getGithubToken() { try { return sessionStorage.getItem(KEYS.token) || ''; } catch (e) { return ''; } }
 
 async function exportPhotosToFile() {
-  if (!_savedPhotos) _savedPhotos = {};
-  for (let i = 0; i < FD.length; i++) { if (!_savedPhotos[i]) { const p = safeLS.get('fp_' + i); if (p) _savedPhotos[i] = p; } }
-  const caps = {}; for (let i = 0; i < FD.length; i++) { const c = safeLS.get('fc_' + i); if (c) caps[i] = c; }
-  const js = 'window.__PHOTOS=' + JSON.stringify(_savedPhotos) + ';window.__CAPTIONS=' + JSON.stringify(caps) + ';';
+  const { ph, cap } = mergedPhotoState();
+  const js = 'window.__PHOTO_ID_VERSION=2;window.__PHOTOS=' + JSON.stringify(ph) + ';window.__CAPTIONS=' + JSON.stringify(cap) + ';';
   const token = getGithubToken();
   const el = $('#route-status');
   if (token) {
     el.textContent = '⏳ Publicando fotos en GitHub...';
     setLoading(true);
-    try { await publishToGithub(js); } catch (e) { toast('❌ Error al publicar: ' + e.message, 'warn'); }
+    try { await publishToGithub(js); afterPhotoPublish(); } catch (e) { toast('❌ Error al publicar: ' + e.message, 'warn'); }
     finally { setLoading(false); }
     return;
   }
   const blob = new Blob([js], { type: 'text/javascript' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = 'photos_data.js'; a.click(); URL.revokeObjectURL(url);
-  el.innerHTML = '✅ ' + Object.keys(_savedPhotos).length + ' fotos exportadas — 📸 <span class="blink" style="color:var(--accent);font-weight:700">Sube photos_data.js a GitHub</span>';
+  el.innerHTML = '✅ ' + Object.keys(ph).length + ' fotos exportadas — 📸 <span class="blink" style="color:var(--accent);font-weight:700">Sube photos_data.js a GitHub</span>';
   updateSaveStatus();
+}
+function afterPhotoPublish() {
+  const { ph, cap } = mergedPhotoState();
+  _publishedPhotos = Object.freeze(ph); _publishedCaptions = Object.freeze(cap);
+  clearOverrides('photo'); clearOverrides('caption');
+  updateSaveStatus();
+}
+function clearOverrides(prefix) {
+  FD.forEach(f => { const key = idKey(prefix, f.id); safeLS.remove(key); safeLS.remove(key + '-del'); });
+}
+function resetLocalData() {
+  for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.indexOf('rm:') === 0) { try { localStorage.removeItem(k); } catch { } } }
+  try { sessionStorage.removeItem(KEYS.token); } catch { }
+  _publishedPhotos = Object.freeze({}); _publishedCaptions = Object.freeze({}); _publishedAccess = Object.freeze({});
+  invalidateRoute({ clearManual: true, clearStatus: true });
+  renderList(); updateSaveStatus(); updateAccessStatus(); syncMm();
+  toast('🗑 Datos locales borrados');
 }
 
 async function publishToGithub(content, path, msg) {
@@ -788,8 +878,9 @@ async function publishToGithub(content, path, msg) {
     const sha = res.status === 200 ? (await res.json().catch(() => null))?.sha : undefined;
     const base64 = btoa(new TextEncoder().encode(content).reduce((s, b) => s + String.fromCharCode(b), ''));
     const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { ...ghOpts('PUT'), signal: ac.signal, body: JSON.stringify({ message: msg, content: base64, sha }) });
+    if (putRes.status === 409 || putRes.status === 422) { let em = ''; try { em = (await putRes.json()).message || ''; } catch { } throw new Error('Conflicto con el repositorio: ' + (em || 'SHA desactualizado, recarga y reintenta')); }
     if (!putRes.ok) { let em = 'Error desconocido'; try { em = (await putRes.json()).message || em; } catch { } throw new Error(em); }
-    toast('✅ Publicado: ' + path); updateSaveStatus(); $('#github-token-status').textContent = '✅ Publicado';
+    toast('✅ Publicado: ' + path); $('#github-token-status').textContent = '✅ Publicado';
   } finally { clearTimeout(timer); }
 }
 
@@ -797,14 +888,13 @@ function loadPhotosFile() {
   const s = document.createElement('script');
   s.src = 'photos_data.js?_=' + Date.now();
   s.onload = () => {
-    _savedPhotos = window.__PHOTOS || {};
-    Object.keys(_savedPhotos).forEach(k => safeLS.set('fp_' + k, _savedPhotos[k]));
-    _savedCaptions = window.__CAPTIONS || {};
-    Object.keys(_savedCaptions).forEach(k => safeLS.set('fc_' + k, ('' + _savedCaptions[k]).slice(0, 250)));
+    const ph = window.__PHOTOS || {}, cap = window.__CAPTIONS || {};
+    _publishedPhotos = Object.freeze(Object.assign({}, ph));
+    _publishedCaptions = Object.freeze(Object.assign({}, cap));
     Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
     updateSaveStatus(); renderList(); updSum();
   };
-  s.onerror = () => { if (!_savedPhotos) console.warn('photos_data.js no disponible'); };
+  s.onerror = () => { console.warn('photos_data.js no disponible'); };
   document.head.appendChild(s);
 }
 
@@ -812,10 +902,8 @@ function loadAccessFile() {
   const s = document.createElement('script');
   s.src = 'access_data.js?_=' + Date.now();
   s.onload = () => {
-    window.__ACCESS = window.__ACCESS || {};
-    Object.keys(window.__ACCESS).forEach(k => {
-      if (safeLS.get('fa_' + k) === null) safeLS.set('fa_' + k, window.__ACCESS[k]);
-    });
+    const acc = window.__ACCESS || {};
+    _publishedAccess = Object.freeze(Object.assign({}, acc));
     Object.values(mm).forEach(m => { if (m.isPopupOpen()) updPop(m); });
     syncMm(); renderList(); updateAccessStatus();
   };
@@ -823,46 +911,39 @@ function loadAccessFile() {
   document.head.appendChild(s);
 }
 
-function collectAccOverrides() {
-  const over = {};
-  for (let i = 0; i < FD.length; i++) {
-    const ov = safeLS.get('fa_' + i);
-    if (ov !== null) over[i] = ov;
-  }
-  return over;
-}
 function updateAccessStatus() {
   const el = $('#save-access-status'); const btn = $('#btn-save-access');
-  const over = collectAccOverrides();
-  const saved = window.__ACCESS || {};
-  let unsaved = 0;
-  Object.keys(over).forEach(k => { if (saved[k] !== over[k]) unsaved++; });
-  Object.keys(saved).forEach(k => { if (over[k] === undefined) unsaved++; });
+  const unsaved = accOverrideCount();
+  const totalPub = Object.keys(_publishedAccess).length;
   if (unsaved > 0) {
     el.innerHTML = `<span class="blink" style="color:var(--accent);font-weight:700">🚧 ${unsaved} cambio${unsaved > 1 ? 's' : ''} de acceso sin publicar</span>`;
     btn.style.display = 'inline-block';
   } else {
-    el.textContent = Object.keys(saved).length ? `🚧 ${Object.keys(saved).length} accesos publicados` : '🚧 Sin cambios de acceso';
+    el.textContent = totalPub ? `🚧 ${totalPub} accesos publicados` : '🚧 Sin cambios de acceso';
     btn.style.display = 'none';
   }
 }
 async function exportAccessToFile() {
-  const js = 'window.__ACCESS=' + JSON.stringify(collectAccOverrides()) + ';';
+  const js = 'window.__ACCESS_ID_VERSION=2;window.__ACCESS=' + JSON.stringify(mergedAccessState()) + ';';
   const token = getGithubToken();
   const el = $('#route-status');
   if (token) {
     el.textContent = '⏳ Publicando accesos en GitHub...';
     setLoading(true);
-    try { await publishToGithub(js, 'access_data.js', '🚧 Actualizar accesos'); window.__ACCESS = collectAccOverrides(); }
+    try { await publishToGithub(js, 'access_data.js', '🚧 Actualizar accesos'); afterAccessPublish(); }
     catch (e) { toast('❌ Error al publicar: ' + e.message, 'warn'); }
     finally { setLoading(false); }
-    updateAccessStatus();
     return;
   }
   const blob = new Blob([js], { type: 'text/javascript' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = 'access_data.js'; a.click(); URL.revokeObjectURL(url);
   el.innerHTML = '✅ Accesos exportados — 🚧 <span class="blink" style="color:var(--accent);font-weight:700">Sube access_data.js a GitHub</span>';
+  updateAccessStatus();
+}
+function afterAccessPublish() {
+  _publishedAccess = Object.freeze(mergedAccessState());
+  clearOverrides('access');
   updateAccessStatus();
 }
 function readBlob(blob) {
@@ -888,47 +969,62 @@ function compressAndSet(idx, dataUrl) {
   img.src = dataUrl;
 }
 function focusPaste() { if (!getGithubToken()) return; if (!_pasteTarget) initPhotoInput(); _pasteTarget.focus(); }
-function setPhoto(idx, dataUrl) {
+function setPhoto(id, dataUrl) {
   try {
-    const lsOK = safeLS.set('fp_' + idx, dataUrl);
+    const lsOK = safeLS.set(idKey('photo', id), dataUrl);
     if (!lsOK && dataUrl.length < 100) { toast('⚠️ Foto demasiado pequeña o almacenamiento lleno', 'warn'); return; }
-    if (!_savedPhotos) _savedPhotos = {};
-    _savedPhotos[idx] = dataUrl; renderList();
-    if (mm[idx]?.isPopupOpen()) updPop(mm[idx]);
+    if (!lsOK) { $('#route-status').textContent = '⚠️ Almacén lleno: la foto no se guardó en este dispositivo'; return; }
+    safeLS.remove(idKey('photo', id) + '-del');
+    renderList();
+    if (mm[id]?.isPopupOpen()) updPop(mm[id]);
     toast('✅ Foto guardada (' + (dataUrl.length / 1024).toFixed(0) + ' KB)');
     updateSaveStatus();
-    if (!lsOK) setTimeout(exportPhotosToFile, 500);
-    else $('#route-status').innerHTML = '✅ Foto guardada — <span class="blink" style="color:var(--accent);font-weight:700">📸 Pulsa "Publicar fotos"</span>';
+    $('#route-status').innerHTML = '✅ Foto guardada — <span class="blink" style="color:var(--accent);font-weight:700">📸 Pulsa "Publicar fotos"</span>';
   } catch (e) { toast('⚠️ Error guardar: ' + e.message, 'warn'); }
 }
-function photoClick(idx) { _activePhotoIdx = idx; initPhotoInput(); _photoInput.dataset.idx = idx; setTimeout(() => _photoInput.click(), 0); }
-function photoBtn(idx) {
-  const has = getPhoto(idx); const d = document.createElement('div'); d.style.display = 'flex'; d.style.gap = '2px';
+function deletePhoto(id) {
+  safeLS.set(idKey('photo', id) + '-del', '1'); safeLS.remove(idKey('photo', id));
+  safeLS.set(idKey('caption', id) + '-del', '1'); safeLS.remove(idKey('caption', id));
+  renderList(); updateSaveStatus();
+  if (mm[id]?.isPopupOpen()) updPop(mm[id]);
+}
+function editCaption(id) {
+  const c = prompt('Leyenda para la foto (máx 250 carácteres):', getCaption(id));
+  if (c === null) return;
+  const cc = ('' + c).slice(0, 250);
+  if (cc) { safeLS.set(idKey('caption', id), cc); safeLS.remove(idKey('caption', id) + '-del'); }
+  else { safeLS.set(idKey('caption', id) + '-del', '1'); safeLS.remove(idKey('caption', id)); }
+  renderList(); updateSaveStatus();
+  if (mm[id]?.isPopupOpen()) updPop(mm[id]);
+}
+function photoClick(id) { _activePhotoIdx = id; initPhotoInput(); _photoInput.dataset.idx = id; setTimeout(() => _photoInput.click(), 0); }
+function photoBtn(id) {
+  const has = getPhoto(id); const d = document.createElement('div'); d.style.display = 'flex'; d.style.gap = '2px';
   const b = document.createElement('button'); b.className = 'fi-btn pt' + (has ? ' on' : ''); b.textContent = '📷'; b.title = has ? 'Cambiar foto' : 'Añadir foto';
-  b.addEventListener('click', e => { e.stopPropagation(); photoClick(idx); });
+  b.addEventListener('click', e => { e.stopPropagation(); photoClick(id); });
   d.appendChild(b);
   return d;
 }
 
 function updPop(mk) {
-  const f = mk._fd; const isWp = waypoints.some(w => w._idx === f._idx); const wpI = waypoints.findIndex(w => w._idx === f._idx);
-  const note = safeLS.get('fn_' + f._idx) || ''; const photo = getPhoto(f._idx);
+  const f = mk._fd; const id = f.id; const isWp = waypoints.some(w => fountainId(w) === id); const wpI = waypoints.findIndex(w => fountainId(w) === id);
+  const note = safeLS.get(idKey('note', id)) || ''; const photo = getPhoto(id);
   let h = `<div class="p-title">${escapeHtml(f.n)}</div><div class="p-town">📍 ${escapeHtml(f.p)}</div>`;
   h += `<div class="p-acc ${getAccType(f)}">${aLbl(getAccType(f))}</div>`;
   if (isWp) h += `<div class="p-status">📍 Parada ${wpI + 1}</div>`;
   if (note) h += `<div class="p-note">📝 ${escapeHtml(note)}</div>`;
-  if (photo) h += `<div style="margin:4px 0"><img src="${photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" /></div>`;
-  const cap = getCaption(f._idx);
+  if (photo) h += `<div style="margin:4px 0"><img src="${photo}" alt="${escapeHtml(f.n)}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" /></div>`;
+  const cap = getCaption(id);
   if (photo && cap) h += `<div class="p-caption">📷 ${escapeHtml(cap)}</div>`;
   h += '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">';
-  if (startTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🏁 Inicio</button>';
-  else if (endTownMarker?._fd?._idx === f._idx) h += '<button class="btn btn-sec btn-sm" disabled>🎯 Destino</button>';
-  else h += `<button class="btn btn-sec btn-sm" onclick="if(!startTown&&!endTown){var f=FD[${f._idx}];setStart(f);}else{toggleWp(FD[${f._idx}]);}">➕ Parada</button>`;
-  if (getGithubToken()) h += `<button class="btn btn-sec btn-sm" onclick="cycleAcc(FD[${f._idx}])">🚧 Acceso: ${aLbl(getAccType(f))}</button>`;
+  if (startTownMarker?._fd && startTownMarker._fd.id === id) h += '<button class="btn btn-sec btn-sm" disabled>🏁 Inicio</button>';
+  else if (endTownMarker?._fd && endTownMarker._fd.id === id) h += '<button class="btn btn-sec btn-sm" disabled>🎯 Destino</button>';
+  else h += `<button class="btn btn-sec btn-sm" onclick="if(!startTown&&!endTown){setStart(FD.find(x=>x.id===${id}));}else{toggleWp(FD.find(x=>x.id===${id}));}">➕ Parada</button>`;
+  if (getGithubToken()) h += `<button class="btn btn-sec btn-sm" onclick="cycleAcc(FD.find(x=>x.id===${id}))">🚧 Acceso: ${aLbl(getAccType(f))}</button>`;
   if (getGithubToken()) {
-    h += `<button class="btn btn-sec btn-sm" onclick="photoClick(${f._idx})">📷 + Fotos</button>`;
-    if (photo) h += `<button class="btn btn-red btn-sm" onclick="localStorage.removeItem('fp_${f._idx}');localStorage.removeItem('fc_${f._idx}');if(_savedPhotos)delete _savedPhotos[${f._idx}];if(_savedCaptions)delete _savedCaptions[${f._idx}];if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);renderList();updateSaveStatus();">❌</button>`;
-    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="var c=prompt('Leyenda para la foto (máx 250 carácteres):',safeLS.get('fc_${f._idx}')||'');if(c!==null){c=c.slice(0,250);safeLS.set('fc_${f._idx}',c);if(!_savedCaptions)_savedCaptions={};_savedCaptions[${f._idx}]=c;if(mm[${f._idx}]?.isPopupOpen())updPop(mm[${f._idx}]);}">✏️ Leyenda</button>`;
+    h += `<button class="btn btn-sec btn-sm" onclick="photoClick(${id})">📷 + Fotos</button>`;
+    if (photo) h += `<button class="btn btn-red btn-sm" onclick="deletePhoto(${id})">❌</button>`;
+    if (photo) h += `<button class="btn btn-sec btn-sm" onclick="editCaption(${id})">✏️ Leyenda</button>`;
     h += `<button class="btn btn-sec btn-sm" onclick="exportPhotosToFile()">📸 Publicar</button>`;
   }
   h += `<a href="https://www.google.com/maps?q=${f.la},${f.lo}" target="_blank" rel="noopener" style="text-decoration:none"><button class="btn btn-sec btn-sm">🗺️ Maps</button></a>`;
@@ -938,8 +1034,8 @@ function updPop(mk) {
   mk.setPopupContent(h);
 }
 
-function setStart(f) { const isWp = waypoints.some(w => w._idx === f._idx); if (isWp) waypoints = waypoints.filter(w => w._idx !== f._idx); startTown = f; updTownMarkers(); updSum(); renderList(); updateStartSelects(f); }
-function setEnd(f) { const isWp = waypoints.some(w => w._idx === f._idx); if (isWp) waypoints = waypoints.filter(w => w._idx !== f._idx); endTown = f; updTownMarkers(); updSum(); renderList(); updateEndSelects(f); }
+function setStart(f) { const isWp = waypoints.some(w => fountainId(w) === fountainId(f)); if (isWp) waypoints = waypoints.filter(w => fountainId(w) !== fountainId(f)); startTown = f; updTownMarkers(); updSum(); renderList(); updateStartSelects(f); invalidateRoute({ clearStatus: true }); }
+function setEnd(f) { const isWp = waypoints.some(w => fountainId(w) === fountainId(f)); if (isWp) waypoints = waypoints.filter(w => fountainId(w) !== fountainId(f)); endTown = f; updTownMarkers(); updSum(); renderList(); updateEndSelects(f); invalidateRoute({ clearStatus: true }); }
 function updateStartSelects(f) { if (!f) return; const prov = TP[f.p] || ''; const pvSel = $('#prov-start'); const twSel = $('#town-start'); if (prov && pvSel) { pvSel.value = prov; provChange('prov-start', 'town-start'); twSel.value = f.p; } }
 function updateEndSelects(f) { if (!f) return; const prov = TP[f.p] || ''; const pvSel = $('#prov-end'); const twSel = $('#town-end'); if (prov && pvSel) { pvSel.value = prov; provChange('prov-end', 'town-end'); twSel.value = f.p; } }
 
@@ -952,13 +1048,13 @@ function updTownMarkers() {
 }
 
 /* === WAYPOINTS === */
-function toggleWp(f) { const idx = waypoints.findIndex(w => w._idx === f._idx); if (idx >= 0) { waypoints.splice(idx, 1); const mk = mm[f._idx]; if (mk && routeLayer.hasLayer(mk)) { routeLayer.removeLayer(mk); if (routing) mcg.addLayer(mk); } if (!routing) applyFilters(); } else { if (startTown?._idx === f._idx) startTown = null; if (endTown?._idx === f._idx) endTown = null; waypoints.push(f); const mk = mm[f._idx]; if (mk) { if (mcg.hasLayer(mk)) mcg.removeLayer(mk); routeLayer.addLayer(mk); mk.openPopup(); mk.off('popupclose'); mk.on('popupclose', () => { if (waypoints.some(w => w._idx === f._idx)) mk.openPopup(); }); } } syncMm(); renderList(); updSum(); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
-function openRoutePopups() { if (startTownMarker && !startTownMarker.isPopupOpen()) startTownMarker.openPopup(); if (endTownMarker && !endTownMarker.isPopupOpen()) endTownMarker.openPopup(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && !mk.isPopupOpen()) mk.openPopup(); }); }
+function toggleWp(f) { const id = fountainId(f); const idx = waypoints.findIndex(w => fountainId(w) === id); if (idx >= 0) { waypoints.splice(idx, 1); const mk = mm[id]; if (mk && routeLayer.hasLayer(mk)) { routeLayer.removeLayer(mk); if (routing) mcg.addLayer(mk); } if (!routing) applyFilters(); } else { if (fountainId(startTown) === id) startTown = null; if (fountainId(endTown) === id) endTown = null; waypoints.push(f); const mk = mm[id]; if (mk) { if (mcg.hasLayer(mk)) mcg.removeLayer(mk); routeLayer.addLayer(mk); mk.openPopup(); mk.off('popupclose'); mk.on('popupclose', () => { if (waypoints.some(w => fountainId(w) === id)) mk.openPopup(); }); } } syncMm(); renderList(); updSum(); invalidateRoute({ clearStatus: true }); $('#route-status').textContent = waypoints.length + ' parada(s). Pulsa "Calcular ruta"'; }
+function openRoutePopups() { if (startTownMarker && !startTownMarker.isPopupOpen()) startTownMarker.openPopup(); if (endTownMarker && !endTownMarker.isPopupOpen()) endTownMarker.openPopup(); waypoints.forEach(w => { const mk = wpMarker(w); if (mk && !mk.isPopupOpen()) mk.openPopup(); }); }
 function useGpsLocation() {
   if (!navigator.geolocation) { toast('⚠️ GPS no disponible en este contexto (necesita HTTPS o localhost)', 'warn'); return; }
-  btnLoading('#btn-gps', '⏳ GPS...'); navigator.geolocation.getCurrentPosition(p => { btnLoading('#btn-gps'); startTown = { la: p.coords.latitude, lo: p.coords.longitude, n: '📍 Mi ubicación', p: '📍 Mi ubicación' }; $('#btn-gps').classList.add('gps-on'); const m = $('#btn-gps-map'); if (m) m.classList.add('gps-on'); $('#prov-start').value = ''; $('#town-start').value = ''; updTownMarkers(); updSum(); toast('📍 GPS: ubicación actual como salida'); }, e => { btnLoading('#btn-gps'); $('#btn-gps').classList.remove('gps-on'); const m = $('#btn-gps-map'); if (m) m.classList.remove('gps-on'); toast('⚠️ GPS: ' + (e.code === 1 ? 'permiso denegado' : e.code === 2 ? 'señal no disponible' : 'timeout'), 'warn'); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }); }
-function togglePanel() { const sb = $('#sidebar'); sb.classList.toggle('open'); const btn = $('#btn-toggle-panel'); if (btn) btn.textContent = sb.classList.contains('open') ? '✕' : '📋'; }
-function syncMm() { FD.forEach(f => { const mk = mm[f._idx]; if (!mk) return; if (mk === _selMk) return; const wi = waypoints.findIndex(w => w._idx === f._idx); mk.setIcon(wi >= 0 ? wpIcon(wi + 1) : (I[getAccType(f) || 'u'])); if (mk.isPopupOpen()) updPop(mk); }); }
+  btnLoading('#btn-gps', '⏳ GPS...'); navigator.geolocation.getCurrentPosition(p => { btnLoading('#btn-gps'); startTown = { kind: 'gps', la: p.coords.latitude, lo: p.coords.longitude, n: '📍 Mi ubicación', p: '📍 Mi ubicación' }; $('#btn-gps').classList.add('gps-on'); const m = $('#btn-gps-map'); if (m) m.classList.add('gps-on'); $('#prov-start').value = ''; $('#town-start').value = ''; updTownMarkers(); updSum(); invalidateRoute({ clearStatus: true }); toast('📍 GPS: ubicación actual como salida'); }, e => { btnLoading('#btn-gps'); $('#btn-gps').classList.remove('gps-on'); const m = $('#btn-gps-map'); if (m) m.classList.remove('gps-on'); toast('⚠️ GPS: ' + (e.code === 1 ? 'permiso denegado' : e.code === 2 ? 'señal no disponible' : 'timeout'), 'warn'); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }); }
+function togglePanel() { const sb = $('#sidebar'); sb.classList.toggle('open'); const btn = $('#btn-toggle-panel'); if (btn) btn.textContent = sb.classList.contains('open') ? '✕' : '📋'; const hd = $('#sidebar-handle'); if (hd) hd.setAttribute('aria-expanded', sb.classList.contains('open') ? 'true' : 'false'); }
+function syncMm() { FD.forEach(f => { const mk = mm[f.id]; if (!mk) return; if (mk === _selMk) return; const wi = waypoints.findIndex(w => fountainId(w) === f.id); mk.setIcon(wi >= 0 ? wpIcon(wi + 1) : (I[getAccType(f) || 'u'])); if (mk.isPopupOpen()) updPop(mk); }); }
 
 /* === RENDER LIST === */
 function updAccCounts() {
@@ -977,26 +1073,27 @@ function renderList() {
   if (!f.length) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Sin coincidencias</div>'; return; }
   const fragment = document.createDocumentFragment();
   f.forEach(x => {
-    const wpIdx = waypoints.findIndex(w => w._idx === x._idx); const isWp = wpIdx >= 0;
-    const hasNote = safeLS.get('fn_' + x._idx); const hasPhoto = getPhoto(x._idx); const hasCap = safeLS.get('fc_' + x._idx);
+    const id = x.id;
+    const wpIdx = waypoints.findIndex(w => fountainId(w) === id); const isWp = wpIdx >= 0;
+    const hasNote = safeLS.get(idKey('note', id)); const hasPhoto = !!getPhoto(id); const hasCap = !!getCaption(id);
     const d = document.createElement('div'); d.className = 'fi';
     d.innerHTML = `<div class="fi-i"><div class="fi-n">${escapeHtml(x.n)}${hasNote ? ' <span class="note-dot"></span>' : ''}${hasPhoto ? ' <span class="photo-dot"></span>' : ''}${hasCap ? ' <span class="cap-dot"></span>' : ''}</div><div class="fi-t">${escapeHtml(x.p)} · ${aLbl(getAccType(x))}</div></div>`;
     const bw = document.createElement('button'); bw.className = 'fi-btn wp' + (isWp ? ' on' : ''); bw.textContent = isWp ? wpIdx + 1 : '+'; bw.title = 'Parada';
     bw.addEventListener('click', e => { e.stopPropagation(); toggleWp(x); });
     const bn = document.createElement('button'); bn.className = 'fi-btn nt' + (hasNote ? ' on' : ''); bn.textContent = '📝';
     bn.addEventListener('click', e => {
-      e.stopPropagation(); const n = prompt('Nota para ' + x.n + ':', safeLS.get('fn_' + x._idx) || '');
-      if (n !== null) { safeLS.set('fn_' + x._idx, n); renderList(); mm[x._idx]?.isPopupOpen() && updPop(mm[x._idx]); }
+      e.stopPropagation(); const n = prompt('Nota para ' + x.n + ':', safeLS.get(idKey('note', id)) || '');
+      if (n !== null) { if (n) { safeLS.set(idKey('note', id), n); } else { safeLS.remove(idKey('note', id)); } renderList(); mm[id]?.isPopupOpen() && updPop(mm[id]); }
     });
     const a = document.createElement('div'); a.style.display = 'flex'; a.style.gap = '3px'; a.appendChild(bw); a.appendChild(bn);
     if (getGithubToken()) {
       const ba = document.createElement('button'); ba.className = 'fi-btn ac'; ba.textContent = accBtnTxt(getAccType(x)); ba.title = 'Cambiar tipo de acceso';
       ba.addEventListener('click', e => { e.stopPropagation(); cycleAcc(x); });
       a.appendChild(ba);
-      a.appendChild(photoBtn(x._idx));
+      a.appendChild(photoBtn(id));
     }
     d.appendChild(a);
-    d.addEventListener('click', () => { map.setView([x.la, x.lo], 15, {animate:false,duration:0}); setTimeout(() => mm[x._idx]?.openPopup(), 50); });
+    d.addEventListener('click', () => { map.setView([x.la, x.lo], 15, {animate:false,duration:0}); setTimeout(() => mm[id]?.openPopup(), 50); });
     fragment.appendChild(d);
   });
   el.appendChild(fragment);
@@ -1052,41 +1149,73 @@ function drawElevation(data) {
 }
 
 /* === RUTA (OSRM) === */
+function setRouteGeometry(pts) { _combinedRouteGeometry = pts || []; _routePointCount = _combinedRouteGeometry.length; }
+function fitCombinedRoute(pad) {
+  if (!_combinedRouteGeometry || _combinedRouteGeometry.length < 2) return false;
+  map.fitBounds(L.latLngBounds(_combinedRouteGeometry.map(p => L.latLng(p.lat, p.lng))).pad(pad || 0.05));
+  return true;
+}
+function invalidateRoute(opts = {}) {
+  const { clearManual = false, clearStatus = false } = opts;
+  routeGeneration++;
+  if (_osrmAbort) { try { _osrmAbort.abort(); } catch { } _osrmAbort = null; }
+  clearTimeout(_drawCalcTimer); _drawCalcTimer = null;
+  if (computedRouteLayers) computedRouteLayers.clearLayers();
+  if (routing) { map.removeLayer(routing); routing = null; }
+  setRouteGeometry([]);
+  poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
+  weatherData = {}; _routePointCount = 0;
+  $('#poi-list').style.display = 'none';
+  $('#weather-container').style.display = 'none';
+  $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = '';
+  $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
+  if (clearManual) { if (drawLayer) { computedRouteLayers.removeLayer(drawLayer); drawLayer = null; } _drawMarkers.forEach(m => map.removeLayer(m)); _drawMarkers = []; drawPoints = []; }
+  if (clearStatus) $('#route-status').textContent = '';
+}
 function resetRouteCalc() {
   if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }
+  invalidateRoute({});
   clearDraw(); drawMode = false;
-  if (routing) { map.removeLayer(routing); routing = null; }
-  poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = [];
-  $('#poi-list').style.display = 'none';
-  $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = '';
-  $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min'; $('#route-status').textContent = '';
   syncMm(); applyFilters();
 }
 async function osrmRoute(coords, opts = {}) {
-  if (routing) { map.removeLayer(routing); routing = null; }
+  const gen = ++routeGeneration;
+  const ac = new AbortController(); _osrmAbort = ac;
+  const timer = setTimeout(() => ac.abort(), 15000);
   $('#route-status').textContent = '⏳ Calculando ruta...'; setLoading(true);
   try {
     const cc = coords.map(p => p.lng + ',' + p.lat).join(';');
     const url = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${cc}?overview=full&geometries=polyline&steps=true&alternatives=false`;
-    const data = await fetchJSON(url, { timeout: 15000, retries: 1 });
+    const res = await fetch(url, { signal: ac.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
     if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.code);
-      const r = data.routes[0]; const distKm = r.distance / 1000, timeMin = Math.round(r.duration / 60);
-      const fmtTime = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
-      $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
-      $('#route-status').textContent = '✅ ' + Math.round(distKm) + ' km';
-      const legPts = decodePolyline(r.geometry); routing = L.polyline(legPts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
-      if (opts.fit !== false) map.fitBounds(routing.getBounds(), { padding: [30, 30] });
-      const legs = []; let wpIdx = 0, segDist = 0, segTime = 0;
-      for (let i = 0; i < r.legs.length; i++) { const leg = r.legs[i]; for (let j = 0; j < leg.steps.length; j++) { const s = leg.steps[j]; segDist += s.distance; segTime += s.duration; if (s.type === 1 || (j === leg.steps.length - 1 && i === r.legs.length - 1)) { const isWp = wpIdx < coords.length; const nm = isWp ? (wpIdx === 0 ? '🏁 Inicio' : wpIdx === coords.length - 1 ? '🎯 Destino' : '📍 ' + (wpIdx + 1)) : s.name || '—'; legs.push({ name: nm, dist: segDist, time: segTime, road: s.name || '—' }); segDist = 0; segTime = 0; wpIdx++; } } }
-      const elData = await calcElevation(legPts); drawElevation(elData);
-      if (elData?.length > 1) { $('#el-max').textContent = Math.round(Math.max(...elData.map(d => d.ele))); $('#el-min').textContent = Math.round(Math.min(...elData.map(d => d.ele))); let gn = 0, ls = 0; for (let i = 1; i < elData.length; i++) { const d = elData[i].ele - elData[i - 1].ele; if (d > 0) gn += d; else ls -= d; } $('#el-gain').textContent = Math.round(gn) + 'm'; $('#el-loss').textContent = Math.round(ls) + 'm'; }
-      renderLegs(legs);
-      return r;
+    const r = data.routes[0];
+    if (gen !== routeGeneration) return r;
+    const distKm = r.distance / 1000, timeMin = Math.round(r.duration / 60);
+    const fmtTime = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h ' + (m ? m + 'min' : '') : m + 'min'; };
+    $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = fmtTime(timeMin);
+    $('#route-status').textContent = '✅ ' + Math.round(distKm) + ' km';
+    const legPts = decodePolyline(r.geometry);
+    if (gen !== routeGeneration) return r;
+    routing = L.polyline(legPts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(computedRouteLayers);
+    setRouteGeometry(legPts.map(p => ({ lat: p[0], lng: p[1] })));
+    if (opts.fit !== false) fitCombinedRoute(0.03);
+    const legs = [];
+    for (let i = 0; i < r.legs.length; i++) { const leg = r.legs[i]; const isLast = i === r.legs.length - 1; const nm = i === 0 ? '🏁 Inicio' : isLast ? '🎯 Destino' : ('📍 ' + (i + 1)); legs.push({ name: nm, dist: leg.distance || 0, time: leg.duration || 0, road: (leg.summary || '—') }); }
+    if (gen !== routeGeneration) return r;
+    const elData = await calcElevation(legPts); if (gen !== routeGeneration) return r;
+    drawElevation(elData);
+    if (elData?.length > 1) { $('#el-max').textContent = Math.round(Math.max(...elData.map(d => d.ele))); $('#el-min').textContent = Math.round(Math.min(...elData.map(d => d.ele))); let gn = 0, ls = 0; for (let i = 1; i < elData.length; i++) { const d = elData[i].ele - elData[i - 1].ele; if (d > 0) gn += d; else ls -= d; } $('#el-gain').textContent = Math.round(gn) + 'm'; $('#el-loss').textContent = Math.round(ls) + 'm'; }
+    renderLegs(legs);
+    return r;
   } catch (e) {
+    if (e.name === 'AbortError' && gen !== routeGeneration) return null;
     if (e.name === 'AbortError' || /Timeout/.test(e.message)) { $('#route-status').textContent = '⏱️ Timeout OSRM (15s) — se muestra ruta en línea recta'; }
-    throw e;
+    else throw e;
   } finally {
-    setLoading(false);
+    clearTimeout(timer);
+    if (gen === routeGeneration) setLoading(false);
   }
 }
 
@@ -1103,7 +1232,7 @@ async function calcRoute() {
       const flat = Array.isArray(pts[0]) ? pts.flat() : pts;
       if (flat.length >= 2) {
         toggleDraw();
-        drawPoints = simplifyPolyline(flat.map(p => L.latLng(p.lat, p.lng)), 30);
+        drawPoints = simplifyPolyline(flat.map(p => L.latLng(p.lat, p.lng)), MAX_DRAW_PTS);
         updDrawLine();
         calcManualRouteDebounced();
         $('#route-status').textContent = '✏️ Ruta calculada — arrastra puntos o añade más (máx ' + MAX_DRAW_PTS + ')';
@@ -1116,19 +1245,18 @@ async function calcRoute() {
 /* === DIBUJAR RUTA MANUAL === */
 const MAX_DRAW_PTS = 10;
 function simplifyPolyline(pts, maxPts) {
-  if (pts.length <= maxPts) return pts;
-  const step = Math.floor(pts.length / maxPts);
-  const simplified = [pts[0]];
-  for (let i = step; i < pts.length - 1; i += step) simplified.push(pts[i]);
-  simplified.push(pts[pts.length - 1]);
-  return simplified;
+  if (maxPts <= 1 || pts.length <= maxPts) return pts;
+  const n = pts.length; const result = [];
+  for (let i = 0; i < maxPts; i++) result.push(pts[Math.round(i * (n - 1) / (maxPts - 1))]);
+  return result;
 }
 let _drawMarkers = [], _drawCalcTimer = null, drawCtrl = null;
 const ptIcn = num => L.divIcon({ className: 'cm', html: `<svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#e74c3c" stroke="#fff" stroke-width="1.5"/><text x="13" y="18" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">${num}</text></svg>`, iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -13] });
 function clearDraw() {
-  if (drawLayer) { map.removeLayer(drawLayer); drawLayer = null; }
+  if (drawLayer) { computedRouteLayers.removeLayer(drawLayer); drawLayer = null; }
   _drawMarkers.forEach(m => map.removeLayer(m)); _drawMarkers = [];
   drawPoints = [];
+  setRouteGeometry([]);
   updDrawCtrl();
 }
 function drawDist() { let td = 0; for (let i = 1; i < drawPoints.length; i++) td += drawPoints[i - 1].distanceTo(drawPoints[i]); return td; }
@@ -1187,8 +1315,9 @@ async function calcManualRoute(fit) {
   } catch (e) {
     $('#route-status').textContent = '❌ ' + (e.message || 'Error con OSRM') + ' — se muestra ruta en línea recta';
     if (routing) { map.removeLayer(routing); routing = null; }
-    routing = L.polyline(pts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
-    if (fit) map.fitBounds(routing.getBounds(), { padding: [30, 30] });
+    routing = L.polyline(pts, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(computedRouteLayers);
+    setRouteGeometry(pts.map(p => ({ lat: p.lat, lng: p.lng })));
+    if (fit) fitCombinedRoute(0.03);
   }
 }
 function toggleDraw() {
@@ -1197,9 +1326,7 @@ function toggleDraw() {
     map.getContainer().style.cursor = 'crosshair';
     if (map.hasLayer(mcg)) map.removeLayer(mcg);
     clearDraw();
-    if (routing) { map.removeLayer(routing); routing = null; }
-    $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = '';
-    $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
+    invalidateRoute({ clearStatus: true });
     $('#route-status').textContent = `✏️ Click en el mapa para añadir puntos (máx ${MAX_DRAW_PTS}) — doble click para terminar`;
   } else { map.getContainer().style.cursor = ''; if (!currentTown && !map.hasLayer(mcg)) map.addLayer(mcg); finishDraw(); }
   updDrawCtrl();
@@ -1207,7 +1334,7 @@ function toggleDraw() {
 function finishDraw() {
   drawMode = false;
   map.getContainer().style.cursor = '';
-  if (drawPoints.length < 2) clearDraw();
+  if (drawPoints.length < 2) { invalidateRoute({ clearManual: true, clearStatus: true }); }
   else calcManualRoute(true);
   updDrawCtrl();
 }
@@ -1233,6 +1360,7 @@ map.on('click', function (e) {
       if (d < minDist) { minDist = d; insertIdx = i + 1; }
     }
     if (minDist < tol) {
+      if (drawPoints.length >= MAX_DRAW_PTS) { $('#route-status').textContent = `⚠ Máximo de ${MAX_DRAW_PTS} puntos alcanzado`; return; }
       drawPoints.splice(insertIdx, 0, e.latlng);
       updDrawLine();
       calcManualRouteDebounced();
@@ -1247,25 +1375,28 @@ map.on('contextmenu', function (e) {
   if (drawMode || (drawPoints.length >= 2 && drawLayer)) removeLastDrawPoint();
 });
 function updDrawLine() {
-  if (drawLayer) map.removeLayer(drawLayer);
+  if (drawLayer) { computedRouteLayers.removeLayer(drawLayer); drawLayer = null; }
   _drawMarkers.forEach(m => map.removeLayer(m)); _drawMarkers = [];
   updDrawCtrl();
-  if (drawPoints.length < 1) { $('#r-dist').textContent = '0 km'; return; }
+  if (drawPoints.length < 1) { $('#r-dist').textContent = '0 km'; setRouteGeometry([]); return; }
   drawPoints.forEach((p, i) => {
     const mk = L.marker(p, { icon: ptIcn(i + 1), draggable: true, zIndexOffset: 1000 }).addTo(map);
     mk.on('click', L.DomEvent.stopPropagation);
     mk.on('dragend', function () {
       drawPoints[i] = mk.getLatLng();
+      if (drawPoints.length > MAX_DRAW_PTS) drawPoints.length = MAX_DRAW_PTS;
       updDrawLine();
       if (drawPoints.length >= 2) calcManualRouteDebounced();
     });
     _drawMarkers.push(mk);
   });
   if (drawPoints.length >= 2) {
-    drawLayer = L.polyline(drawPoints, { color: '#e74c3c', weight: 3, opacity: .8, dashArray: '5,5' }).addTo(map);
+    drawLayer = L.polyline(drawPoints, { color: '#e74c3c', weight: 3, opacity: .8, dashArray: '5,5' }).addTo(computedRouteLayers);
+    setRouteGeometry(drawPoints.map(p => ({ lat: p.lat, lng: p.lng })));
     $('#r-dist').textContent = (drawDist() / 1000).toFixed(2) + ' km';
     $('#route-status').textContent = `Punto ${drawPoints.length}/${MAX_DRAW_PTS} — doble click para terminar`;
   } else {
+    setRouteGeometry([]);
     $('#r-dist').textContent = '0 km';
     $('#route-status').textContent = `Punto 1/${MAX_DRAW_PTS} — sigue haciendo click o doble click para terminar`;
   }
@@ -1280,7 +1411,7 @@ function distToSegment(p, a, b) {
   return L.latLng(p).distanceTo(proj);
 }
 
-function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; if (startTownMarker) { routeLayer.addLayer(startTownMarker); added[startTownMarker._fd._idx] = true; } if (endTownMarker && !added[endTownMarker._fd._idx]) { routeLayer.addLayer(endTownMarker); added[endTownMarker._fd._idx] = true; } waypoints.forEach(w => { if (!added[w._idx] && mm[w._idx]) { routeLayer.addLayer(mm[w._idx]); added[w._idx] = true; } }); markers.forEach(m => { const f = m._fd; if (!added[f._idx] && f.p === currentTown) { mcg.addLayer(m); added[f._idx] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
+function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; const addId = id => { if (id == null) added['x'] = true; else added[id] = true; }; if (startTownMarker) { routeLayer.addLayer(startTownMarker); addId(fountainId(startTownMarker._fd)); } if (endTownMarker && !added[fountainId(endTownMarker._fd)]) { routeLayer.addLayer(endTownMarker); addId(fountainId(endTownMarker._fd)); } waypoints.forEach(w => { const id = fountainId(w); if (id != null && !added[id] && mm[id]) { routeLayer.addLayer(mm[id]); added[id] = true; } }); markers.forEach(m => { const f = m._fd; if (f && !added[f.id] && f.p === currentTown) { mcg.addLayer(m); added[f.id] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
 
 function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHTML = legs.map((l, i) => { total += l.dist; const nm = escapeHtml(l.name.length > 20 ? l.name.substring(0, 20) + '…' : l.name); const legMin = Math.round(l.time / 60); const fmtLeg = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h' + (m ? m + 'min' : '') : m + 'min'; }; return `<tr><td>${i + 1}</td><td class="leg-wp">${nm}</td><td>${(l.dist / 1000).toFixed(1)}km</td><td>${(total / 1000).toFixed(1)}km</td><td>${fmtLeg(legMin)}</td><td style="color:var(--sub);font-size:.55rem">${escapeHtml(l.road.substring(0, 10))}</td></tr>`; }).join(''); }
 
@@ -1288,16 +1419,20 @@ function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHT
 const escXml = s => ('' + s).replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 function exportGPX() {
   const rll = [];
-  if (drawPoints.length >= 2) drawPoints.forEach((p, i) => rll.push({ lat: p.lat, lon: p.lng, n: '📍 Punto ' + (i + 1) }));
-  else {
+  if (_combinedRouteGeometry.length >= 2) {
     if (startTown?.la) rll.push({ lat: startTown.la, lon: startTown.lo, n: '🏁 Inicio: ' + startTown.n });
-    waypoints.forEach((w, i) => rll.push({ lat: w.la, lon: w.lo, n: `📍 Parada ${i + 1}: ${w.n}` })); if (endTown?.la) rll.push({ lat: endTown.la, lon: endTown.lo, n: '🎯 Destino: ' + endTown.n });
+    _combinedRouteGeometry.forEach(p => rll.push({ lat: p.lat, lon: p.lng, n: '' }));
+    if (endTown?.la) rll.push({ lat: endTown.la, lon: endTown.lo, n: '🎯 Destino: ' + endTown.n });
+  } else {
+    if (startTown?.la) rll.push({ lat: startTown.la, lon: startTown.lo, n: '🏁 Inicio: ' + startTown.n });
+    waypoints.forEach((w, i) => rll.push({ lat: w.la, lon: w.lo, n: `📍 Parada ${i + 1}: ${w.n}` }));
+    if (endTown?.la) rll.push({ lat: endTown.la, lon: endTown.lo, n: '🎯 Destino: ' + endTown.n });
   }
   if (rll.length < 2) return;
   let xml = '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="RutasMoterasAndalucia" xmlns="http://www.topografix.com/GPX/1/1">';
-  rll.forEach(p => xml += `<wpt lat="${p.lat}" lon="${p.lon}"><name>${escXml(p.n)}</name></wpt>`);
+  rll.forEach(p => { if (p.n) xml += `<wpt lat="${p.lat}" lon="${p.lon}"><name>${escXml(p.n)}</name></wpt>`; });
   xml += '<trk><name>Ruta Motera - Andalucía</name><trkseg>';
-  if (routing?.getLatLngs?.()?.length) { const pts = routing.getLatLngs(); const flat = Array.isArray(pts[0]) ? pts.flat() : pts.flat(1); flat.forEach(p => xml += `<trkpt lat="${p.lat}" lon="${p.lng}"></trkpt>`); } else rll.forEach(p => xml += `<trkpt lat="${p.lat}" lon="${p.lon}"></trkpt>`);
+  rll.forEach(p => xml += `<trkpt lat="${p.lat}" lon="${p.lon}"></trkpt>`);
   xml += '</trkseg></trk></gpx>';
   const blob = new Blob([xml], { type: 'application/gpx+xml' }); const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = 'ruta_motera_andalucia.gpx'; a.click(); URL.revokeObjectURL(url); toast('📥 GPX exportado');
@@ -1321,7 +1456,7 @@ function handleGpxFile(e) {
 
 function importGPX() { $('#gpx-file').click(); }
 
-async function parseGpxFile(xmlText, _destIdx) {
+async function parseGpxFile(xmlText) {
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
   if (doc.querySelector('parsererror')) { toast('⚠️ XML inválido', 'warn'); return; }
   const nameEl = doc.querySelector('trk > name, rte > name, gpx > name');
@@ -1329,129 +1464,63 @@ async function parseGpxFile(xmlText, _destIdx) {
   const trkPts = doc.querySelectorAll('trkpt, rtept');
   const pts = []; trkPts.forEach(el => { const lat = parseFloat(el.getAttribute('lat')), lon = parseFloat(el.getAttribute('lon')); if (!isNaN(lat) && !isNaN(lon)) { const ele = el.querySelector('ele'); pts.push({ lat, lon, ele: ele ? parseFloat(ele.textContent) : null }); } });
   const wptEls = doc.querySelectorAll('wpt');
-  const wpts = []; wptEls.forEach(el => { const lat = parseFloat(el.getAttribute('lat')), lon = parseFloat(el.getAttribute('lon')); if (!isNaN(lat) && !isNaN(lon)) { const n = el.querySelector('name'); wpts.push({ la: lat, lo: lon, n: n ? n.textContent.trim() : 'WP' }); } });
+  const wpts = []; wptEls.forEach(el => { const lat = parseFloat(el.getAttribute('lat')), lon = parseFloat(el.getAttribute('lon')); if (!isNaN(lat) && !isNaN(lon)) { const n = el.querySelector('name'); wpts.push({ kind: 'gpx', la: lat, lo: lon, n: n ? n.textContent.trim() : 'WP' }); } });
   if (!pts.length && !wpts.length) { toast('⚠️ El GPX no contiene datos de ruta', 'warn'); return; }
-  let destIdx = -1, vueltaWpts = [];
-  if (wpts.length >= 3 && _destIdx === undefined) {
-    _gpxPending = { name, pts, wpts, xmlText };
-    showGpxDestMarkers(wpts);
-    return;
-  }
-  if (_destIdx !== undefined) destIdx = _destIdx;
+  invalidateRoute({ clearManual: true, clearStatus: true });
+  if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }
+  _gpxPending = null;
   startTown = null; endTown = null; waypoints = [];
-  if (routing) { const r = routing; routing = null; r.remove(); }
-  $('#elevation-chart').style.display = 'none'; $('#leg-body').innerHTML = ''; $('#r-dist').textContent = '0 km'; $('#r-time').textContent = '0 min';
   routeLayer.clearLayers();
   if (wpts.length) {
     startTown = wpts[0];
-    if (destIdx >= 1) {
-      for (let i = 1; i < destIdx; i++) waypoints.push(wpts[i]);
-      endTown = wpts[destIdx];
-      for (let i = destIdx + 1; i < wpts.length; i++) vueltaWpts.push(wpts[i]);
-    } else {
-      if (wpts.length > 1) waypoints = wpts.slice(1, -1);
-      if (wpts.length >= 2) endTown = wpts[wpts.length - 1];
-    }
+    if (wpts.length > 1) waypoints = wpts.slice(1, -1);
+    if (wpts.length >= 2) endTown = wpts[wpts.length - 1];
     waypoints.forEach((w, i) => {
       const mk = L.marker([w.la, w.lo], { icon: wpIcon(i + 1) }).addTo(routeLayer);
       mk.bindPopup('<div class="p-title">📌 Parada ' + (i + 1) + ': ' + escapeHtml(w.n) + '</div>');
     });
-    vueltaWpts.forEach((w, i) => {
-      const mk = L.marker([w.la, w.lo], { icon: wpIconG(i + 1) }).addTo(routeLayer);
-      mk.bindPopup('<div class="p-title">🟢 Vuelta ' + (i + 1) + ': ' + escapeHtml(w.n) + '</div>');
-    });
   }
-  if (!wpts.length && pts.length >= 2) { startTown = { la: pts[0].lat, lo: pts[0].lon, n: 'Inicio' }; endTown = { la: pts[pts.length - 1].lat, lo: pts[pts.length - 1].lon, n: 'Destino' }; }
-  await drawGpxRoute(startTown, waypoints, endTown, vueltaWpts, pts, destIdx);
+  if (!wpts.length && pts.length >= 2) { startTown = { kind: 'gpx', la: pts[0].lat, lo: pts[0].lon, n: 'Inicio' }; endTown = { kind: 'gpx', la: pts[pts.length - 1].lat, lo: pts[pts.length - 1].lon, n: 'Destino' }; }
+  await drawGpxRoute(startTown, waypoints, endTown, pts);
   if (!pts.length && wpts.length >= 1) {
-    const allPts = [startTown, ...waypoints, ...vueltaWpts, endTown].filter(Boolean);
-    if (allPts.length >= 2) {
-      map.fitBounds(L.latLngBounds(allPts.map(p => [p.la, p.lo])), { padding: [30, 30] });
-    } else if (allPts.length === 1) {
-      map.setView([allPts[0].la, allPts[0].lo], 15);
-    }
+    const allPts = [startTown, ...waypoints, endTown].filter(Boolean);
+    if (allPts.length >= 2) { map.fitBounds(L.latLngBounds(allPts.map(p => [p.la, p.lo])), { padding: [30, 30] }); }
+    else if (allPts.length === 1) { map.setView([allPts[0].la, allPts[0].lo], 15); }
   }
   updTownMarkers(); syncMm(); renderList(); updSum();
   toast('✅ ' + name + (pts.length ? ' (' + $('#r-dist').textContent + ')' : ' (' + wpts.length + ' waypoints)'));
 }
 
-function showGpxDestMarkers(wpts) {
-  if (_gpxTempLayer) _gpxTempLayer.clearLayers();
-  else { _gpxTempLayer = L.layerGroup().addTo(map); }
-  for (let i = 1; i < wpts.length - 1; i++) {
-    const mk = L.marker([wpts[i].la, wpts[i].lo], { icon: wpIconG(i + 1) }).addTo(_gpxTempLayer);
-    mk.bindPopup('<div class="p-title">' + escapeHtml(wpts[i].n) + '</div><button class="btn btn-pri btn-sm" onclick="applyGpxDest(' + i + ')">🎯 Hacer destino</button>');
+async function drawGpxRoute(start, idaWps, dest, rawPts) {
+  let totalDist = 0, totalTime = 0;
+  if (rawPts && rawPts.length >= 2) {
+    const latlngs = rawPts.map(p => L.latLng(p.lat, p.lon));
+    routing = L.polyline(latlngs, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(computedRouteLayers);
+    setRouteGeometry(rawPts.map(p => ({ lat: p.lat, lng: p.lon })));
+    for (let i = 1; i < latlngs.length; i++) totalDist += latlngs[i - 1].distanceTo(latlngs[i]);
+    $('#route-status').textContent = '✅ Ruta importada (trazado original)';
+  } else {
+    const idaPts = [];
+    if (start?.la) idaPts.push(L.latLng(start.la, start.lo));
+    idaWps.forEach(w => { if (w?.la != null && w?.lo != null) idaPts.push(L.latLng(w.la, w.lo)); });
+    if (dest?.la) idaPts.push(L.latLng(dest.la, dest.lo));
+    if (idaPts.length >= 2) {
+      await osrmRoute(idaPts, { fit: true });
+      if (routing) { const pts = routing.getLatLngs(); const flat = Array.isArray(pts[0]) ? pts.flat() : pts; totalDist = 0; totalTime = 0; for (let i = 1; i < flat.length; i++) totalDist += flat[i - 1].distanceTo(flat[i]); }
+      $('#route-status').textContent = '✅ Ruta importada y encaminada por carreteras';
+    }
   }
-  map.fitBounds(L.latLngBounds(wpts.map(p => [p.la, p.lo])).pad(0.1));
-}
-function applyGpxDest(idx) {
-  if (_gpxTempLayer) { _gpxTempLayer.clearLayers(); map.removeLayer(_gpxTempLayer); _gpxTempLayer = null; }
-  const data = _gpxPending;
-  _gpxPending = null;
-  parseGpxFile(data.xmlText, idx);
-}
-
-async function drawGpxRoute(start, idaWps, dest, vueltaWps, rawPts, destIdx) {
-  const idaPts = [];
-  if (start?.la) idaPts.push(start);
-  idaWps.forEach(w => idaPts.push(w));
-  if (dest?.la) idaPts.push(dest);
-  
-  let totalDist = 0, totalTime = 0, allLegPts = [];
-  
-  // Helper to call OSRM
-  async function osrmRoute(pts, color) {
-    if (pts.length < 2) return null;
-    const coords = pts.map(p => p.lo + ',' + p.la).join(';');
-    const url = CONFIG.OSRM + '/driving/' + coords + '?overview=full&geometries=polyline';
-    try {
-      const data = await fetchJSON(url, { timeout: 15000, retries: 1 });
-      if (data.code !== 'Ok' || !data.routes?.length) return null;
-      const r = data.routes[0];
-      const legPts = decodePolyline(r.geometry);
-      const pl = L.polyline(legPts, { color: color, opacity: .7, weight: 4 }).addTo(map);
-      totalDist += r.distance;
-      totalTime += r.duration;
-      legPts.forEach(p => allLegPts.push(p));
-      return pl;
-    } catch (e) { return null; }
-  }
-  
-  if (destIdx >= 1 && dest?.la && vueltaWps.length) {
-    // Ida + Vuelta
-    const idaPl = await osrmRoute(idaPts, '#ff0000');
-    const vueltaPts = [dest, ...vueltaWps, start].filter(Boolean);
-    const vueltaPl = await osrmRoute(vueltaPts, '#00aa00');
-    if (!idaPl && !vueltaPl) routing = null;
-    else if (idaPl) routing = idaPl;
-    else if (vueltaPl) routing = vueltaPl;
-  } else if (idaPts.length >= 2) {
-    // Single route (ida only or no split)
-    const pl = await osrmRoute(idaPts, destIdx >= 1 ? '#ff0000' : '#1a73e8');
-    if (pl) routing = pl;
-  }
-  
-  // Fallback: draw raw track pts if OSRM failed
-  if (!routing && rawPts?.length >= 2) {
-    const latlngs = rawPts.map(p => [p.lat, p.lon]);
-    routing = L.polyline(latlngs, { color: '#1a73e8', opacity: .9, weight: 4 }).addTo(map);
-    let cd = 0;
-    for (let i = 1; i < rawPts.length; i++) { const dx = rawPts[i].lat - rawPts[i - 1].lat, dy = rawPts[i].lon - rawPts[i - 1].lon; cd += Math.sqrt(dx * dx + dy * dy) * 111320; }
-    totalDist = cd;
-  }
-  
   if (routing) {
-    map.fitBounds(routing.getBounds(), { padding: [30, 30] });
+    if (!fitCombinedRoute(0.03)) map.fitBounds(routing.getBounds(), { padding: [30, 30] });
     const distKm = totalDist / 1000, timeMin = Math.round(totalTime / 60 || distKm / 0.8);
     $('#r-dist').textContent = distKm.toFixed(1) + ' km'; $('#r-time').textContent = timeMin + ' min';
-    if (!rawPts?.length && allLegPts.length) rawPts = allLegPts.map(p => ({ lat: p[0], lon: p[1] }));
     if (rawPts?.length) {
       const hasEle = rawPts.some(p => p.ele !== null && !isNaN(p.ele));
       if (hasEle) {
         const elData = []; let cd = 0;
-        for (let i = 0; i < rawPts.length; i++) { if (i > 0) { const dx = rawPts[i].lat - rawPts[i - 1].lat, dy = rawPts[i].lon - rawPts[i - 1].lon; cd += Math.sqrt(dx * dx + dy * dy) * 111320; } elData.push({ dist: cd / 1000, lat: rawPts[i].lat, lon: rawPts[i].lon, ele: rawPts[i].ele || 0 }); }
+        for (let i = 0; i < rawPts.length; i++) { if (i > 0) cd += L.latLng(rawPts[i - 1].lat, rawPts[i - 1].lon).distanceTo(L.latLng(rawPts[i].lat, rawPts[i].lon)); elData.push({ dist: cd / 1000, lat: rawPts[i].lat, lon: rawPts[i].lon, ele: rawPts[i].ele !== null && !isNaN(rawPts[i].ele) ? rawPts[i].ele : 0 }); }
         drawElevation(elData);
-      } else if (rawPts.length > 1) { const step = Math.max(1, Math.floor(rawPts.length / 100)); const samples = []; for (let i = 0; i < rawPts.length; i += step) samples.push([rawPts[i].lat, rawPts[i].lon]); if (samples[samples.length - 1][0] !== rawPts[rawPts.length - 1].lat) samples.push([rawPts[rawPts.length - 1].lat, rawPts[rawPts.length - 1].lon]); await calcElevation(samples).then(d => drawElevation(d)); }
+      }
     }
     const legs = [{ name: '🏁 ' + (start ? start.n : 'Inicio'), dist: 0, time: 0, road: '' }, { name: '🎯 ' + (dest ? dest.n : 'Destino'), dist: totalDist, time: totalTime, road: '' }];
     renderLegs(legs);
@@ -1460,11 +1529,11 @@ async function drawGpxRoute(start, idaWps, dest, vueltaWps, rawPts, destIdx) {
 
 
 function shareLink() {
-  const wpIds = waypoints.map(w => w._idx); let hash = 'r=' + routeProfile;
-  if (startTown) hash += '&s=' + encodeURIComponent(startTown.p) + '|' + encodeURIComponent(startTown.n);
-  if (endTown) hash += '&e=' + encodeURIComponent(endTown.p) + '|' + encodeURIComponent(endTown.n);
-  if (wpIds.length) hash += '&w=' + wpIds.join(',');
-  const url = location.href.split('#')[0] + '#' + hash;
+  const payload = { p: routeProfile, manual: drawPoints.length >= 2 ? drawPoints.map(p => [p.lat, p.lng]) : null };
+  payload.s = startTown ? serializeEndpoint(startTown) : null;
+  payload.e = endTown ? serializeEndpoint(endTown) : null;
+  payload.w = waypoints.map(w => serializeEndpoint(w));
+  const url = location.href.split('#')[0] + '#v=2&data=' + encodeURIComponent(JSON.stringify(payload));
   navigator.clipboard.writeText(url).then(() => toast('✅ Enlace copiado')).catch(() => prompt('Copia este enlace:', url));
 }
 function routeSharePts() {
@@ -1491,33 +1560,72 @@ function shareRouteWA() { const pts = routeSharePts(); if (pts.length < 2) { toa
 function parseHash() {
   const hash = window.location.hash.slice(1); if (!hash) return;
   const params = new URLSearchParams(hash);
-  if (['r', 'c', 'm'].includes(params.get('r'))) { routeProfile = params.get('r'); $$('.btn-grp button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); }
+  const dataStr = params.get('data');
+  if (params.get('v') === '2' && dataStr) {
+    let d; try { d = JSON.parse(decodeURIComponent(dataStr)); } catch { return; }
+    if (['r', 'c', 'm'].includes(d.p)) { routeProfile = d.p; $$('.btn-grp button[data-v]').forEach(b => { const on = b.dataset.v === routeProfile; b.classList.toggle('active', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); }); }
+    startTown = d.s ? restoreEndpoint(d.s) : null;
+    endTown = d.e ? restoreEndpoint(d.e) : null;
+    waypoints = (d.w || []).map(restoreEndpoint).filter(Boolean);
+    if (Array.isArray(d.manual) && d.manual.length >= 2) { drawPoints = d.manual.map(p => L.latLng(p[0], p[1])); updDrawLine(); }
+    updTownMarkers(); syncMm(); renderList(); updSum();
+    if (drawPoints.length >= 2) calcManualRoute(true);
+    return;
+  }
+  if (['r', 'c', 'm'].includes(params.get('r'))) { routeProfile = params.get('r'); $$('.btn-grp button[data-v]').forEach(b => { const on = b.dataset.v === routeProfile; b.classList.toggle('active', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); }); }
   const startStr = params.get('s'); if (startStr) { const parts = startStr.split('|'); const name = decodeURIComponent(parts[0] || ''); const fName = parts[1] || ''; const f = FD.find(x => x.p === name && (!fName || x.n === fName)); if (f) setStart(f); }
   const endStr = params.get('e'); if (endStr) { const parts = endStr.split('|'); const name = decodeURIComponent(parts[0] || ''); const fName = parts[1] || ''; const f = FD.find(x => x.p === name && (!fName || x.n === fName)); if (f) setEnd(f); }
-  const wpStr = params.get('w'); if (wpStr) { wpStr.split(',').map(Number).forEach(id => { if (id >= 0 && id < FD.length && !waypoints.some(w => w._idx === id)) waypoints.push(FD[id]); }); syncMm(); renderList(); updSum(); }
+  const wpStr = params.get('w'); if (wpStr) { wpStr.split(',').map(Number).forEach(id => { const fx = (id >= 0 && id < FD.length) ? FD[id] : null; if (fx && !waypoints.some(w => fountainId(w) === fx.id)) waypoints.push(fx); }); syncMm(); renderList(); updSum(); }
 }
 
+function getSavedRoutes() {
+  let raw = safeLS.get(KEYS.routes);
+  if (!raw) { raw = safeLS.get('rm_routes'); if (raw) { safeLS.set(KEYS.routes, raw); safeLS.remove('rm_routes'); } }
+  let routes; try { routes = JSON.parse(raw || '[]'); } catch { routes = []; }
+  return routes.map(normalizeSavedRoute).filter(Boolean);
+}
+function normalizeSavedRoute(r) {
+  if (!r || r.schema === 2) return r;
+  return {
+    schema: 2, id: r.id || Date.now(), name: r.name,
+    startTown: (typeof r.startTown === 'number' && FD[r.startTown]) ? serializeEndpoint(FD[r.startTown]) : (r.startTown ? r.startTown : null),
+    endTown: (typeof r.endTown === 'number' && FD[r.endTown]) ? serializeEndpoint(FD[r.endTown]) : (r.endTown ? r.endTown : null),
+    waypoints: (r.waypoints || []).map(id => (typeof id === 'number' && FD[id]) ? serializeEndpoint(FD[id]) : (id && id.kind ? id : null)).filter(Boolean),
+    manual: r.manual, profile: r.profile, date: r.date
+  };
+}
 function saveRoute() {
-  const wpIds = waypoints.map(w => w._idx);
   const isManual = drawPoints.length >= 2;
-  if (!startTown && !endTown && !wpIds.length && !isManual) { toast('⚠️ No hay ruta que guardar', 'warn'); return; }
+  if (!startTown && !endTown && !waypoints.length && !isManual) { toast('⚠️ No hay ruta que guardar', 'warn'); return; }
   const name = prompt('Nombre de la ruta:', 'Ruta por ' + ((startTown || endTown || {}).p || (isManual ? 'Mi ruta' : 'Andalucía'))); if (!name) return;
-  let routes; try { routes = JSON.parse(safeLS.get('rm_routes') || '[]'); } catch { routes = []; }
-  routes.push({ id: Date.now(), name, startTown: startTown?._idx !== undefined ? startTown._idx : (startTown ? FD.findIndex(f => f.p === startTown.p) : null), endTown: endTown?._idx !== undefined ? endTown._idx : (endTown ? FD.findIndex(f => f.p === endTown.p) : null), waypoints: wpIds, manual: isManual ? drawPoints.map(p => [p.lat, p.lng]) : null, profile: routeProfile, date: new Date().toISOString() }); safeLS.set('rm_routes', JSON.stringify(routes)); toast('✅ Ruta guardada: ' + name); renderSaved();
+  const route = { schema: 2, id: Date.now(), name, startTown: startTown ? serializeEndpoint(startTown) : null, endTown: endTown ? serializeEndpoint(endTown) : null, waypoints: waypoints.map(w => serializeEndpoint(w)), manual: isManual ? drawPoints.map(p => [p.lat, p.lng]) : null, profile: routeProfile, date: new Date().toISOString() };
+  const routes = getSavedRoutes();
+  routes.push(route);
+  safeLS.set(KEYS.routes, JSON.stringify(routes));
+  toast('✅ Ruta guardada: ' + name); renderSaved();
 }
 
-function renderSaved() { const el = $('#saved-routes-panel'); let routes; try { routes = JSON.parse(safeLS.get('rm_routes') || '[]'); } catch { routes = []; } if (!routes.length) { el.style.display = 'none'; return; } el.style.display = 'block'; el.innerHTML = '<div class="lbl">📁 Mis rutas</div>'; routes.forEach((r, i) => { const d = document.createElement('div'); d.className = 'sr-item'; const n = document.createElement('span'); n.className = 'sr-name'; n.textContent = r.name; n.addEventListener('click', () => loadRoute(i));   const info = document.createElement('span'); info.className = 'sr-info'; info.textContent = (r.manual?.length >= 2) ? `✏️ Modificación manual (${r.manual.length} pts)` : `${r.startTown !== null ? FD[r.startTown]?.p || '?' : '—'} → ${r.endTown !== null ? FD[r.endTown]?.p || '?' : '—'}`; const del = document.createElement('button'); del.className = 'btn btn-red btn-sm'; del.textContent = '✕'; del.style.padding = '2px 6px'; del.style.fontSize = '.6rem'; del.addEventListener('click', e => { e.stopPropagation(); routes.splice(i, 1); safeLS.set('rm_routes', JSON.stringify(routes)); renderSaved(); }); d.appendChild(n); d.appendChild(info); d.appendChild(del); el.appendChild(d); }); }
+function renderSaved() { const el = $('#saved-routes-panel'); const routes = getSavedRoutes(); if (!routes.length) { el.style.display = 'none'; return; } el.style.display = 'block'; el.innerHTML = '<div class="lbl">📁 Mis rutas</div>'; routes.forEach((r, i) => { const d = document.createElement('div'); d.className = 'sr-item'; const n = document.createElement('span'); n.className = 'sr-name'; n.textContent = r.name; n.addEventListener('click', () => loadRoute(i)); const info = document.createElement('span'); info.className = 'sr-info'; const sT = r.startTown ? (restoreEndpoint(r.startTown) || {}).p : null; const eT = r.endTown ? (restoreEndpoint(r.endTown) || {}).p : null; info.textContent = (Array.isArray(r.manual) && r.manual.length >= 2) ? `✏️ Modificación manual (${r.manual.length} pts)` : `${sT || '?'} → ${eT || '?'}`; const del = document.createElement('button'); del.className = 'btn btn-red btn-sm'; del.textContent = '✕'; del.style.padding = '2px 6px'; del.style.fontSize = '.6rem'; del.setAttribute('aria-label', 'Eliminar ruta'); del.addEventListener('click', e => { e.stopPropagation(); routes.splice(i, 1); safeLS.set(KEYS.routes, JSON.stringify(routes)); renderSaved(); }); d.appendChild(n); d.appendChild(info); d.appendChild(del); el.appendChild(d); }); }
 
-function loadRoute(idx) { let routes; try { routes = JSON.parse(safeLS.get('rm_routes') || '[]'); } catch { routes = []; } if (idx >= routes.length) return;   const r = routes[idx]; startTown = endTown = null; waypoints = []; clearDraw(); drawMode = false; if (r.startTown !== null && FD[r.startTown]) startTown = FD[r.startTown]; if (r.endTown !== null && FD[r.endTown]) endTown = FD[r.endTown]; (r.waypoints || []).forEach(id => { if (FD[id]) waypoints.push(FD[id]); });   if (['r', 'c', 'm'].includes(r.profile)) { routeProfile = r.profile; $$('.btn-grp button[data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === routeProfile); b.setAttribute('aria-checked', b.dataset.v === routeProfile); }); } updTownMarkers(); routeLayer.clearLayers(); waypoints.forEach(w => { const mk = mm[w._idx]; if (mk && mcg.hasLayer(mk)) { mcg.removeLayer(mk); routeLayer.addLayer(mk); } }); syncMm(); renderList(); updSum(); toast('📁 Ruta cargada: ' + r.name); $('#saved-routes-panel').style.display = 'none'; if (Array.isArray(r.manual) && r.manual.length >= 2) { drawPoints = r.manual.map(p => L.latLng(p[0], p[1])); updDrawLine(); calcManualRoute(true); } }
+function loadRoute(idx) { const routes = getSavedRoutes(); if (idx >= routes.length) return; const r = routes[idx]; invalidateRoute({ clearManual: true, clearStatus: true }); startTown = r.startTown ? restoreEndpoint(r.startTown) : null; endTown = r.endTown ? restoreEndpoint(r.endTown) : null; waypoints = (r.waypoints || []).map(restoreEndpoint).filter(Boolean); routeLayer.clearLayers(); if (['r', 'c', 'm'].includes(r.profile)) { routeProfile = r.profile; $$('.btn-grp button[data-v]').forEach(b => { const on = b.dataset.v === routeProfile; b.classList.toggle('active', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); }); } waypoints.forEach(w => { const mk = wpMarker(w); if (mk && mcg.hasLayer(mk)) { mcg.removeLayer(mk); routeLayer.addLayer(mk); } }); updTownMarkers(); syncMm(); renderList(); updSum(); toast('📁 Ruta cargada: ' + r.name); $('#saved-routes-panel').style.display = 'none'; const routePointCount = (startTown ? 1 : 0) + waypoints.length + (endTown ? 1 : 0); if (Array.isArray(r.manual) && r.manual.length >= 2) { drawPoints = r.manual.map(p => L.latLng(p[0], p[1])); updDrawLine(); calcManualRoute(true); } else if (routePointCount >= 2) { calcRoute(); } }
 
 /* === POIs Y CLIMA === */
-async function searchPOIs() { const rll = []; if (startTown?.la) rll.push([startTown.la, startTown.lo]); waypoints.forEach(w => rll.push([w.la, w.lo])); if (endTown?.la) rll.push([endTown.la, endTown.lo]); if (rll.length < 2) { toast('⚠️ Calcula la ruta primero', 'warn'); return; } $('#route-status').textContent = '⏳ Buscando POIs...'; setLoading(true); btnLoading('#btn-poi', '⏳ Buscando...');
+async function searchPOIs() {
+  const gen = routeGeneration;
+  let routePts = _combinedRouteGeometry;
+  if (routePts.length < 2) {
+    const rll = []; if (startTown?.la) rll.push([startTown.la, startTown.lo]); waypoints.forEach(w => rll.push([w.la, w.lo])); if (endTown?.la) rll.push([endTown.la, endTown.lo]);
+    if (rll.length < 2) { toast('⚠️ Calcula la ruta primero', 'warn'); return; }
+    routePts = rll.map(p => ({ lat: p[0], lng: p[1] }));
+  }
+  $('#route-status').textContent = '⏳ Buscando POIs...'; setLoading(true); btnLoading('#btn-poi', '⏳ Buscando...');
   let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-  rll.forEach(p => { if (p[0] < minLat) minLat = p[0]; if (p[0] > maxLat) maxLat = p[0]; if (p[1] < minLon) minLon = p[1]; if (p[1] > maxLon) maxLon = p[1]; });
+  routePts.forEach(p => { if (p.lat < minLat) minLat = p.lat; if (p.lat > maxLat) maxLat = p.lat; if (p.lng < minLon) minLon = p.lng; if (p.lng > maxLon) maxLon = p.lng; });
   const pad = 0.03, bbox = (minLat - pad) + ',' + (minLon - pad) + ',' + (maxLat + pad) + ',' + (maxLon + pad);
   const query = '[out:json][timeout:15];(node["amenity"="fuel"](' + bbox + ');node["amenity"="car_repair"](' + bbox + ');node["tourism"="viewpoint"](' + bbox + ');node["tourism"="hotel"](' + bbox + ');node["tourism"="camp_site"](' + bbox + ');node["shop"="motorcycle"](' + bbox + ');node["shop"="motorcycle_repair"](' + bbox + '););out body;';
   let elements = []; for (let i = 0; i < CONFIG.OVERPASS.length; i++) { try { const data = await fetchJSON(CONFIG.OVERPASS[i], { method: 'POST', timeout: 20000, retries: 1, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(query) }); if (data.elements?.length) { elements = data.elements; break; } } catch { } }
   setLoading(false); btnLoading('#btn-poi');
+  if (gen !== routeGeneration) return;
   if (!elements?.length) { $('#route-status').textContent = '⏱️ Tiempo de espera agotado. Inténtalo de nuevo.'; return; }
   showPOIs(elements);
 }
@@ -1530,36 +1638,51 @@ POI_ICONS.car_repair = letterIcn('#8b5cf6', 'T'); POI_ICONS.motorcycle = letterI
 
 function distKm(lat1, lon1, lat2, lon2) { const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180; const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2; return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
 function showPOIs(elements) { poiMarkers.forEach(m => map.removeLayer(m)); poiMarkers = []; const list = $('#poi-list'); list.innerHTML = ''; list.style.display = 'none';
-  const raw = routing?.getLatLngs?.(); const routePts = raw ? (Array.isArray(raw[0]) ? raw.flat() : raw) : []; if (!routePts.length) { list.style.display = 'none'; $('#route-status').textContent = '⏳ Calcula la ruta primero'; return; } const step = Math.max(1, Math.floor(routePts.length / 100));
+  const routePts = _combinedRouteGeometry; if (routePts.length < 2) { list.style.display = 'none'; $('#route-status').textContent = '⏳ Calcula la ruta primero'; return; } const step = Math.max(1, Math.floor(routePts.length / 100));
   const maxKm = 5;
-  elements.forEach(el => { if (!el.lat || !el.lon) return;
+  elements.forEach(el => { if (el.lat == null || el.lon == null) return;
     let near = false; for (let i = 0; i < routePts.length; i += step) { if (distKm(el.lat, el.lon, routePts[i].lat, routePts[i].lng) <= maxKm) { near = true; break; } } if (!near) return;
-    const type = el.tags?.amenity || el.tags?.tourism || el.tags?.shop; const name = escapeHtml(el.tags?.name || el.tags?.operator || POI_LABELS[type] || type); const icon = POI_ICONS[type] || icn('#888', 14); const mk = L.marker([el.lat, el.lon], { icon }).addTo(map);
+    const type = el.tags?.amenity || el.tags?.tourism || el.tags?.shop; const rawName = el.tags?.name || el.tags?.operator || POI_LABELS[type] || type; const icon = POI_ICONS[type] || icn('#888', 14); const mk = L.marker([el.lat, el.lon], { icon }).addTo(map);
     const web = el.tags?.website || el.tags?.['contact:website'] || el.tags?.url;
     const safeWeb = web && /^https?:\/\//.test(web) ? web : '';
-    const webHtml = safeWeb ? `<div style="margin-top:4px"><a href="${escapeHtml(safeWeb)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.65rem;text-decoration:underline">🔗 ${escapeHtml(safeWeb)}</a></div>` : '';
-    mk.bindPopup(`<div class="p-title">${escapeHtml(POI_LABELS[type] || type)}</div><div class="p-town">${name}</div>${webHtml}`); poiMarkers.push(mk); const d = document.createElement('div'); d.className = 'poi-item'; d.innerHTML = `<span class="poi-icon">${escapeHtml((POI_LABELS[type] || '📍').charAt(0))}</span><span>${name}${safeWeb ? ' 🔗' : ''}</span><span class="poi-dist">${escapeHtml(POI_LABELS[type] || type)}</span>`; d.addEventListener('click', () => { if (safeWeb) { window.open(safeWeb, '_blank'); } else { map.setView([el.lat, el.lon], 15, {animate:false,duration:0}); setTimeout(() => mk.openPopup(), 50); } }); list.appendChild(d); }); list.style.display = 'block'; $('#route-status').textContent = '✅ ' + poiMarkers.length + ' POIs encontrados (≈5km ruta)'; }
+    mk.bindPopup((() => { const wrap = document.createElement('div'); const t = document.createElement('div'); t.className = 'p-title'; t.textContent = POI_LABELS[type] || type || ''; const town = document.createElement('div'); town.className = 'p-town'; town.textContent = rawName || ''; wrap.appendChild(t); wrap.appendChild(town); if (safeWeb) { const a = document.createElement('a'); a.href = safeWeb; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'color:var(--accent);font-size:.65rem;text-decoration:underline'; a.textContent = '🔗 ' + safeWeb; wrap.appendChild(a); } return wrap; })());
+    poiMarkers.push(mk);
+    const d = document.createElement('div'); d.className = 'poi-item';
+    const iconSpan = document.createElement('span'); iconSpan.className = 'poi-icon'; iconSpan.textContent = (POI_LABELS[type] || '📍').charAt(0);
+    const nameSpan = document.createElement('span'); nameSpan.textContent = rawName + (safeWeb ? ' 🔗' : '');
+    const distSpan = document.createElement('span'); distSpan.className = 'poi-dist'; distSpan.textContent = POI_LABELS[type] || type || '';
+    d.appendChild(iconSpan); d.appendChild(nameSpan); d.appendChild(distSpan);
+    d.addEventListener('click', () => { if (safeWeb) { window.open(safeWeb, '_blank'); } else { map.setView([el.lat, el.lon], 15, {animate:false,duration:0}); setTimeout(() => mk.openPopup(), 50); } }); list.appendChild(d); }); list.style.display = 'block'; $('#route-status').textContent = '✅ ' + poiMarkers.length + ' POIs encontrados (≈5km ruta)'; }
 
-async function getWeather() { const pts = []; if (startTown?.la) pts.push({ name: '🏁 ' + startTown.n, lat: startTown.la, lon: startTown.lo }); waypoints.forEach((w, i) => pts.push({ name: '📍 ' + (i + 1) + '. ' + w.n, lat: w.la, lon: w.lo })); if (endTown?.la) pts.push({ name: '🎯 ' + endTown.n, lat: endTown.la, lon: endTown.lo }); if (!pts.length) { toast('⚠️ No hay puntos en la ruta', 'warn'); return; } const dateInput = $('#weather-date'); let date = dateInput.value; if (!date) { const d = new Date(); d.setDate(d.getDate() + 1); date = d.toISOString().split('T')[0]; dateInput.value = date; } $('#route-status').textContent = '⏳ Consultando clima para ' + date + '...'; setLoading(true); btnLoading('#btn-weather', '⏳ Clima...');
+async function getWeather() {
+  const gen = routeGeneration;
+  const pts = []; if (startTown?.la) pts.push({ name: '🏁 ' + startTown.n, lat: startTown.la, lon: startTown.lo });
+  waypoints.forEach((w, i) => pts.push({ name: '📍 ' + (i + 1) + '. ' + w.n, lat: w.la, lon: w.lo })); if (endTown?.la) pts.push({ name: '🎯 ' + endTown.n, lat: endTown.la, lon: endTown.lo });
+  if (!pts.length) { toast('⚠️ No hay puntos en la ruta', 'warn'); return; }
+  const dateInput = $('#weather-date'); let date = dateInput.value;
+  if (!date) { const d = new Date(); d.setDate(d.getDate() + 1); date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); dateInput.value = date; }
+  $('#route-status').textContent = '⏳ Consultando clima para ' + date + '...'; setLoading(true); btnLoading('#btn-weather', '⏳ Clima...');
   weatherData = {}; const results = await Promise.allSettled(pts.map(p => fetchJSON(`${CONFIG.METEO}?latitude=${p.lat}&longitude=${p.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=auto&start_date=${date}&end_date=${date}`, { timeout: 15000, retries: 1 }).catch(() => null)));
   setLoading(false); btnLoading('#btn-weather');
-  results.forEach((res, i) => { if (res.status === 'fulfilled' && res.value.daily) weatherData[i] = res.value.daily; });
+  if (gen !== routeGeneration) return;
+  results.forEach((res, i) => { if (res.status === 'fulfilled' && res.value?.daily) weatherData[i] = res.value.daily; });
   showWeather(pts);
 }
 function wmoIcon(code) { if (code === 0) return '☀️'; if (code <= 3) return '⛅'; if (code <= 48) return '🌫'; if (code <= 57) return '🌦'; if (code <= 67) return '🌧'; if (code <= 77) return '❄️'; if (code <= 82) return '🌦'; if (code <= 86) return '❄️'; return '🌧'; }
 function showWeather(pts) { let html = '<div style="font-size:.75rem;color:var(--accent);font-weight:700;margin-bottom:5px">🌤 Clima — ' + escapeHtml($('#weather-date').value) + '</div>'; html += '<table style="width:100%;font-size:.68rem;border-collapse:collapse"><tr style="color:var(--muted)"><th>Punto</th><th>🌡</th><th>💧</th><th>☁️</th></tr>'; let hasData = false; pts.forEach((p, i) => { const w = weatherData[i]; if (w) { hasData = true; html += `<tr><td style="padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;border-bottom:1px solid var(--border)">${escapeHtml(p.name)}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.temperature_2m_min !== undefined ? Math.round(w.temperature_2m_min) + '°/' + Math.round(w.temperature_2m_max) + '°' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${w.precipitation_sum !== undefined && w.precipitation_sum > 0 ? w.precipitation_sum + 'mm' : '—'}</td><td style="padding:2px 4px;border-bottom:1px solid var(--border)">${wmoIcon(w.weather_code)}</td></tr>`; } }); html += '</table>'; const el = $('#weather-container'); if (hasData) { el.innerHTML = html; el.style.display = 'block'; $('#sidebar').scrollTo({ top: el.offsetTop, behavior: 'smooth' }); toast('✅ Clima cargado'); } else { el.style.display = 'none'; toast('⚠️ No se pudo obtener el clima', 'warn'); } }
 
 /* === EVENTOS Y CONTROLADORES === */
-  $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const newProfile = b.dataset.v; $$('.btn-grp button[data-v]').forEach(x => { const on = x.dataset.v === newProfile; x.classList.toggle('active', on); x.setAttribute('aria-checked', on ? 'true' : 'false'); }); if (newProfile === 'm' && routeProfile !== 'm' && routing) { const pts = routing.getLatLngs(); const flat = Array.isArray(pts[0]) ? pts.flat() : pts; if (flat.length >= 2) { routeProfile = newProfile; toggleDraw(); drawPoints = simplifyPolyline(flat.map(p => L.latLng(p.lat, p.lng)), 30); updDrawLine(); calcManualRouteDebounced(); $('#route-status').textContent = '✏️ Ruta convertida a manual — arrastra puntos o añade más (máx ' + MAX_DRAW_PTS + ')'; } else { routeProfile = newProfile; } } else { routeProfile = newProfile; } updSum(); renderList(); applyFilters(); if (startTown && endTown && routeProfile !== 'm') calcRoute(); }); });
+  $$('.btn-grp button[data-v]').forEach(b => { b.addEventListener('click', () => { const newProfile = b.dataset.v; $$('.btn-grp button[data-v]').forEach(x => { const on = x.dataset.v === newProfile; x.classList.toggle('active', on); x.setAttribute('aria-checked', on ? 'true' : 'false'); }); if (newProfile === 'm' && routeProfile !== 'm' && routing) { const pts = routing.getLatLngs(); const flat = Array.isArray(pts[0]) ? pts.flat() : pts; if (flat.length >= 2) { routeProfile = newProfile; toggleDraw(); drawPoints = simplifyPolyline(flat.map(p => L.latLng(p.lat, p.lng)), MAX_DRAW_PTS); updDrawLine(); calcManualRouteDebounced(); $('#route-status').textContent = '✏️ Ruta convertida a manual — arrastra puntos o añade más (máx ' + MAX_DRAW_PTS + ')'; } else { routeProfile = newProfile; } } else { routeProfile = newProfile; } updSum(); renderList(); applyFilters(); if (startTown && endTown && routeProfile !== 'm') calcRoute(); }); });
 $('#btn-calc').addEventListener('click', calcRoute); $('#btn-gpx').addEventListener('click', toggleGpxMenu); $('#btn-gpx-export').addEventListener('click', exportGPX); $('#btn-gpx-import').addEventListener('click', importGPX); $('#gpx-file').addEventListener('change', handleGpxFile); $('#btn-share').addEventListener('click', shareLink); $('#btn-save').addEventListener('click', saveRoute); $('#btn-poi').addEventListener('click', searchPOIs); $('#btn-weather').addEventListener('click', getWeather); $('#btn-share-maps').addEventListener('click', shareRouteMaps); $('#btn-share-wa').addEventListener('click', shareRouteWA); $('#btn-gps').addEventListener('click', useGpsLocation); $('#btn-traffic-dgt').addEventListener('click', () => openModal('traffic-modal')); $('#link-traffic').addEventListener('click', e => { e.preventDefault(); openModal('traffic-modal'); });
 
-$('#btn-fit-all').addEventListener('click', () => { if (routing) { map.fitBounds(routing.getBounds(), { padding: [30, 30] }); return; } const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
+$('#btn-fit-all').addEventListener('click', () => { if (fitCombinedRoute(0.1)) return; const pts = []; if (startTownMarker && map.hasLayer(startTownMarker)) pts.push(startTownMarker.getLatLng()); if (endTownMarker && map.hasLayer(endTownMarker)) pts.push(endTownMarker.getLatLng()); markers.forEach(m => { if (mcg.hasLayer(m)) pts.push(m.getLatLng()); }); if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1)); });
 $('#btn-saved-toggle').addEventListener('click', () => { const el = $('#saved-routes-panel'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; renderSaved(); });
 function applyFilters() { if (routing) return; if (!currentTown) { if (!map.hasLayer(mcg)) map.addLayer(mcg); return; } mcg.clearLayers(); markers.forEach(m => { if (routeLayer.hasLayer(m)) return; if (m._fd.p === currentTown) mcg.addLayer(m); }); if (!map.hasLayer(mcg)) map.addLayer(mcg); }
 
 /* === MODALES GENÉRICAS === */
-function openModal(id) { const m = document.getElementById(id); if (!m) return; m.style.display = 'block'; m.removeAttribute('hidden'); m.setAttribute('aria-hidden', 'false'); }
-function closeModal(id) { const m = document.getElementById(id); if (!m) return; m.style.display = 'none'; m.setAttribute('hidden', ''); m.setAttribute('aria-hidden', 'true'); document.activeElement?.blur(); }
+let _modalOpener = null;
+function openModal(id) { const m = document.getElementById(id); if (!m) return; _modalOpener = document.activeElement; m.style.display = 'block'; m.removeAttribute('hidden'); m.setAttribute('aria-hidden', 'false'); const mc = m.querySelector('.modal-content'); setTimeout(() => (mc || m).focus(), 10); }
+function closeModal(id) { const m = document.getElementById(id); if (!m) return; m.style.display = 'none'; m.setAttribute('hidden', ''); m.setAttribute('aria-hidden', 'true'); if (_modalOpener && typeof _modalOpener.focus === 'function') { try { _modalOpener.focus(); } catch { } } _modalOpener = null; }
 document.addEventListener('click', function (e) {
   const close = e.target.closest('.modal-close');
   if (close) { const m = close.closest('.modal'); if (m) closeModal(m.id); }
@@ -1567,20 +1690,25 @@ document.addEventListener('click', function (e) {
   if (modal && e.target === modal) closeModal(modal.id);
 });
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') {
-    const openModals = document.querySelectorAll('.modal[aria-hidden="false"]');
-    if (openModals.length) closeModal(openModals[openModals.length - 1].id);
+  const openModals = Array.from(document.querySelectorAll('.modal[aria-hidden="false"]'));
+  if (!openModals.length) return;
+  const modal = openModals[openModals.length - 1];
+  if (e.key === 'Escape') { closeModal(modal.id); return; }
+  if (e.key === 'Tab') {
+    const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 });
 
 /* === LEGAL Y FOCUS TRAP === */
-(function () { if (!safeLS.get('cb_accepted')) $('#cookie-banner').style.display = 'block'; $('#cb-accept').addEventListener('click', () => { safeLS.set('cb_accepted', '1'); $('#cookie-banner').style.display = 'none'; }); const lt = { aviso: '<h2>Aviso Legal</h2><p><strong>Responsable:</strong> Propietario de esta web (aficionado, sin ánimo de lucro).</p><p><strong>Finalidad:</strong> Planificación de rutas moteras por fuentes de Andalucía.</p><p><strong>Propiedad intelectual:</strong> Datos del inventario público "Inventario_Fuentes_Cadiz_Completo". Código de uso libre.</p><p><strong>Exención de responsabilidad:</strong> El usuario es responsable de cumplir con la normativa de tráfico y medio ambiente. El responsable no se hace responsable de daños derivados del uso de esta web.</p><p><strong>Legislación:</strong> Ley 34/2002 LSSI-CE.</p>', privacidad: '<h2>Política de Privacidad (RGPD)</h2><p>Esta web <strong>no recopila ni comparte datos personales</strong> en servidores externos.</p><h3>Datos locales</h3><p>Usamos localStorage del navegador para guardar:<br>• Fotos que añadas a las fuentes<br>• Notas personales<br>• Rutas guardadas<br>• Preferencia de cookies</p><p>Estos datos permanecen en tu dispositivo y puedes borrarlos desde la configuración del navegador.</p><h3>Terceros</h3><p>Consultamos APIs públicas gratuitas (OSRM, Open-Elevation, Overpass, Open-Meteo) que pueden registrar tu IP según sus propias políticas.</p><h3>Tus derechos</h3><p>Acceso, rectificación, supresión: borra los datos locales desde el navegador.</p>', cookies: '<h2>Política de Cookies</h2><p>Usamos <strong>localStorage</strong> como equivalente técnico a cookies:</p><h3>Necesario</h3><p>• <strong>cb_accepted</strong>: guarda si aceptaste el aviso</p><h3>Funcional</h3><p>• <strong>fp_*</strong>: fotos de fuentes<br>• <strong>fn_*</strong>: notas personales<br>• <strong>saved_routes</strong>: rutas guardadas</p><p>Puedes eliminar estos datos desde Configuración del navegador → Borrar datos locales.</p>' }; function showLegal(id) { $('#legal-body').innerHTML = lt[id]; openModal('legal-modal'); setTimeout(() => $('#legal-modal .modal-content').focus(), 10); } function trapFocus(e) { const focusable = $('#legal-modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'); const first = focusable[0]; const last = focusable[focusable.length - 1]; if (e.key === 'Tab') { if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } } $('#link-legal').addEventListener('click', e => { e.preventDefault(); showLegal('aviso'); }); $('#link-privacy').addEventListener('click', e => { e.preventDefault(); showLegal('privacidad'); }); $('#link-cookies').addEventListener('click', e => { e.preventDefault(); showLegal('cookies'); }); $('#cb-info').addEventListener('click', () => showLegal('cookies')); $('#legal-modal').addEventListener('keydown', trapFocus); $('#cookie-banner').addEventListener('keydown', e => { if (e.key === 'Escape') $('#cb-accept').click(); }); })();
+(function () { if (!safeLS.get(KEYS.cookie)) $('#cookie-banner').style.display = 'block'; $('#cb-accept').addEventListener('click', () => { safeLS.set(KEYS.cookie, '1'); $('#cookie-banner').style.display = 'none'; }); const lt = { aviso: '<h2>Aviso Legal</h2><p><strong>Responsable:</strong> Propietario de esta web (aficionado, sin ánimo de lucro).</p><p><strong>Finalidad:</strong> Planificación de rutas moteras por fuentes de Andalucía.</p><p><strong>Propiedad intelectual:</strong> Datos del inventario público "Inventario_Fuentes_Cadiz_Completo". Código de uso libre.</p><p><strong>Exención de responsabilidad:</strong> El usuario es responsable de cumplir con la normativa de tráfico y medio ambiente. El responsable no se hace responsable de daños derivados del uso de esta web.</p><p><strong>Legislación:</strong> Ley 34/2002 LSSI-CE.</p>', privacidad: '<h2>Política de Privacidad (RGPD)</h2><p>Esta web <strong>no recopila ni comparte datos personales</strong> en servidores externos.</p><h3>Datos locales</h3><p>Usamos localStorage del navegador para guardar:<br>• Fotos que añadas a las fuentes<br>• Notas personales<br>• Rutas guardadas<br>• Preferencia de cookies</p><p>Estos datos permanecen en tu dispositivo y puedes borrarlos desde la configuración del navegador. Si publicas fotos o leyendas (con token de GitHub), esas fotos y leyendas se hacen públicas en el repositorio de esta web.</p><h3>Terceros</h3><p>Consultamos APIs públicas gratuitas (OSRM, Open-Elevation, Overpass, Open-Meteo) que pueden registrar tu IP según sus propias políticas.</p><h3>Tus derechos</h3><p>Acceso, rectificación, supresión: borra los datos locales desde el navegador.</p>', cookies: '<h2>Política de Cookies</h2><p>Usamos <strong>localStorage</strong> como equivalente técnico a cookies:</p><h3>Necesario</h3><p>• <strong>rm:cookie-accepted</strong>: guarda si aceptaste el aviso</p><h3>Funcional</h3><p>• <strong>rm:photo:&lt;id&gt;</strong> y <strong>rm:caption:&lt;id&gt;</strong>: fotos y leyendas de fuentes (por id)<br>• <strong>rm:note:&lt;id&gt;</strong>: notas personales por fuente<br>• <strong>rm:routes</strong>: rutas guardadas<br>• <strong>rm:access:&lt;id&gt;</strong>: tipo de acceso por fuente</p><p>Puedes eliminar estos datos desde Configuración del navegador → Borrar datos locales.</p>' }; function showLegal(id) { $('#legal-body').innerHTML = lt[id]; openModal('legal-modal'); setTimeout(() => $('#legal-modal .modal-content').focus(), 10); } function trapFocus(e) { const focusable = $('#legal-modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'); const first = focusable[0]; const last = focusable[focusable.length - 1]; if (e.key === 'Tab') { if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } } $('#link-legal').addEventListener('click', e => { e.preventDefault(); showLegal('aviso'); }); $('#link-privacy').addEventListener('click', e => { e.preventDefault(); showLegal('privacidad'); }); $('#link-cookies').addEventListener('click', e => { e.preventDefault(); showLegal('cookies'); }); $('#cb-info').addEventListener('click', () => showLegal('cookies')); $('#legal-modal').addEventListener('keydown', trapFocus); $('#cookie-banner').addEventListener('keydown', e => { if (e.key === 'Escape') $('#cb-accept').click(); }); })();
 
 /* === INICIALIZACIÓN === */
 $('#route-status').textContent = 'Selecciona salida, destino y paradas';
-if (!navigator.onLine) $('#offline-banner').style.display = 'block';
-window.addEventListener('offline', () => $('#offline-banner').style.display = 'block');
-window.addEventListener('online', () => $('#offline-banner').style.display = 'none');
+migrateLegacyStorage();
 function respPanel() { const isMobile = window.innerWidth <= 768; const sb = $('#sidebar'); const btn = $('#btn-toggle-panel'); if (btn) btn.style.display = isMobile ? 'flex' : 'none'; if (!isMobile) sb.classList.remove('open'); }
 respPanel(); window.addEventListener('resize', respPanel);
 (function() { let startY = 0, moved = false; const sb = $('#sidebar'), sc = $('#sidebar-content'), el = $('#fountain-list'), hd = $('#sidebar-handle'); let scrollLocked = false;
@@ -1590,30 +1718,36 @@ function onMove(e) { if (window.innerWidth > 768) return; const dy = e.touches[0
 function onEnd() { moved = false; scrollLocked = false; }
 ['touchstart','touchmove','touchend'].forEach(ev => hd.addEventListener(ev, ev === 'touchstart' ? onStart : ev === 'touchmove' ? onMove : onEnd, { passive: true }));
 hd.addEventListener('click', function(e) { e.stopPropagation(); if (window.innerWidth <= 768) togglePanel(); }); })();
-// Tab switching
-$$('.tab-btn').forEach(btn => { btn.addEventListener('click', function() { if (window.innerWidth > 768) return; $$('.tab-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); $$('.tab-panel').forEach(p => p.classList.remove('active')); const p = document.querySelector(`.tab-panel[data-tab="${this.dataset.tab}"]`); if (p) p.classList.add('active'); }); });
+// Tab switching (accesible: aria-selected / aria-controls / roving tabindex + flechas)
+function selectTab(btn, focus) {
+  $$('.tab-btn').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); b.setAttribute('tabindex', on ? '0' : '-1'); const panel = document.getElementById(b.getAttribute('aria-controls')); if (panel) panel.classList.toggle('active', on); });
+  if (focus) btn.focus();
+}
+$$('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => selectTab(btn, false));
+  btn.addEventListener('keydown', e => {
+    const tabs = Array.from($$('.tab-btn')); const i = tabs.indexOf(btn);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); selectTab(tabs[(i + 1) % tabs.length], true); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); selectTab(tabs[(i - 1 + tabs.length) % tabs.length], true); }
+    else if (e.key === 'Home') { e.preventDefault(); selectTab(tabs[0], true); }
+    else if (e.key === 'End') { e.preventDefault(); selectTab(tabs[tabs.length - 1], true); }
+  });
+});
 // D: close panel on fountain select (mobile)
 document.addEventListener('click', function(e) { const fi = e.target.closest('.fi'); if (fi && window.innerWidth <= 768) { const sb = $('#sidebar'); sb.classList.remove('open'); $('#btn-toggle-panel').textContent = '📋'; } });
 parseHash(); loadPhotosFile(); loadAccessFile(); updateAccessStatus(); const ghToken = getGithubToken(); if (ghToken) { $('#github-token').value = ghToken; $('#github-token-status').textContent = '✅ Token configurado'; }
 renderList(); updSum(); if (mcg.getLayers().length > 0) try { map.fitBounds(mcg.getBounds().pad(0.08)); } catch {} renderSaved(); updateSaveStatus();
 
 /* === EXPONER HELPERS A window (para onclick inline de popups / GitHub / reset / GPX) === */
-Object.assign(window, { safeLS, toast, renderList, updateSaveStatus, updateAccessStatus, setStart, setEnd, toggleWp, cycleAcc, photoClick, updPop, exportPhotosToFile, exportAccessToFile, applyGpxDest, saveGithubToken, clearGithubToken, getGithubToken, mm, getAccType, aLbl });
+Object.assign(window, { safeLS, toast, renderList, updateSaveStatus, updateAccessStatus, setStart, setEnd, toggleWp, cycleAcc, photoClick, deletePhoto, editCaption, updPop, exportPhotosToFile, exportAccessToFile, getPhoto, getCaption, getAccType, aLbl, saveGithubToken, clearGithubToken, getGithubToken, resetLocalData, mm, FD });
 Object.defineProperties(window, {
   startTown: { get() { return startTown; }, set(v) { startTown = v; }, configurable: true },
   endTown: { get() { return endTown; }, set(v) { endTown = v; }, configurable: true },
-  _savedPhotos: { get() { return _savedPhotos; }, set(v) { _savedPhotos = v; }, configurable: true },
-  _savedCaptions: { get() { return _savedCaptions; }, set(v) { _savedCaptions = v; }, configurable: true }
+  waypoints: { get() { return waypoints; }, set(v) { waypoints = v; }, configurable: true }
 });
 } // End of initializeApp
 
 if ('serviceWorker' in navigator) {
-  let reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
-    reloading = true;
-    window.location.reload();
-  });
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 </script>

@@ -4,17 +4,25 @@
 
 1. CÓMO PUBLICAR CAMBIOS
    - Editar index.html en G:\-IA-\Rutas Moteras -Fuentes de Andalucía-
-   - git add -A
+   - Revisar git status y git diff
+   - Añadir solo los archivos previstos
    - git commit -m "descripción"
    - git push
    - Esperar 1-2 min, la web se actualiza sola en:
      https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
+
+   Publicación temporal desde el navegador:
+   - Usar exclusivamente un token fine-grained limitado a este repositorio
+   - Conceder solo el permiso de contenido necesario
+   - Mantenerlo únicamente en sessionStorage y eliminarlo al terminar
+   - No usar nunca un token clásico con permisos amplios
 
 2. SI SE AÑADEN NUEVAS FUENTES (datos)
    - Datos y scripts en: G:\-IA-\FUENTES-Access\
    - Pipeline actual: FUENTES_Andalucia.accdb → export_rutas.py → fuentes_data.js
    - export_rutas.py genera PROVS, TC, TP y FD directamente desde la DB Access
    - Copiar el fuentes_data.js generado a la carpeta de este proyecto
+   - Recuentos actuales: FD 13,719, TC 712, TP 711
 
 3. SI SE AÑADEN NUEVOS PUEBLOS
    - TC y TP se generan desde la DB Access con export_rutas.py (no hay CSV)
@@ -26,10 +34,10 @@
      Ver document.querySelector('.btn-grp:first-of-type')
 
 5. CLAVES TÉCNICAS
-   - FD: array de fuentes (13720). Campos: p(pueblo), n(nombre), la(lat),
+   - FD: array de fuentes (13,719). Campos: p(pueblo), n(nombre), la(lat),
      lo(lng), t(tipo r=asfaltada o=off-road)
-   - TC: coordenadas de pueblos {nombre: [lat, lng]} (733 entries)
-   - TP: provincia por pueblo {nombre: provincia} (generado por export_rutas.py desde la DB)
+   - TC: coordenadas de pueblos {nombre: [lat, lng]} (712)
+   - TP: provincia por pueblo {nombre: provincia} (711)
    - PROVS: provincias con tilde {Almeria, Cadiz, Cordoba, Granada, Huelva,
      Jaen, Malaga, Sevilla}
    - currentTown: pueblo seleccionado en DESTINO
@@ -37,8 +45,7 @@
    - routeProfile: modo ruta ('r', 'c', 'o')
    - mcg: markerClusterGroup (disableClusteringAtZoom:15)
    - startTownMarker / endTownMarker: marcadores separados (NO en mcg)
-   - _isAdmin: modo admin activo (contraseña rutas2025)
-   - _savedPhotos: fotos en memoria (para persistencia en Firefox file://)
+   - _savedPhotos: fotos cargadas en memoria
 
 6. LAYOUT SIDEBAR (orden actual)
    1. Título centrado + subtítulo verde centrado
@@ -54,7 +61,7 @@
   11. Información de ruta
   12. Botones (Calcular ruta, GPX, Compartir, Guardar, etc.)
   13. Links legales (Aviso Legal, Privacidad, Cookies)
-  14. Indicador fotos guardadas (solo visible en Admin)
+   14. Indicador de fotos guardadas
 
 7. MAPA: controles
    - Zoom +/- : esquina superior derecha (topright)
@@ -68,18 +75,11 @@
    - applyFilters() respeta rutas activas (no interfiere)
 
 9. FOTOS
-   - Chrome/Edge (HTTPS): se guardan en localStorage automáticamente
-   - Firefox (file://): no soporta localStorage, se auto-descarga photos_data.js
-     El usuario debe guardarlo en la misma carpeta que index.html
-   - Para que se vea en TODOS los navegadores:
-     a) Configurar token GitHub clásico con scope "repo" (una vez):
-        https://github.com/settings/tokens → Generate classic token → repo
-        Pégalo en la web (Admin → campo "Token clásico GitHub" → Guardar)
-     b) Añadir foto → pulsar "📸 Publicar fotos" (rojo parpadeante)
-     c) Esperar 1-2 min, recargar → visible en todos los navegadores
-   - Sin token: el botón descarga photos_data.js para subirlo manualmente
-   - Los visitantes ven la foto en el popup si la tienen
-   - El indicador de fotos guardadas solo se ve en modo Admin
+   - Los borradores locales permanecen en el almacenamiento del navegador
+   - Para publicar desde el navegador, usar temporalmente un token fine-grained
+     limitado a este repositorio y solo durante la sesión
+   - No usar un token clásico con permisos amplios
+   - Sin token, exportar el archivo y publicarlo mediante el flujo normal de Git
 
 10. DISEÑO POPUPS
     - Fondo: #161b22 (oscuro)
@@ -89,22 +89,25 @@
     - Tamaño fuente popup: .85rem (más grande que antes)
 
 11. SEGURIDAD
-    - Admin password por defecto: rutas2025
-    - Para cambiar: buscar 'rutas2025' en index.html
-    - Los visitantes no ven botones de admin, foto ni nota
-    - El indicador de fotos solo se ve en Admin
+    - No guardar credenciales ni tokens en archivos del proyecto
+    - El token fine-grained debe limitarse a este repositorio y al permiso mínimo
+    - El token del navegador es temporal: sessionStorage y borrado al terminar
+    - No usar nunca tokens clásicos con permisos amplios
 
-12. RESPALDO
+12. CONEXIÓN Y SERVICE WORKER
+    - La aplicación es solo online y necesita Internet
+    - Mapas, OSRM, Open-Elevation, Overpass y Open-Meteo son servicios externos
+    - sw.js solo elimina exactamente rm-cache-v8 y se desregistra
+    - No añadir caché offline ni borrar cachés ajenas
+
+13. RESPALDO
     - index.html y NO_OLVIDAR.txt en la carpeta Andalucía
     - Scripts .py y la DB Access en G:\-IA-\FUENTES-Access\
     - Ambos repositorios GitHub: RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA
       y RUTAS-MOTERAS-FUENTES-DE-CADIZ
     - fuentes_data.js.bak: backup antes de corrección de tildes
 
-13. CAMBIOS RECIENTES (25 julio 2026)
-    - Corregidas 164 tildes rotas en nombres de fuentes (U+FFFD)
-    - Popups cambiados a azul fuerte (#1976d2) y más grandes
-    - Añadido meta referrer para OSM en Firefox
-    - Fotos: guardado dual (localStorage + photos_data.js)
-    - Indicador de fotos guardadas en Admin
-    - Error handlers en compresión de fotos
+14. ESTADO ACTUAL
+    - Datos: FD 13,719, TC 712, TP 711
+    - Pipeline: FUENTES_Andalucia.accdb → export_rutas.py → fuentes_data.js
+    - Aplicación solo online; no se mantiene caché offline
