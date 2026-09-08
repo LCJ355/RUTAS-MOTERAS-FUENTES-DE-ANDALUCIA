@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es" dir="ltr">
 <head>
 <meta charset="UTF-8">
@@ -25,38 +25,40 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <style>
-:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--text:#c9d1d9;--muted:#8b949e;--sub:#484f58;--accent:#f5c842;--pri:#66bb6a;--sec:#e67e22;--warn:#da3633;--info:#1976d2;--radius:6px}
+:root{--bg:#0d1117;--panel:#161b22;--border:#3a424e;--text:#f0f6fc;--muted:#b8c3d1;--sub:#96a2b4;--accent:#f5c842;--pri:#66bb6a;--sec:#e67e22;--warn:#da3633;--info:#1976d2;--radius:6px}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.4;overflow:hidden}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 #app{display:flex;flex-direction:row;height:100vh;height:100dvh;width:100vw}
 #sidebar{width:420px;min-width:320px;background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;overflow-y:auto;gap:8px;scroll-behavior:smooth;scrollbar-gutter:stable;transition:width .2s}
 #sidebar-content{flex:1;min-height:0}
 #tab-bar{display:none}
 .tab-panel{display:block}
-#sidebar h1{font-size:1.2rem;color:var(--accent);text-align:center;margin-bottom:2px}
-#sidebar .sub{font-size:.7rem;color:var(--pri);text-align:center;margin-bottom:4px}
-#stats{font-size:.65rem;color:var(--sub)}
-.lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:6px}
-select,input{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:.78rem;min-height:34px;outline:none;transition:border .15s}
-select:focus,input:focus{border-color:var(--accent)}
-select option{background:var(--bg)}
-.row{display:flex;gap:5px;flex-wrap:wrap}
+#sidebar h1{font-size:1.2rem;color:var(--accent);text-align:center;margin-bottom:2px;font-weight:700;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sidebar .sub{font-size:.74rem;color:#7ee787;text-align:center;margin-bottom:4px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stats{font-size:.68rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lbl{font-size:.64rem;color:#d8e2ec;text-transform:uppercase;letter-spacing:1px;margin-top:6px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+select,input{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:.78rem;font-weight:500;min-height:34px;outline:none;transition:border .15s,box-shadow .15s}
+select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(245,200,66,.2)}
+select option{background:var(--panel);color:var(--text)}
+.row{display:flex;gap:5px;align-items:center}
 .row>*{flex:1;min-width:0}
-.btn{padding:7px 11px;border:none;border-radius:var(--radius);font-weight:600;cursor:pointer;font-size:.72rem;white-space:nowrap;transition:all .15s;min-height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;gap:5px;position:relative;overflow:hidden}
+.row>button.btn-sm{flex:none}
+#btn-gps{flex:none;min-width:44px}
+.btn{padding:7px 11px;border:none;border-radius:var(--radius);font-weight:600;cursor:pointer;font-size:.72rem;white-space:nowrap;transition:all .15s;min-height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;gap:5px;position:relative;overflow:hidden;text-overflow:ellipsis}
 .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;z-index:2}
-.btn-pri{background:var(--accent);color:#0d1117}
+.btn-pri{background:var(--accent);color:#0d1117;font-weight:700}
 .btn-pri:hover{background:#e0b530;transform:translateY(-1px)}
-.btn-red{background:var(--warn);color:#fff}
+.btn-red{background:var(--warn);color:#fff;font-weight:600}
 .btn-red:hover{background:#b62324}
-.btn-sec{background:var(--bg);color:var(--text);border:1px solid var(--border)}
-.btn-sec:hover{background:#30363d}
-.btn-sec.active{background:var(--accent);color:#0d1117;border-color:var(--accent)}
+.btn-sec{background:var(--bg);color:var(--text);border:1px solid var(--border);font-weight:600}
+.btn-sec:hover{background:#21262d;border-color:#56606f}
+.btn-sec.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
-.btn-grp{display:flex;gap:4px}
-.btn-grp button{flex:1;padding:5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--muted);cursor:pointer;font-size:.65rem;text-align:center;transition:all .15s;min-height:32px}
+.btn-grp{display:flex;gap:4px;flex-wrap:nowrap}
+.btn-grp button{flex:1;min-width:0;padding:5px 4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--muted);cursor:pointer;font-size:.68rem;font-weight:600;text-align:center;transition:all .15s;min-height:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn-grp button.active{font-weight:700;border-color:currentColor}
-.btn-grp button.active[data-v="r"]{background:#66bb6a;color:#fff;border-color:#66bb6a}
-.btn-grp button.active[data-v="m"]{background:#e74c3c;color:#fff;border-color:#e74c3c}
+.btn-grp button.active[data-v="r"]{background:#2ea043;color:#fff;border-color:#2ea043}
+.btn-grp button.active[data-v="m"]{background:#da3633;color:#fff;border-color:#da3633}
 .acc-info{display:flex;gap:6px;flex-wrap:wrap}
 .acc-badge{display:flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:.66rem;min-height:32px;flex:1;justify-content:center}
 .acc-badge b{color:var(--accent);font-size:.78rem}
@@ -74,10 +76,10 @@ select option{background:var(--bg)}
 .draw-ctrl .btn{margin:0;flex:none}
 #fountain-list{flex:1;overflow-y:auto;min-height:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:4px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .fi{display:flex;align-items:center;padding:5px 7px;border-bottom:1px solid var(--border);font-size:.72rem;gap:5px;cursor:pointer;min-height:34px;transition:background .1s}
-.fi:hover{background:#1c2128}
+.fi:hover{background:#1f2631}
 .fi .fi-i{flex:1;min-width:0}
-.fi .fi-n{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fi .fi-t{color:var(--sub);font-size:.62rem}
+.fi .fi-n{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi .fi-t{color:var(--sub);font-size:.66rem}
 .fi-btn{width:26px;height:26px;border:none;border-radius:4px;cursor:pointer;font-size:.65rem;font-weight:700;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;transition:all .1s}
 .fi-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .fi-btn.wp{background:var(--accent);color:#0d1117}
@@ -87,38 +89,41 @@ select option{background:var(--bg)}
 .fi-btn.ac{background:0 0;color:var(--sec);font-size:.8rem}
 #elevation-chart{background:var(--bg);border-radius:var(--radius);margin:6px 0;padding:5px;display:none;border:1px solid var(--border);flex-shrink:0}
 #elevation-chart svg{width:100%;height:85px;display:block;shape-rendering:crispEdges}
-#elevation-chart .el-stats{display:flex;gap:10px;font-size:.62rem;color:var(--muted);justify-content:center;margin-top:4px}
-#elevation-chart .el-stats strong{color:var(--text)}
+#elevation-chart .el-stats{display:flex;gap:10px;font-size:.64rem;color:var(--muted);justify-content:center;margin-top:4px}
+#elevation-chart .el-stats strong{color:#ffffff;font-weight:700}
 #route-info{background:var(--panel);border-radius:var(--radius);padding:8px 12px;font-size:.72rem;flex-shrink:0;border:1px solid var(--border)}
-#route-info h3{color:var(--accent);font-size:.85rem;margin-bottom:5px}
-#route-summary{display:flex;gap:8px;flex-wrap:wrap;font-size:.68rem}
-#route-summary span{color:var(--muted)}
-#route-summary strong{color:var(--text)}
-#leg-table{width:100%;font-size:.62rem;border-collapse:collapse;margin:5px 0;table-layout:fixed}
-#leg-table th{color:var(--sub);text-align:left;padding:3px 5px;border-bottom:1px solid var(--border)}
-#leg-table td{padding:3px 5px;border-bottom:1px solid var(--panel);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#leg-table tr:hover td{background:#1c2128}
-.leg-wp{color:var(--accent);font-weight:600}
+#route-info h3{color:var(--accent);font-weight:700;font-size:.88rem;margin-bottom:5px}
+#route-summary{display:flex;gap:6px;align-items:center;font-size:.72rem;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+#route-summary span{color:var(--muted);white-space:nowrap;flex-shrink:0}
+#route-summary strong{color:#ffffff;font-weight:700}
+#route-status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legend-row{display:flex;gap:4px;justify-content:space-between;align-items:center;margin-top:3px;flex-wrap:nowrap;overflow:hidden}
+.legend-row span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.64rem}
+#leg-table{width:100%;font-size:.65rem;border-collapse:collapse;margin:5px 0;table-layout:fixed}
+#leg-table th{color:var(--sub);font-weight:700;text-align:left;padding:4px 5px;border-bottom:1px solid var(--border)}
+#leg-table td{padding:4px 5px;color:var(--text);border-bottom:1px solid var(--panel);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#leg-table tr:hover td{background:#1f2631}
+.leg-wp{color:var(--accent);font-weight:700}
 #waypoints-mini{max-height:45px;overflow-y:auto;padding:3px 0}
-.wp-mini{display:inline-block;font-size:.62rem;background:var(--border);padding:2px 6px;border-radius:4px;margin:2px 3px}
-.poi-btn{padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;font-size:.62rem;min-height:28px}
+.wp-mini{display:inline-block;font-size:.62rem;background:var(--border);color:var(--text);font-weight:600;padding:2px 6px;border-radius:4px;margin:2px 3px}
+.poi-btn{padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;font-size:.62rem;min-height:28px;font-weight:600}
 .poi-btn.on{background:var(--accent);color:#0d1117}
 #poi-list{max-height:130px;overflow-y:auto;display:none;font-size:.62rem;scrollbar-width:thin}
-.poi-item{display:flex;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer;min-height:30px;transition:background .1s}
-.poi-item:hover{background:#1c2128}
+.poi-item{display:flex;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer;min-height:30px;transition:background .1s;color:var(--text);font-weight:500}
+.poi-item:hover{background:#1f2631}
 .poi-icon{font-size:.85rem}
-.poi-dist{color:var(--sub);font-size:.58rem;margin-left:auto}
+.poi-dist{color:var(--sub);font-size:.62rem;margin-left:auto;font-weight:600}
 #saved-routes-panel{display:none;font-size:.65rem;max-height:200px;overflow-y:auto}
 .sr-item{display:flex;align-items:center;gap:6px;padding:5px 7px;border-bottom:1px solid var(--border);min-height:32px}
-.sr-item .sr-name{flex:1;color:var(--text);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-item .sr-name{flex:1;color:var(--text);font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sr-item .sr-name:hover{color:var(--accent)}
-.sr-item .sr-info{color:var(--sub);font-size:.58rem;white-space:nowrap}
+.sr-item .sr-info{color:var(--sub);font-size:.64rem;white-space:nowrap}
 .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{color:#8a0000!important}
 .note-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:2px;vertical-align:middle}
 .photo-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#3498db;margin-left:3px;vertical-align:middle}
 .cap-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#2ecc71;margin-left:3px;vertical-align:middle}
 .p-caption{font-size:.68rem;color:#3498db;margin-top:2px;font-style:italic}
-.legal-links{text-align:center;font-size:.52rem;color:var(--sub);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px}
+.legal-links{text-align:center;font-size:.56rem;color:var(--sub);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px}
 .legal-links a{color:var(--muted);text-decoration:underline;cursor:pointer;padding:2px 4px;border-radius:3px}
 .legal-links a:hover{color:var(--accent);background:#21262d}
 .legal-links a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -134,7 +139,7 @@ select option{background:var(--bg)}
 .modal-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .modal h2{color:var(--accent);font-size:1rem;margin:14px 0 8px}
 .modal h3{color:var(--accent);font-size:.85rem;margin:12px 0 5px}
-.modal p{margin:6px 0;color:#b0b8c4}
+.modal p{margin:6px 0;color:#d8e2ec}
 #map{flex:1;height:100vh;height:100dvh;z-index:0;overscroll-behavior:contain}
 @media (prefers-reduced-motion: no-preference){
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
@@ -143,16 +148,16 @@ select option{background:var(--bg)}
 @keyframes spin{to{transform:rotate(360deg)}}
 }
 .leaflet-tooltip{background:var(--panel)!important;border:1px solid var(--border)!important;color:#66bb6a!important;font-size:.72rem!important;padding:5px 9px!important;border-radius:5px!important;box-shadow:0 2px 12px rgba(0,0,0,.5)!important;white-space:nowrap}
-.leaflet-popup-content-wrapper{background:var(--panel)!important;color:var(--text)!important;border-radius:7px!important;box-shadow:0 3px 14px rgba(0,0,0,.6)!important}
+.leaflet-popup-content-wrapper{background:var(--panel)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:7px!important;box-shadow:0 3px 14px rgba(0,0,0,.6)!important}
 .leaflet-popup-tip{background:var(--panel)!important}
 .leaflet-popup-content{font-size:.88rem!important;margin:10px 15px!important}
-.p-title{font-weight:700;color:var(--accent)}
-.p-town{color:var(--muted);font-size:.78rem}
+.p-title{font-weight:700;color:var(--accent);font-size:.95rem}
+.p-town{color:var(--muted);font-size:.82rem;font-weight:600}
 .p-acc{display:inline-block;font-size:.72rem;padding:3px 8px;border-radius:4px;margin-top:5px;background:#9e9e9e;color:#fff}
 .p-acc.r{background:#1976d2;color:#fff}
 .p-acc.o{background:#e67e22;color:#fff}
-.p-status{font-size:.68rem;color:var(--muted);margin-top:4px}
-.p-note{font-size:.68rem;color:var(--accent);margin-top:4px;font-style:italic}
+.p-status{font-size:.74rem;color:var(--muted);margin-top:4px}
+.p-note{font-size:.74rem;color:#ffe082;margin-top:4px;font-style:italic}
 #weather-container{display:none;font-size:.72rem;background:var(--bg);border-radius:var(--radius);padding:10px 12px;margin:6px 0;border:1px solid var(--accent)}
 .admin-only.visible{display:flex}
 .admin-only{display:none!important}
@@ -172,54 +177,78 @@ select option{background:var(--bg)}
 #sidebar-content{pointer-events:auto;flex:1;min-height:0;display:flex;flex-direction:column}
 #sidebar:not(.open) #sidebar-content{pointer-events:none}
 #tab-bar{display:flex;flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
-.tab-btn{flex:1;padding:8px 4px;border:none;background:0 0;color:var(--muted);font-size:.7rem;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;min-height:44px;display:flex;align-items:center;justify-content:center}
+.tab-btn{flex:1;padding:8px 4px;border:none;background:0 0;color:var(--muted);font-size:.82rem;white-space:nowrap;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;min-height:44px;display:flex;align-items:center;justify-content:center}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
 .tab-panel{display:none;flex:1;min-height:0;overflow-y:auto}
 .tab-panel.active{display:flex;flex-direction:column}
 #map{height:100vh}
 select,input{font-size:16px;min-height:44px}
-.btn{min-height:44px;min-width:44px}
-.fi{min-height:44px}
-.fi-btn{width:44px;height:44px}
-.btn-grp button{font-size:.72rem;min-height:44px}
-.map-layer-btn{min-height:44px}
-.map-layer-toggle{min-height:44px}
+.btn{min-height:44px;min-width:44px;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-grp button{font-size:.8rem;min-height:44px;white-space:nowrap}
+.fi{min-height:44px;font-size:.86rem}
+.fi .fi-n{font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi .fi-t{font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-btn{width:44px;height:44px;font-size:.78rem}
+.map-layer-btn{min-height:44px;font-size:.75rem;white-space:nowrap}
+.map-layer-toggle{min-height:44px;font-size:.78rem;white-space:nowrap}
 .modal-close{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
-.poi-item{min-height:44px}
-.sr-item{min-height:44px}
-.legal-links a{padding:8px 10px}
-.lbl{font-size:.7rem}
-#elevation-chart .el-stats{font-size:.7rem}
-.poi-item{font-size:.7rem}
-.poi-dist{font-size:.65rem}
-.sr-info{font-size:.65rem}
-.legal-links{font-size:.62rem}
-.wp-mini{font-size:.68rem}
-.poi-btn{font-size:.68rem;min-height:44px}
-#saved-routes-panel{font-size:.68rem}
-.poi-item,.sr-item{font-size:.68rem}
+.poi-item{min-height:44px;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.poi-dist{font-size:.74rem;white-space:nowrap}
+.sr-item{min-height:44px;font-size:.8rem}
+.sr-item .sr-name{font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-info{font-size:.74rem;white-space:nowrap}
+.legal-links a{padding:8px 10px;font-size:.74rem;white-space:nowrap}
+.lbl{font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sidebar .sub{font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stats{font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#elevation-chart .el-stats{font-size:.78rem;white-space:nowrap}
+#elevation-chart .el-stats span{white-space:nowrap}
+#route-summary{font-size:.8rem}
+#route-summary span{white-space:nowrap}
+#route-status{font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#leg-table{font-size:.74rem}
+#leg-table th,#leg-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legal-links{font-size:.72rem}
+.wp-mini{font-size:.76rem;white-space:nowrap}
+.poi-btn{font-size:.76rem;min-height:44px;white-space:nowrap}
+#saved-routes-panel{font-size:.8rem}
 #poi-list,#saved-routes-panel,#waypoints-mini{max-height:none!important}
+.toast{font-size:.82rem}
+.legend-row{display:flex;gap:4px 8px;align-items:center;margin-top:4px;flex-wrap:wrap}
+.legend-row span{white-space:nowrap;font-size:.65rem;display:inline-flex;align-items:center;gap:3px}
+#weather-container{font-size:.8rem}
 }
 @media(max-width:768px){
 .mobile-only{display:block}
-.btn-grp:not(.mobile-only .btn-grp){display:none}
+.desktop-only{display:none}
+.legend-row span{white-space:nowrap;font-size:.72rem}
 }
 @media(min-width:769px){
 .mobile-only{display:none}
+.desktop-only{display:block}
 }
 @media(max-width:500px){
-#sidebar{width:100%;min-width:unset;height:80vh;padding:8px 8px;font-size:.85rem}
-#sidebar h1{font-size:1.05rem}
+#sidebar{width:100%;min-width:unset;height:80vh;padding:8px 8px;font-size:.88rem}
+#sidebar h1{font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row{gap:4px}
-.btn{padding:6px 9px;font-size:.68rem;min-height:44px;min-width:44px}
+.btn{padding:6px 8px;font-size:.78rem;min-height:44px;min-width:44px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab-btn{font-size:.8rem;white-space:nowrap}
+.btn-grp button{font-size:.78rem;white-space:nowrap}
+.fi{font-size:.84rem}
+.fi .fi-n{font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi .fi-t{font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 @media(max-width:375px){
 #sidebar{height:80vh;padding:6px 6px 0}
-#sidebar h1{font-size:.95rem}
-#sidebar .sub{display:none}
+#sidebar h1{font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sidebar .sub{font-size:.68rem}
 .row{gap:3px}
-.btn{font-size:.65rem;padding:5px 7px}
-.fi{font-size:.68rem}
+.btn{font-size:.75rem;padding:5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab-btn{font-size:.76rem;padding:6px 2px;white-space:nowrap}
+.btn-grp button{font-size:.75rem;white-space:nowrap}
+.fi{font-size:.82rem}
+.fi .fi-n{font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi .fi-t{font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 </style>
 </head>
@@ -230,7 +259,7 @@ select,input{font-size:16px;min-height:44px}
 <div id="sidebar-content">
 <div id="tab-bar" role="tablist"><button class="tab-btn active" id="tab-fuentes" data-tab="fuentes" role="tab" aria-selected="true" aria-controls="panel-fuentes" tabindex="0">📍 Fuentes</button><button class="tab-btn" id="tab-ruta" data-tab="ruta" role="tab" aria-selected="false" aria-controls="panel-ruta" tabindex="-1">🛵 Ruta</button><button class="tab-btn" id="tab-ajustes" data-tab="ajustes" role="tab" aria-selected="false" aria-controls="panel-ajustes" tabindex="-1">⚙️ Ajustes</button></div>
 <div class="tab-panel active" id="panel-fuentes" role="tabpanel" aria-labelledby="tab-fuentes" tabindex="0" data-tab="fuentes">
-<h1 style="text-align:center">🏍 RUTAS MOTERAS 🏍</h1><div style="color:#66bb6a;font-size:1.15rem;text-align:center;margin-bottom:2px">Fuentes/Manantiales de Andalucía</div>
+<h1 style="text-align:center">🏍 RUTAS MOTERAS 🏍</h1><div style="color:#66bb6a;font-size:1.05rem;text-align:center;margin-bottom:2px;font-weight:600">Fuentes/Manantiales de Andalucía</div>
 <div class="sub">Selecciona salida/destino (pueblos) y paradas (fuentes)</div>
 <div id="stats"></div>
 
@@ -238,10 +267,10 @@ select,input{font-size:16px;min-height:44px}
 <div class="row">
 <select id="prov-start" aria-label="Provincia de inicio"><option value="">Capital...</option></select>
 <select id="town-start" aria-label="Pueblo de inicio"><option value="">Pueblo...</option></select>
-<button class="btn btn-sec btn-sm" id="btn-gps" style="font-size:.7rem;padding:5px 6px;flex-shrink:0" aria-label="Usar ubicación GPS">📍 GPS</button>
+<button class="btn btn-sec btn-sm" id="btn-gps" style="font-size:.7rem;padding:5px 8px;flex:none;min-width:44px" aria-label="Usar ubicación GPS">📍 GPS</button>
 </div>
 <div class="lbl">📍 DESTINO</div>
-<div style="font-size:.58rem;color:var(--sub);margin-bottom:3px">Pueblo que quieres explorar (filtra fuentes en mapa y lista)</div>
+<div style="font-size:.7rem;color:var(--muted);font-weight:500;margin-bottom:4px">Pueblo que quieres explorar (filtra fuentes en mapa y lista)</div>
 <div class="row">
 <select id="prov-dest" aria-label="Provincia de destino"><option value="">Capital...</option></select>
 <select id="town-dest" aria-label="Pueblo de destino"><option value="">Pueblo...</option></select>
@@ -252,18 +281,28 @@ select,input{font-size:16px;min-height:44px}
 <select id="town-end" aria-label="Pueblo de fin"><option value="">Pueblo...</option></select>
 </div>
 
+<div class="desktop-only">
 <div class="lbl">🛣 MODO Cálculo Ruta</div>
 <div class="btn-grp" role="radiogroup" aria-label="Modo de ruta">
 <button class="active" data-v="r" role="radio" aria-checked="true">🏎 Rápido</button>
 <button data-v="m" role="radio" aria-checked="false">✏️ Modificación manual</button>
 </div>
-<div style="display:flex;gap:7px;font-size:.6rem;color:var(--sub);margin-top:3px">
+</div>
+<div class="legend-row">
 <span><span style="color:var(--pri)">●</span> Asfaltada</span>
 <span><span style="color:var(--sec)">●</span> Sin asfaltar</span>
 <span><span style="color:#2ecc71">●</span> Inicio</span>
 <span><span style="color:#e74c3c">●</span> Destino</span>
 <span><span style="color:var(--accent)">●</span> Parada</span>
 </div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;margin:6px 0 4px;font-size:.74rem;color:var(--text);font-weight:600">
+<span id="fountain-count" style="color:var(--muted);font-size:.72rem;font-weight:600"></span>
+<span><span style="color:#f5c842">●</span> Total <b id="acc-t-count">0</b></span>
+<span><span style="color:#66bb6a">●</span> Asfaltadas <b id="acc-r-count">0</b></span>
+<span><span style="color:#e74c3c">●</span> Sin asfaltar <b id="acc-o-count">0</b></span>
+</div>
+<div id="fountain-list" role="list" aria-label="Lista de fuentes"><div class="fi" style="justify-content:center;color:var(--muted);font-size:.78rem">Cargando...</div></div>
 
 </div>
 <div class="tab-panel" id="panel-ruta" role="tabpanel" aria-labelledby="tab-ruta" tabindex="0" data-tab="ruta">
@@ -282,9 +321,9 @@ select,input{font-size:16px;min-height:44px}
 <div id="route-info">
 <h3>🛵 Ruta</h3>
 <div id="route-summary">
-<span>🏁 <strong id="r-start">—</strong></span>
+<span>🏁 <strong id="r-start" style="display:inline-block;max-width:75px;vertical-align:bottom;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</strong></span>
 <span>📍 <strong id="r-wps">0</strong></span>
-<span>🎯 <strong id="r-end">—</strong></span>
+<span>🎯 <strong id="r-end" style="display:inline-block;max-width:75px;vertical-align:bottom;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</strong></span>
 <span>📏 <strong id="r-dist">0 km</strong></span>
 <span>⏱ <strong id="r-time">0 min</strong></span>
 <span id="r-mode" style="color:var(--muted)"></span>
@@ -292,68 +331,62 @@ select,input{font-size:16px;min-height:44px}
 <div style="max-height:130px;overflow-y:auto"><table id="leg-table" aria-label="Detalle de tramos"><thead><tr><th>#</th><th>Parada</th><th>Dist</th><th>Acum</th><th>Tiempo</th><th>Carretera</th></tr></thead><tbody id="leg-body"></tbody></table></div>
 <div id="waypoints-mini"></div>
 <div id="poi-list" role="listbox" aria-label="Puntos de interés cercanos"></div>
-<div id="route-status" style="font-size:.64rem;color:var(--sub);margin:5px 0" aria-live="polite"></div>
-<div class="row" style="gap:4px;flex-wrap:wrap">
-<button class="btn btn-pri btn-sm" id="btn-calc" style="flex:2" aria-label="Calcular ruta">🛵 Calcular ruta</button>
-<div class="btn-group-gpx" style="position:relative;flex:1;min-width:0">
-<button class="btn btn-sec btn-sm" id="btn-gpx" aria-label="GPX" style="width:100%">📥 GPX ▾</button>
+<div id="route-status" style="font-size:.72rem;color:var(--muted);font-weight:600;margin:5px 0" aria-live="polite"></div>
+<div class="row" style="gap:4px;flex-wrap:nowrap">
+<button class="btn btn-pri btn-sm" id="btn-calc" style="flex:2.2;min-width:0" aria-label="Calcular ruta">🛵 Calcular ruta</button>
+<div class="btn-group-gpx" style="position:relative;flex:1.4;min-width:0">
+<button class="btn btn-sec btn-sm" id="btn-gpx" aria-label="GPX" style="width:100%;min-width:0">📥 GPX ▾</button>
 <div id="gpx-menu" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--panel);border:1px solid var(--border);border-radius:4px;margin-top:2px;box-shadow:0 4px 12px rgba(0,0,0,.4);overflow:hidden">
 <button class="btn btn-sec btn-sm" id="btn-gpx-export" style="width:100%;border:none;border-radius:0;justify-content:flex-start;min-height:36px">📤 Exportar GPX</button>
 <button class="btn btn-sec btn-sm" id="btn-gpx-import" style="width:100%;border:none;border-radius:0;justify-content:flex-start;min-height:36px">📥 Importar GPX</button>
 </div>
 </div>
 <input type="file" accept=".gpx" id="gpx-file" style="display:none">
-<button class="btn btn-sec btn-sm" id="btn-share" aria-label="Compartir enlace">🔗</button>
-<button class="btn btn-sec btn-sm" id="btn-save" aria-label="Guardar ruta">💾</button>
+<button class="btn btn-sec btn-sm" id="btn-share" aria-label="Compartir enlace" style="flex:0.6;min-width:0">🔗</button>
+<button class="btn btn-sec btn-sm" id="btn-save" aria-label="Guardar ruta" style="flex:0.6;min-width:0">💾</button>
 </div>
 <div id="route-share-btns" style="margin:5px 0">
-<div style="font-size:.62rem;color:var(--muted);margin-bottom:4px">📤 Compartir ruta:</div>
-<div class="row" style="gap:4px">
-<button class="btn btn-sec btn-sm" id="btn-share-maps" style="flex:1">🗺️ Google Maps</button>
-<button class="btn btn-sec btn-sm" id="btn-share-wa" style="flex:1">💬 WhatsApp</button>
+<div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📤 Compartir ruta:</div>
+<div class="row" style="gap:4px;flex-wrap:nowrap">
+<button class="btn btn-sec btn-sm" id="btn-share-maps" style="flex:1;min-width:0">🗺️ Google Maps</button>
+<button class="btn btn-sec btn-sm" id="btn-share-wa" style="flex:1;min-width:0">💬 WhatsApp</button>
 </div>
 </div>
-<div class="row" style="gap:4px">
-<button class="btn btn-sec btn-sm" id="btn-poi">⛽ POIs</button>
-<button class="btn btn-sec btn-sm" id="btn-weather">🌤 Clima</button>
-<input type="date" id="weather-date" aria-label="Fecha del pronóstico meteorológico" style="font-size:.62rem;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:115px">
+<div class="row" style="gap:4px;flex-wrap:nowrap">
+<button class="btn btn-sec btn-sm" id="btn-poi" style="flex:1;min-width:0">⛽ POIs</button>
+<button class="btn btn-sec btn-sm" id="btn-weather" style="flex:1.2;min-width:0">🌤 Clima</button>
+<input type="date" id="weather-date" aria-label="Fecha del pronóstico meteorológico" style="font-size:.62rem;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);flex:1.4;min-width:0">
 </div>
 <div id="weather-container" role="region" aria-label="Pronóstico meteorológico"></div>
-<div class="row" style="gap:4px">
-<button class="btn btn-sec btn-sm" id="btn-saved-toggle" style="flex:1" aria-label="Mis rutas guardadas">📁 Mis rutas</button>
-<button class="btn btn-sec btn-sm" id="btn-fit-all" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
+<div class="row" style="gap:4px;flex-wrap:nowrap">
+<button class="btn btn-sec btn-sm" id="btn-saved-toggle" style="flex:2;min-width:0" aria-label="Mis rutas guardadas">📁 Mis rutas</button>
+<button class="btn btn-sec btn-sm" id="btn-fit-all" style="flex:1;min-width:0" aria-label="Ajustar vista del mapa">🔍 Ajustar</button>
 </div>
 <div id="saved-routes-panel" role="region" aria-label="Rutas guardadas"></div>
 </div>
 </div>
 <div class="tab-panel" id="panel-ajustes" role="tabpanel" aria-labelledby="tab-ajustes" tabindex="0" data-tab="ajustes">
-<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0;font-size:.7rem;color:var(--text)">
-<span id="fountain-count" style="color:var(--sub);font-size:.62rem"></span>
-<span><span style="color:#f5c842">●</span> Total <b id="acc-t-count">0</b></span>
-<span><span style="color:#66bb6a">●</span> Asfaltadas <b id="acc-r-count">0</b></span>
-<span><span style="color:#e74c3c">●</span> Sin asfaltar <b id="acc-o-count">0</b></span>
-</div>
-<div id="fountain-list" role="list" aria-label="Lista de fuentes"><div class="fi" style="justify-content:center;color:var(--sub);font-size:.78rem">Cargando...</div></div>
-<details style="margin-top:5px;font-size:.62rem;color:var(--muted)">
-<summary style="cursor:pointer;padding:4px;color:var(--muted);font-size:.65rem">🔐 Configuración GitHub</summary>
+<div class="lbl" style="margin-top:0">⚙️ CONFIGURACIÓN Y SINCRONIZACIÓN</div>
+<details style="margin-top:5px;font-size:.68rem;color:var(--muted)">
+<summary style="cursor:pointer;padding:4px;color:var(--text);font-size:.72rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔐 Configuración GitHub</summary>
 <div style="margin-top:5px">
-<input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo)" aria-label="Token clásico de GitHub (scope repo)" style="width:100%;padding:5px;font-size:.62rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-bottom:3px">
-<div style="display:flex;gap:4px;align-items:center">
-<span id="github-token-status" style="color:var(--sub)">🔑 No configurado</span>
-<button class="btn btn-sec btn-sm" onclick="saveGithubToken()" style="font-size:.55rem" aria-label="Guardar token GitHub">Guardar</button>
-<button class="btn btn-sec btn-sm" onclick="clearGithubToken()" style="font-size:.55rem" aria-label="Eliminar token">Eliminar</button>
+<input id="github-token" type="password" placeholder="Token clásico GitHub (scope repo)" aria-label="Token clásico de GitHub (scope repo)" style="width:100%;padding:5px;font-size:.68rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);margin-bottom:3px">
+<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
+<span id="github-token-status" style="color:var(--muted);font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔑 No configurado</span>
+<button class="btn btn-sec btn-sm" onclick="saveGithubToken()" style="font-size:.55rem;flex:none;min-width:44px" aria-label="Guardar token GitHub">Guardar</button>
+<button class="btn btn-sec btn-sm" onclick="clearGithubToken()" style="font-size:.55rem;flex:none;min-width:44px" aria-label="Eliminar token">Eliminar</button>
 </div>
 </div>
 <hr style="border:none;border-top:1px solid var(--border);margin:6px 0">
 <button class="btn btn-red btn-sm" id="btn-reset-all" onclick="if(confirm('¿Borrar TODOS los datos locales (fotos, notas, rutas guardadas)?')){resetLocalData();}" style="width:100%;font-size:.6rem;padding:4px">🗑 Reset completo</button>
 </details>
-<div class="row" style="gap:4px;margin-top:5px" id="save-photos-row">
-<span id="save-photos-status" style="font-size:.62rem;color:var(--sec);flex:1"></span>
-<button class="btn btn-sm" id="btn-save-photos" style="display:none;background:var(--warn);color:#fff;border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite" onclick="exportPhotosToFile()" aria-label="Publicar fotos en repositorio">📸 Publicar fotos</button>
+<div class="row" style="gap:4px;margin-top:5px;flex-wrap:nowrap" id="save-photos-row">
+<span id="save-photos-status" style="font-size:.62rem;color:var(--sec);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+<button class="btn btn-sm" id="btn-save-photos" style="display:none;background:var(--warn);color:#fff;border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite;flex:none" onclick="exportPhotosToFile()" aria-label="Publicar fotos en repositorio">📸 Publicar fotos</button>
 </div>
-<div class="row" style="gap:4px;margin-top:3px" id="save-access-row">
-<span id="save-access-status" style="font-size:.62rem;color:var(--sec);flex:1"></span>
-<button class="btn btn-sm" id="btn-save-access" style="display:none;background:var(--accent);color:#0d1117;border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite" onclick="exportAccessToFile()" aria-label="Publicar cambios de acceso en repositorio">🚧 Publicar accesos</button>
+<div class="row" style="gap:4px;margin-top:3px;flex-wrap:nowrap" id="save-access-row">
+<span id="save-access-status" style="font-size:.62rem;color:var(--sec);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+<button class="btn btn-sm" id="btn-save-access" style="display:none;background:var(--accent);color:#0d1117;border:none;border-radius:4px;padding:5px 8px;cursor:pointer;font-weight:600;font-size:.65rem;animation:blink 1s ease-in-out infinite;flex:none" onclick="exportAccessToFile()" aria-label="Publicar cambios de acceso en repositorio">🚧 Publicar accesos</button>
 </div>
 <div style="text-align:center;margin:8px 0">
   <button class="btn btn-sec btn-sm" id="btn-traffic-dgt" style="width:100%">🚦 Tráfico DGT en tiempo real</button>
@@ -1068,9 +1101,9 @@ function updAccCounts() {
 function renderList() {
   const el = $('#fountain-list'); el.innerHTML = '';
   updAccCounts();
-  if (!currentTown) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Selecciona un destino</div>'; return; }
+  if (!currentTown) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--muted);font-weight:600">Selecciona un destino</div>'; return; }
   const f = FD.filter(x => x.p === currentTown);
-  if (!f.length) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--sub)">Sin coincidencias</div>'; return; }
+  if (!f.length) { el.innerHTML = '<div class="fi" style="justify-content:center;color:var(--muted);font-weight:600">Sin coincidencias</div>'; return; }
   const fragment = document.createDocumentFragment();
   f.forEach(x => {
     const id = x.id;
@@ -1413,7 +1446,7 @@ function distToSegment(p, a, b) {
 
 function showRouteMarkers() { mcg.clearLayers(); routeLayer.clearLayers(); const added = {}; const addId = id => { if (id == null) added['x'] = true; else added[id] = true; }; if (startTownMarker) { routeLayer.addLayer(startTownMarker); addId(fountainId(startTownMarker._fd)); } if (endTownMarker && !added[fountainId(endTownMarker._fd)]) { routeLayer.addLayer(endTownMarker); addId(fountainId(endTownMarker._fd)); } waypoints.forEach(w => { const id = fountainId(w); if (id != null && !added[id] && mm[id]) { routeLayer.addLayer(mm[id]); added[id] = true; } }); markers.forEach(m => { const f = m._fd; if (f && !added[f.id] && f.p === currentTown) { mcg.addLayer(m); added[f.id] = true; } }); if (!map.hasLayer(mcg)) map.addLayer(mcg); openRoutePopups(); }
 
-function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHTML = legs.map((l, i) => { total += l.dist; const nm = escapeHtml(l.name.length > 20 ? l.name.substring(0, 20) + '…' : l.name); const legMin = Math.round(l.time / 60); const fmtLeg = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h' + (m ? m + 'min' : '') : m + 'min'; }; return `<tr><td>${i + 1}</td><td class="leg-wp">${nm}</td><td>${(l.dist / 1000).toFixed(1)}km</td><td>${(total / 1000).toFixed(1)}km</td><td>${fmtLeg(legMin)}</td><td style="color:var(--sub);font-size:.55rem">${escapeHtml(l.road.substring(0, 10))}</td></tr>`; }).join(''); }
+function renderLegs(legs) { const tb = $('#leg-body'); let total = 0; tb.innerHTML = legs.map((l, i) => { total += l.dist; const nm = escapeHtml(l.name.length > 20 ? l.name.substring(0, 20) + '…' : l.name); const legMin = Math.round(l.time / 60); const fmtLeg = t => { const h = Math.floor(t / 60), m = t % 60; return h ? h + 'h' + (m ? m + 'min' : '') : m + 'min'; }; return `<tr><td>${i + 1}</td><td class="leg-wp">${nm}</td><td>${(l.dist / 1000).toFixed(1)}km</td><td>${(total / 1000).toFixed(1)}km</td><td>${fmtLeg(legMin)}</td><td style="color:var(--muted);font-size:.65rem;font-weight:500">${escapeHtml(l.road.substring(0, 10))}</td></tr>`; }).join(''); }
 
 /* === GPX Y COMPARTIR === */
 const escXml = s => ('' + s).replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));

@@ -1,0 +1,15 @@
+{
+  "name": "rutas-moteras-fuentes-de-andalucia",
+  "version": "1.0.0",
+  "description": "Planificador interactivo de rutas moteras por fuentes y manantiales de Andalucía. Mapas Leaflet, perfiles de elevación, POIs, clima, exportación GPX y fotos locales.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node -e \"console.log('Build ready')\"",
+    "test": "node scripts/test_core.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
