@@ -14,10 +14,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Serve static assets from project root
+// Serve static assets from project root (no-cache en desarrollo)
 app.use(express.static(__dirname, {
   extensions: ['html'],
-  index: 'index.html'
+  index: 'index.html',
+  setHeaders: (res) => { res.setHeader('Cache-Control', 'no-store'); }
 }));
 
 // Fallback all other routes to index.html for client-side routing

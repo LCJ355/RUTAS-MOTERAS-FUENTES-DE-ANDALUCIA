@@ -42,7 +42,7 @@
      Jaen, Malaga, Sevilla}
    - currentTown: pueblo seleccionado en DESTINO
    - currentAcc: filtro acceso ('all', 'r', 'o')
-   - routeProfile: modo ruta ('r', 'c', 'o')
+   - routeProfile: modo ruta ('r' rápido, 'm' manual)
    - mcg: markerClusterGroup (disableClusteringAtZoom:15)
    - startTownMarker / endTownMarker: marcadores separados (NO en mcg)
    - _savedPhotos: fotos cargadas en memoria
