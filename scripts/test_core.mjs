@@ -56,7 +56,7 @@ function hoistRestore() {
 function migrationScenario(data) {
   const store = new Map();
   const localStorage = { getItem: k => store.has(k) ? store.get(k) : null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), key: i => [...store.keys()][i] || null, get length() { return store.size; } };
-  const safeLS = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } }, remove: k => { try { localStorage.removeItem(k); } catch { } } };
+  const safeLS = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } }, remove: k => { try { localStorage.removeItem(k); } catch { } }, keys: () => [...store.keys()] };
   const idKey = (type, id) => `rm:${type}:${id}`;
   const ctx = { FD: data.FD, safeLS, idKey, console };
   vm.createContext(ctx);
