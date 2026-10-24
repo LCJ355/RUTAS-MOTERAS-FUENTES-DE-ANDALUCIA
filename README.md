@@ -1,23 +1,71 @@
-# Rutas Moteras - Fuentes de Andalucía
+# Rutas Moteras · Fuentes de Andalucía
 
-Planificador web de rutas moteras por fuentes y manantiales de Andalucía.
+Repositorio con dos líneas de evolución independientes:
 
-La aplicación es **solo online**. Necesita conexión a Internet para cargar los mapas y consultar las APIs de rutas, elevación, puntos de interés y meteorología.
+| Línea | Carpeta | Estado |
+|---|---|---|
+| Web/PWA | `WEB-V3.40/` | Versión 3.40; solo online |
+| Web/PWA nativa | `WEB-V1.8/` | Versión 1.8; carcasa basada en la app nativa |
+| Android nativo | `NATIVA-V1.8/` | Versión 1.8 (`versionCode 9`); Kotlin/osmdroid |
 
-## Datos actuales
+La antigua línea APK Capacitor 3.40 se retiró; se ha recuperado una APK instalable en `WEB-V3.40/APK-Android/` a partir de la base 3.39 y los datos actuales.
 
-- FD: 13,719 fuentes
-- TC: 712 pueblos con coordenadas
-- TP: 711 asociaciones de pueblo y provincia
+La raíz conserva un `index.html` mínimo de compatibilidad que redirige a `WEB-V3.40/`, para que la URL publicada anteriormente siga funcionando.
 
-Pipeline de datos actual:
+## Web
 
-`FUENTES_Andalucia.accdb -> export_rutas.py -> fuentes_data.js`
+```powershell
+cd WEB-V3.40
+npm install
+npm run dev        # http://localhost:3000
+npm test
+```
 
-`export_rutas.py` genera `PROVS`, `TC`, `TP` y `FD` directamente desde la base de datos Access.
+La web publicada queda en:
+
+`https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/WEB-V3.40/`
+
+Los datos de fuentes, fotos, accesos, municipios y códigos postales están dentro de `WEB-V3.40/`. El pipeline de datos de Access es externo: `G:\-IA-\FUENTES-Access\`.
+
+## Web V-1.8 (carcasa nativa)
+
+```powershell
+cd WEB-V1.8
+npm run dev        # http://127.0.0.1:8081
+npm test
+```
+
+Publicada en:
+
+`https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/WEB-V1.8/`
+
+Reutiliza el motor móvil del APK 3.39 y los datos actuales, con una carcasa nueva basada en `NATIVA-V1.8` (barra superior, búsqueda, capas, clima, brújula, barra de ruta y cinco accesos inferiores). La raíz sigue redirigiendo a `WEB-V3.40/` para no romper enlaces antiguos.
+
+## Android nativo
+
+```powershell
+cd NATIVA-V1.8
+$env:JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
+$env:ANDROID_HOME="C:\Android\sdk"
+.\gradlew.bat --no-daemon assembleRelease
+```
+
+Salida: `NATIVA-V1.8\app\build\outputs\apk\release\app-release.apk`.
+
+El APK de referencia está en `NATIVA-V1.8\APKs\RutasFuentes-v1.8.apk`. La build release usa firma de debug y R8; no es apta para Google Play sin configurar un keystore propio.
+
+## Datos nativos
+
+`NATIVA-V1.8\app\src\main\assets\data.json` es un snapshot generado desde los datos de la web. Para regenerarlo:
+
+```powershell
+cd NATIVA-V1.8
+node tools/build_native_data.mjs
+node tools/build_native_data.mjs --check
+```
+
+El generador lee `..\WEB-V3.40` y aplica `data_overrides.json`. No editar `data.json` a mano.
 
 ## Publicación
 
-Web pública: https://lcj355.github.io/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/
-
-La publicación normal se realiza mediante Git y GitHub Pages. La publicación desde el navegador a través de la API de GitHub es una solución temporal: usa únicamente un token fine-grained limitado a este repositorio y guárdalo solo durante la sesión. No uses nunca un token clásico con permisos amplios.
+Publicación web normal mediante Git/GitHub Pages. No guardar tokens en el repositorio; si se usa publicación temporal desde el navegador, debe ser un token fine-grained limitado a este repositorio.
