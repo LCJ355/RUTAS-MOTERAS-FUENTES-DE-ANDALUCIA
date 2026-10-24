@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -12,7 +13,9 @@ const ok = (cond, msg) => { if (cond) { passed++; } else { fail(msg); } };
 
 function loadData() {
   const c = {}; vm.createContext(c);
-  vm.runInContext(fs.readFileSync(root + 'fuentes_data.js', 'utf8'), c, { timeout: 20000 });
+  for (const file of ['fuentes_data.js', 'municipios_andalucia.js', 'postal_andalucia.js', 'pueblos_andalucia.js']) {
+    vm.runInContext(fs.readFileSync(root + file, 'utf8'), c, { timeout: 20000 });
+  }
   return c;
 }
 
@@ -134,6 +137,32 @@ ok(data.FD.every(x => Number.isInteger(x.id) && x.id > 0), 'Todos los id deben s
 ok(data.FD.every(x => Number.isFinite(x.la) && Number.isFinite(x.lo)), 'Todas las coordenadas deben ser finitas');
 ok(Object.keys(data.TC).length === 712, 'TC debe ser 712, es ' + Object.keys(data.TC).length);
 ok(Object.keys(data.TP).length === 711, 'TP debe ser 711, es ' + Object.keys(data.TP).length);
+
+console.log('== Municipios, pedanías y CP ==');
+ok(Object.keys(data.MUN).length === 75, 'MUN debe ser 75, es ' + Object.keys(data.MUN).length);
+ok(Object.keys(data.PED).length === 23, 'PED debe ser 23, es ' + Object.keys(data.PED).length);
+ok(Object.keys(data.POSTAL).length === 790, 'POSTAL debe ser 790, es ' + Object.keys(data.POSTAL).length);
+const townUnion = new Set([...Object.keys(data.TC), ...Object.keys(data.MUN), ...Object.keys(data.PED)]);
+ok(townUnion.size === 810, 'El total de pueblos/pedanías debe ser 810, es ' + townUnion.size);
+ok(Object.keys(data.MUN).every(n => data.MUN[n][2] in data.PROVS), 'Todo MUN debe tener un código de provincia válido');
+ok(Object.keys(data.TC).every(n => !data.TP[n] || data.TP[n] in data.PROVS), 'Todo TP debe usar un código de provincia válido');
+ok(Object.keys(data.PED).every(n => data.TP[data.PED[n][2]] || data.MUN[data.PED[n][2]]), 'Toda pedanía debe tener padre con provincia');
+ok(Object.values(data.POSTAL).every(list => Array.isArray(list) && list.length && list.every(cp => /^\d{5}$/.test(cp))), 'Todos los CP deben ser de 5 dígitos');
+ok(Object.keys(data.POSTAL).every(n => townUnion.has(n)), 'Todo CP debe pertenecer a un pueblo/pedanía conocido');
+
+console.log('== Versión y recursos web ==');
+const webHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const webVersion = (webHtml.match(/const RM_VERSION = '([^']+)'/) || [])[1];
+const pkgVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version.split('.').slice(0, 2).join('.');
+ok(webVersion === pkgVersion, 'RM_VERSION debe ser ' + pkgVersion + ', es ' + webVersion);
+ok(webHtml.includes('Versión web:</strong> ' + webVersion), 'Acerca de debe mostrar la misma versión');
+ok(/function searchTowns\(q\)/.test(webHtml), 'La web debe incluir búsqueda de pueblos/CP');
+ok(/function setDestino\(name\)/.test(webHtml), 'La web debe incluir setDestino');
+ok(/function addParada\(id\)/.test(webHtml), 'La web debe incluir addParada');
+ok(webHtml.includes('Sin coincidencias'), 'La web debe avisar cuando una búsqueda no tiene resultados');
+
+const webManifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
+ok(webManifest.version === webVersion + '.0', 'manifest web debe ser ' + webVersion + '.0');
 
 console.log('== Municipios anomalos corregidos (TC cerca de sus fuentes) ==');
 for (const [name, maxKm] of [['Viso, El', 60], ['Victoria, La', 5], ['Villares, Los', 40]]) {

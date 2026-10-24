@@ -1,11 +1,13 @@
-
 node_modules/
 .env
 .env.local
 npm-debug.log*
 
-index_con_fotos.html
-index_con_fotos*.html
-PARA-ACTUALIZAR.txt
-index-old.html
-
+WEB-V3.40/node_modules/
+NATIVA-V1.8/.gradle/
+NATIVA-V1.8/.kotlin/
+NATIVA-V1.8/build/
+NATIVA-V1.8/app/build/
+NATIVA-V1.8/local.properties
+*.jks
+*.keystore
