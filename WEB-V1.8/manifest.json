@@ -1,0 +1,21 @@
+{
+  "name": "Rutas Moteras V-1.8 · Fuentes de Andalucía",
+  "short_name": "Rutas Moteras",
+  "description": "Planificador de rutas moteras por fuentes y manantiales de Andalucía. Interfaz web basada en la app nativa V-1.8.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "es",
+  "dir": "ltr",
+  "theme_color": "#ff6a00",
+  "background_color": "#0e0e0e",
+  "categories": ["travel", "navigation", "outdoors"],
+  "prefer_related_applications": false,
+  "version": "1.8.0",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

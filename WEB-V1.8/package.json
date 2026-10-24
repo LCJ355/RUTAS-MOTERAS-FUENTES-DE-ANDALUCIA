@@ -1,0 +1,12 @@
+{
+  "name": "rutas-moteras-web-v1",
+  "version": "1.8.0",
+  "private": true,
+  "description": "Rutas Moteras V-1.8 · Fuentes de Andalucía (web/PWA)",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "test": "node tests/smoke.mjs"
+  }
+}
