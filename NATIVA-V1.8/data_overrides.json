@@ -1,0 +1,10 @@
+{
+  "towns": {
+    "Cádiz": [36.529744, -6.292898, "ca"],
+    "Puerto de Santa María, El": [36.6004, -6.2253, "ca"],
+    "San Roque": [36.2101, -5.3868, "ca"],
+    "Medina Sidonia": [36.456, -5.9276, "ca"],
+    "San Martín del Tesorillo": [36.3412, -5.3205, "ca"],
+    "Zahara": [36.8406, -5.3905, "ca"]
+  }
+}

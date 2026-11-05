@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.RutasFuentes" parent="Theme.RutasFuentes.Base">
+        <item name="android:windowSplashScreenBackground">#F7F7F7</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+</resources>

@@ -1,0 +1,11 @@
+<resources>
+    <color name="hd_orange">#FF6A00</color>
+    <color name="hd_orange_dark">#E05A00</color>
+    <color name="hd_black">#000000</color>
+    <color name="hd_bar">#0E0E0E</color>
+    <color name="white">#FFFFFF</color>
+    <color name="panel">#FFFFFF</color>
+    <color name="text_dark">#111111</color>
+    <color name="text_muted">#6B7280</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
