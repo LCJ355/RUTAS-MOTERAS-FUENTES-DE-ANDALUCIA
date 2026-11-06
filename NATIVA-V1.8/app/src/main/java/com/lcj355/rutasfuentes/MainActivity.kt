@@ -3155,7 +3155,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             zip
-        } catch (e: Exception) { toast("Error al exportar: ${e.message}"); null }
+        } catch (e: Exception) { null }
     }
 
     private fun importarDatosPick() {
@@ -3169,6 +3169,7 @@ class MainActivity : AppCompatActivity() {
             val r = withContext(Dispatchers.IO) { restoreBackup(uri) }
             statusText.visibility = View.GONE
             if (r.error != null) { toast(r.error); return@launch }
+            applyRestoredSettings()
             refreshMarkers(); map.invalidate()
             android.app.AlertDialog.Builder(this@MainActivity).setTitle("\u2705 Copia importada")
                 .setMessage("Restaurados:\n ${r.notas} notas\n ${r.accesos} accesos\n ${r.pies} pies de foto\n ${r.fotos} fotos\n ${r.rutas} rutas guardadas")
@@ -3231,7 +3232,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     ce.apply()
-                    applyRestoredSettings()
                 }
                 return RestoreResult(fotos, o.optJSONObject("notas")?.length() ?: 0, o.optJSONObject("accesos")?.length() ?: 0, o.optJSONObject("pies")?.length() ?: 0, rutas, null)
             } else {

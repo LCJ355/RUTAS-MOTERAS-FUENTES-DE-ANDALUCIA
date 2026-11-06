@@ -3,7 +3,7 @@
 ## Products (do not conflate)
 
 - Web/PWA: `WEB-V3.40/`; version in `const RM_VERSION` in its `index.html` (currently 3.40). Root `index.html` is only a compatibility redirect to this folder.
-- Native Android: `NATIVA-V1.8/`; Kotlin + osmdroid, one programmatic `MainActivity.kt` (no XML layouts) plus `CompassRoseView.kt`. Current version is in `NATIVA-V1.8/app/build.gradle` (1.9.4 / code 14).
+- Native Android: `NATIVA-V1.8/`; Kotlin + osmdroid, one programmatic `MainActivity.kt` (no XML layouts) plus `CompassRoseView.kt`. Current version is in `NATIVA-V1.8/app/build.gradle` (1.9.5 / code 15).
 - The old Capacitor APK source line is intentionally removed. A reconstructed installable APK is under `WEB-V3.40/APK-Android/`; it has no maintained source tree here. Do not reintroduce a second web `index.html`.
 - Web and native are independent; native data is a generated snapshot from web data.
 

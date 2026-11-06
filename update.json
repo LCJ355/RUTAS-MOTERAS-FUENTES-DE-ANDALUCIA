@@ -1,8 +1,8 @@
 {
-    "versionCode":  14,
-    "versionName":  "1.9.4",
+    "versionCode":  15,
+    "versionName":  "1.9.5",
     "apkUrl":  "https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/releases/latest/download/RutasFuentes.apk",
-    "sha256":  "362e13b08bc31c33d3b2759e03bc8df3d380490571afb54967e4cdd25f694415",
-    "size":  4081251,
-    "notes":  "Copia de seguridad completa con rutas y ajustes; pantalla encendida durante navegacion y grabacion; comprobacion de actualizacion al volver; nombre de app y HTTPS."
+    "sha256":  "40e9d689248ceedf1370f2d205690f577593a049662851e70d3c4a86f00a8663",
+    "size":  4081407,
+    "notes":  "Copia de seguridad completa con rutas y ajustes; pestana de ajustes restaurada de forma segura; pantalla encendida durante navegacion y grabacion; comprobacion de actualizacion al volver; nombre de app y HTTPS."
 }
