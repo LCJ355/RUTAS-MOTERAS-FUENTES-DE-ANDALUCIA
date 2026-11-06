@@ -3730,13 +3730,43 @@ class MainActivity : AppCompatActivity() {
         add("\uD83E\uDDED Modo Br\u00FAjula / GPS\n")
         add("El bot\u00F3n de la br\u00FAjula alterna entre rumbo del sensor y rumbo GPS. En GPS, si no hay rumbo fiable, usa la br\u00FAjula. La rosa muestra el Norte del mapa y tu rumbo; gira el mapa con dos dedos.\n\n")
         add("Barra inferior: Ruta, engranaje Ruta, Fuentes, Datos e Info. Cada icono abre su pantalla; otra pulsaci\u00F3n vuelve al mapa. Atr\u00E1s cierra men\u00FAs, nunca la app.")
-        android.app.AlertDialog.Builder(this)
-            .setMessage(sp)
-            .setNegativeButton("\uD83D\uDD04 Buscar actualización") { _, _ -> checkForUpdates(false) }
-            .setNeutralButton("\uD83C\uDFCD Cr\u00E9ditos") { _, _ -> showCredits() }
-            .setPositiveButton("OK", null)
-            .setOnDismissListener { infoIcon?.background = ring(ORANGE, 50) }
-            .show()
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = round(Color.WHITE, 20)
+            setPadding(dp(20), dp(16), dp(20), dp(12))
+        }
+        val scroll = android.widget.ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+        }
+        scroll.addView(TextView(this).apply {
+            text = sp
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(DARK)
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(2), 0, dp(2), dp(6))
+        })
+        box.addView(scroll)
+
+        val dlg = android.app.Dialog(this)
+        dlg.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        fun action(text: String, bg: Int, fg: Int, onClick: () -> Unit) {
+            box.addView(tv(text, 15f, fg, true).apply {
+                gravity = Gravity.CENTER
+                background = round(bg, 14)
+                setPadding(0, dp(12), 0, dp(12))
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) }
+                setOnClickListener { onClick() }
+            })
+        }
+        action("\uD83D\uDD04 Buscar actualización", GREEN_FUENTE, Color.WHITE) { dlg.dismiss(); checkForUpdates(false) }
+        action("\uD83C\uDFCD Cr\u00E9ditos", SURFACE2, DARK) { dlg.dismiss(); showCredits() }
+        action("OK", ORANGE, Color.WHITE) { dlg.dismiss() }
+
+        dlg.setContentView(box)
+        dlg.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+        dlg.setOnDismissListener { infoIcon?.background = ring(ORANGE, 50) }
+        dlg.show()
+        dlg.window?.setLayout((resources.displayMetrics.widthPixels * 0.92).toInt(), (resources.displayMetrics.heightPixels * 0.84).toInt())
     }
 
     // ---------------- GPX ----------------

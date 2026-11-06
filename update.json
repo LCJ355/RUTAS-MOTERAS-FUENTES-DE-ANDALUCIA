@@ -1,8 +1,8 @@
 {
-    "versionCode":  10,
-    "versionName":  "1.9",
+    "versionCode":  11,
+    "versionName":  "1.9.1",
     "apkUrl":  "https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/releases/latest/download/RutasFuentes.apk",
-    "sha256":  "7f223f563a4b8422a6846e3850e53b4312ce81bf57720009b6b6ec36de06deb1",
-    "size":  4079803,
-    "notes":  "Comprobacion de actualizaciones al iniciar, descarga e instalacion desde GitHub Releases y keystore de release estable."
+    "sha256":  "6ee5b6d496ab247d51ba0c6fb8d9a06a7db0424db7530d26f16143ace7de1926",
+    "size":  4080451,
+    "notes":  "Corregido el dialogo Acerca de: botones de actualizar, creditos y OK ya no se solapan."
 }
