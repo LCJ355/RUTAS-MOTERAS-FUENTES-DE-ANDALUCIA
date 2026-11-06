@@ -3873,30 +3873,41 @@ class MainActivity : AppCompatActivity() {
     private fun placeRoseOnMap() {
         val c = roseCard ?: return
         if (!layerShowsRose()) { c.visibility = View.INVISIBLE; return }
-        val p = myLoc.myLocation ?: lastLoc
-                if (p == null) { c.visibility = View.INVISIBLE; return }
-        if (c.visibility != View.VISIBLE) c.visibility = View.VISIBLE
         val rv = roseView
-        if (c.width == 0 || rv == null || rv.width == 0 || rv.top == 0) {
+        if (c.width == 0 || rv == null || rv.width == 0) {
             if (!roseRetryPending) {
                 roseRetryPending = true
                 c.postDelayed({ roseRetryPending = false; placeRoseOnMap() }, 80L)
             }
             return
         }
+        val p = myLoc.myLocation ?: lastLoc
         val pt = android.graphics.Point()
-        map.projection.toPixels(p, pt)
-        // El mapa puede estar girado: Projection no aplica la rotacion, la aplicamos aqui
-        val ang = Math.toRadians(map.mapOrientation.toDouble())
-        if (Math.abs(ang) > 0.001) {
-            val cpt = android.graphics.Point()
-            map.projection.toPixels(map.mapCenter, cpt)
-            val dx = (pt.x - cpt.x).toFloat()
-            val dy = (pt.y - cpt.y).toFloat()
-            val cosA = Math.cos(ang).toFloat()
-            val sinA = Math.sin(ang).toFloat()
-            pt.x = Math.round(map.width / 2f + dx * cosA - dy * sinA)
-            pt.y = Math.round(map.height / 2f + dx * sinA + dy * cosA)
+        var useCenter = p == null
+        if (p != null) {
+            map.projection.toPixels(p, pt)
+            // El mapa puede estar girado: Projection no aplica la rotacion, la aplicamos aqui
+            val ang = Math.toRadians(map.mapOrientation.toDouble())
+            if (Math.abs(ang) > 0.001) {
+                val cpt = android.graphics.Point()
+                map.projection.toPixels(map.mapCenter, cpt)
+                val dx = (pt.x - cpt.x).toFloat()
+                val dy = (pt.y - cpt.y).toFloat()
+                val cosA = Math.cos(ang).toFloat()
+                val sinA = Math.sin(ang).toFloat()
+                pt.x = Math.round(map.width / 2f + dx * cosA - dy * sinA)
+                pt.y = Math.round(map.height / 2f + dx * sinA + dy * cosA)
+            }
+            val margin = dp(4)
+            if (pt.x < margin || pt.y < margin || pt.x > map.width - margin || pt.y > map.height - margin) {
+                useCenter = true
+            }
+        }
+        if (useCenter) {
+            // Sin GPS o con la ubicacion fuera de pantalla, la brujula se queda
+            // visible en el centro en vez de desaparecer.
+            pt.x = map.width / 2
+            pt.y = map.height / 2
         }
         val rw = rv.width
         val rh = rv.height

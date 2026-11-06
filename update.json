@@ -1,8 +1,8 @@
 {
-    "versionCode":  11,
-    "versionName":  "1.9.1",
+    "versionCode":  12,
+    "versionName":  "1.9.2",
     "apkUrl":  "https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/releases/latest/download/RutasFuentes.apk",
-    "sha256":  "6ee5b6d496ab247d51ba0c6fb8d9a06a7db0424db7530d26f16143ace7de1926",
-    "size":  4080451,
-    "notes":  "Corregido el dialogo Acerca de: botones de actualizar, creditos y OK ya no se solapan."
+    "sha256":  "f5a000a5a467eb3bf6ace133e13635755df23ae975295d0ab6488fce944e9846",
+    "size":  4080495,
+    "notes":  "Brujula: se mantiene visible en el centro cuando no hay GPS o la ubicacion queda fuera de pantalla."
 }
