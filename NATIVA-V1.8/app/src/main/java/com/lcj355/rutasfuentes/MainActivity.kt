@@ -90,6 +90,8 @@ class MainActivity : AppCompatActivity() {
     private var pendingUpdate: UpdateInfo? = null
     private var splashVisible = false
     private var pendingInstall: File? = null
+    private var lastUpdateCheckAt = 0L
+    private var updateDialogVisible = false
 
     private data class UpdateInfo(
         val versionCode: Long,
@@ -3070,7 +3072,7 @@ class MainActivity : AppCompatActivity() {
 
 
     // ---------------- COPIA DE SEGURIDAD (ZIP con index.json + fotos, y JSON legado) ----------------
-    private data class RestoreResult(val fotos: Int, val notas: Int, val accesos: Int, val pies: Int, val error: String?)
+    private data class RestoreResult(val fotos: Int, val notas: Int, val accesos: Int, val pies: Int, val rutas: Int, val error: String?)
 
     private fun shareFile(f: File, mime: String) {
         try {
@@ -3107,8 +3109,21 @@ class MainActivity : AppCompatActivity() {
         return try {
             val prefs = getSharedPreferences("notes", MODE_PRIVATE).all
             val o = JSONObject()
-            o.put("app", "RutasFuentes"); o.put("tipo", "backup"); o.put("version", 2)
+            o.put("app", "RutasFuentes"); o.put("tipo", "backup"); o.put("version", 3)
             o.put("fecha", java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(java.util.Date()))
+            o.put("rutas", savedRoutes())
+            val ajustes = JSONObject()
+            for ((k, v) in cfg().all) {
+                if (k == "photoTreeUri") continue
+                when (v) {
+                    is Boolean -> ajustes.put(k, v)
+                    is String -> ajustes.put(k, v)
+                    is Int -> ajustes.put(k, v)
+                    is Long -> ajustes.put(k, v)
+                    is Float -> ajustes.put(k, v)
+                }
+            }
+            o.put("ajustes", ajustes)
             val notas = JSONObject(); val accesos = JSONObject(); val pies = JSONObject(); val fechas = JSONObject()
             for ((k, v) in prefs) {
                 when {
@@ -3156,7 +3171,7 @@ class MainActivity : AppCompatActivity() {
             if (r.error != null) { toast(r.error); return@launch }
             refreshMarkers(); map.invalidate()
             android.app.AlertDialog.Builder(this@MainActivity).setTitle("\u2705 Copia importada")
-                .setMessage("Restaurados:\n ${r.notas} notas\n ${r.accesos} accesos\n ${r.pies} pies de foto\n ${r.fotos} fotos")
+                .setMessage("Restaurados:\n ${r.notas} notas\n ${r.accesos} accesos\n ${r.pies} pies de foto\n ${r.fotos} fotos\n ${r.rutas} rutas guardadas")
                 .setPositiveButton("OK", null).show()
         }
     }
@@ -3170,6 +3185,7 @@ class MainActivity : AppCompatActivity() {
             if (isZip) {
                 var index: JSONObject? = null
                 var fotos = 0
+                var rutas = 0
                 val prefs = getSharedPreferences("notes", MODE_PRIVATE)
                 java.util.zip.ZipInputStream(java.io.BufferedInputStream(contentResolver.openInputStream(uri))).use { z ->
                     var e = z.nextEntry
@@ -3193,8 +3209,8 @@ class MainActivity : AppCompatActivity() {
                         e = z.nextEntry
                     }
                 }
-                val o = index ?: return RestoreResult(0, 0, 0, 0, "Copia ZIP sin index.json")
-                if (o.optString("app") != "RutasFuentes") return RestoreResult(0, 0, 0, 0, "Ese archivo no es una copia de esta app")
+                val o = index ?: return RestoreResult(0, 0, 0, 0, 0, "Copia ZIP sin index.json")
+                if (o.optString("app") != "RutasFuentes") return RestoreResult(0, 0, 0, 0, 0, "Ese archivo no es una copia de esta app")
                 val ed = prefs.edit()
                 for (campo in listOf("notas", "accesos", "pies")) {
                     val jo = o.optJSONObject(campo) ?: continue
@@ -3202,11 +3218,26 @@ class MainActivity : AppCompatActivity() {
                 }
                 o.optJSONObject("fechas")?.let { jo -> for (k in jo.keys()) ed.putLong(k, jo.optLong(k)) }
                 ed.apply()
-                return RestoreResult(fotos, o.optJSONObject("notas")?.length() ?: 0, o.optJSONObject("accesos")?.length() ?: 0, o.optJSONObject("pies")?.length() ?: 0, null)
+                o.optJSONArray("rutas")?.let { ra -> rutas = ra.length(); putSavedRoutes(ra) }
+                o.optJSONObject("ajustes")?.let { jo ->
+                    val ce = cfg().edit()
+                    for (k in jo.keys()) {
+                        when (val v = jo.opt(k)) {
+                            is Boolean -> ce.putBoolean(k, v)
+                            is Int -> ce.putInt(k, v)
+                            is Long -> ce.putLong(k, v)
+                            is Double -> ce.putFloat(k, v.toFloat())
+                            is String -> ce.putString(k, v)
+                        }
+                    }
+                    ce.apply()
+                    applyRestoredSettings()
+                }
+                return RestoreResult(fotos, o.optJSONObject("notas")?.length() ?: 0, o.optJSONObject("accesos")?.length() ?: 0, o.optJSONObject("pies")?.length() ?: 0, rutas, null)
             } else {
                 val txt = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: ""
                 val o = JSONObject(txt)
-                if (o.optString("app") != "RutasFuentes") return RestoreResult(0, 0, 0, 0, "Ese archivo no es una copia de esta app")
+                if (o.optString("app") != "RutasFuentes") return RestoreResult(0, 0, 0, 0, 0, "Ese archivo no es una copia de esta app")
                 val prefs = getSharedPreferences("notes", MODE_PRIVATE)
                 val ed = prefs.edit()
                 for (campo in listOf("notas", "accesos", "pies")) {
@@ -3228,9 +3259,9 @@ class MainActivity : AppCompatActivity() {
                     } catch (_: Exception) {}
                 }
                 ed.apply()
-                return RestoreResult(nF, o.optJSONObject("notas")?.length() ?: 0, o.optJSONObject("accesos")?.length() ?: 0, o.optJSONObject("pies")?.length() ?: 0, null)
+                return RestoreResult(nF, o.optJSONObject("notas")?.length() ?: 0, o.optJSONObject("accesos")?.length() ?: 0, o.optJSONObject("pies")?.length() ?: 0, 0, null)
             }
-        } catch (e: Exception) { RestoreResult(0, 0, 0, 0, "Error al importar: ${e.message}") }
+        } catch (e: Exception) { RestoreResult(0, 0, 0, 0, 0, "Error al importar: ${e.message}") }
     }
 
     private fun routeToJson(name: String): JSONObject {
@@ -3244,6 +3275,16 @@ class MainActivity : AppCompatActivity() {
     }
     private fun savedRoutes(): org.json.JSONArray = try { org.json.JSONArray(getSharedPreferences("rf", MODE_PRIVATE).getString("routes", "[]") ?: "[]") } catch (e: Exception) { org.json.JSONArray() }
     private fun putSavedRoutes(a: org.json.JSONArray) = getSharedPreferences("rf", MODE_PRIVATE).edit().putString("routes", a.toString()).apply()
+
+    private fun applyRestoredSettings() {
+        compassRoseOn = (cfg().getString("roseOn", "1") ?: "1") == "1"
+        if (::seguirBtn.isInitialized) {
+            seguirBtn.text = if (compassRoseOn) "\uD83E\uDDED" else "\uD83C\uDFAF"
+            seguirBtn.background = ring(if (compassRoseOn) GREEN_FUENTE else ORANGE, 19, 3)
+            seguirBtn.contentDescription = if (compassRoseOn) "Modo Br\u00FAjula" else "Modo GPS"
+        }
+        if (compassRoseOn && layerShowsRose()) map.post { placeRoseOnMap() } else roseCard?.visibility = View.INVISIBLE
+    }
 
     private fun saveRouteDialog() {
         if (startPt == null && endPt == null && paradas.isEmpty()) { toast("No hay ruta que guardar"); return }
@@ -3609,14 +3650,20 @@ class MainActivity : AppCompatActivity() {
         syncRouteButtons()
         navBanner.post { layoutFab() }
         if (!routePanelHidden) { routePanelHidden = true; routeInfo.visibility = View.GONE; syncBarRings(); layoutFab() }
-        navBtn.background = ring(GREEN_FUENTE, 50, 3); myLoc.enableMyLocation(); toast("\uD83E\uDDED Navegaci\u00F3n iniciada")
+        navBtn.background = ring(GREEN_FUENTE, 50, 3); myLoc.enableMyLocation(); updateKeepScreenOn(); toast("\uD83E\uDDED Navegaci\u00F3n iniciada")
     }
     private fun stopNav() {
         navMode = false; navFreePan = false; lastNavStep = -1; navBanner.visibility = View.GONE
         scheduleRefresh()
         syncRouteButtons()
         navBanner.post { layoutFab() }
-        navBtn.background = ring(ORANGE, 50, 3); followArrow?.let { map.overlays.remove(it) }; followArrow = null; toast("Navegaci\u00F3n detenida")
+        navBtn.background = ring(ORANGE, 50, 3); followArrow?.let { map.overlays.remove(it) }; followArrow = null; updateKeepScreenOn(); toast("Navegaci\u00F3n detenida")
+    }
+
+    private fun updateKeepScreenOn() {
+        val keep = navMode || recording
+        if (keep) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     // ---------------- GRABAR ----------------
@@ -3624,6 +3671,7 @@ class MainActivity : AppCompatActivity() {
         recording = !recording
         if (recording) { lastLoc = null; trackDist = 0.0; myLoc.enableMyLocation(); recordBtn.text = "DETENER GRABACIÓN"; recordBtn.background = round(BAR, 10); recordText.text = "Grabando… 0.00 km" }
         else { recordBtn.text = "INICIAR GRABACIÓN"; recordBtn.background = round(ORANGE, 10); recordText.text = String.format(Locale.US, "Grabación finalizada · %.2f km", trackDist) }
+        updateKeepScreenOn()
     }
 
     // Créditos con tarjeta naranja a todo color
@@ -4079,6 +4127,8 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()
 
     private fun checkForUpdates(auto: Boolean) {
+        if (updateDialogVisible) return
+        if (auto) lastUpdateCheckAt = android.os.SystemClock.elapsedRealtime()
         scope.launch {
             val info = fetchUpdateInfo()
             if (info == null) {
@@ -4140,6 +4190,7 @@ class MainActivity : AppCompatActivity() {
         val sizeTxt = if (info.size > 0) String.format(Locale.US, " · %.1f MB", info.size / 1048576.0) else ""
         val notes = info.notes.ifBlank { "Mejoras y correcciones." }
         val msg = "Nueva versión V-" + info.versionName + sizeTxt + "\n\n" + notes + "\n\n¿Descargar e instalar ahora?"
+        updateDialogVisible = true
         android.app.AlertDialog.Builder(this)
             .setTitle("🔄 Actualización disponible")
             .setMessage(msg)
@@ -4147,6 +4198,7 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton("Ahora no") { _, _ ->
                 getSharedPreferences("rf", MODE_PRIVATE).edit().putLong("skippedUpdateCode", info.versionCode).apply()
             }
+            .setOnDismissListener { updateDialogVisible = false }
             .show()
     }
 
@@ -4258,6 +4310,8 @@ class MainActivity : AppCompatActivity() {
             pendingInstall = null
             installApk(install)
         }
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastUpdateCheckAt > 60_000L) checkForUpdates(auto = true)
     }
     override fun onPause() {
         super.onPause(); map.onPause(); myLoc.disableMyLocation(); main.removeCallbacks(locLoop); unregisterCompass()

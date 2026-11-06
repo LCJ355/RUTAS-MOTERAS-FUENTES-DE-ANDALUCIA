@@ -1,8 +1,8 @@
-# Rutas Moteras · Android nativo V1.9.3
+# Rutas Moteras · Android nativo V1.9.4
 
 App Android nativa de Rutas Moteras · Fuentes de Andalucía. Es una línea independiente de la web/PWA.
 
-- Versión: **1.9.3** (`versionCode 13`)
+- Versión: **1.9.4** (`versionCode 14`)
 - Paquete: `com.lcj355.rutasfuentes`
 - Kotlin + AndroidX + osmdroid, una sola `MainActivity` programática (sin layouts XML) y `CompassRoseView`.
 
@@ -18,7 +18,7 @@ $env:ANDROID_HOME="C:\Android\sdk"
 
 Salida: `app\build\outputs\apk\release\app-release.apk`.
 
-Copia publicada: `APKs\RutasFuentes-v1.9.3.apk`.
+Copia publicada: `APKs\RutasFuentes-v1.9.4.apk`.
 
 ## Firma
 
@@ -84,7 +84,7 @@ Si mueves esta carpeta, ajusta `webRoot` en `tools\build_native_data.mjs`.
 - `app/src/main/java/com/lcj355/rutasfuentes/MainActivity.kt`: UI, mapa, rutas, GPS, APIs, paneles y actualizaciones.
 - `CompassRoseView.kt`: rosa de brújula.
 - `app/src/main/res/`: iconos, temas y sonido de arranque.
-- `APKs/`: APK de referencia V1.9.3.
+- `APKs/`: APK de referencia V1.9.4.
 - `data_overrides.json`: correcciones de datos nativos.
 - `gradle/wrapper/`: no borrar; necesario para `gradlew`.
 
