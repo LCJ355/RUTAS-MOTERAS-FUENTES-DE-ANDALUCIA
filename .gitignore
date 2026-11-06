@@ -9,5 +9,7 @@ NATIVA-V1.8/.kotlin/
 NATIVA-V1.8/build/
 NATIVA-V1.8/app/build/
 NATIVA-V1.8/local.properties
+NATIVA-V1.8/keystore.properties
+NATIVA-V1.8/keystore/
 *.jks
 *.keystore

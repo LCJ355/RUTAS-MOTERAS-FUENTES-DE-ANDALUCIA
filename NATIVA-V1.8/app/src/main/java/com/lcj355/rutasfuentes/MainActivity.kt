@@ -2,15 +2,19 @@
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
+import android.provider.Settings
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -63,6 +67,8 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -75,6 +81,24 @@ class MainActivity : AppCompatActivity() {
         .readTimeout(18, java.util.concurrent.TimeUnit.SECONDS)
         .build()
     private val main = Handler(Looper.getMainLooper())
+
+    // Actualizaciones: el APK y update.json viven en GitHub Releases.
+    private val updateUrls = listOf(
+        "https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/releases/latest/download/update.json",
+        "https://raw.githubusercontent.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/main/update.json"
+    )
+    private var pendingUpdate: UpdateInfo? = null
+    private var splashVisible = false
+    private var pendingInstall: File? = null
+
+    private data class UpdateInfo(
+        val versionCode: Long,
+        val versionName: String,
+        val apkUrl: String,
+        val sha256: String,
+        val size: Long,
+        val notes: String
+    )
 
     private lateinit var map: MapView
     private lateinit var myLoc: MyLocationNewOverlay
@@ -226,6 +250,7 @@ class MainActivity : AppCompatActivity() {
         buildUi()
         loadData()
         askLocation()
+        checkForUpdates(auto = true)
     }
 
     // ---------------- UI ----------------
@@ -2060,8 +2085,9 @@ class MainActivity : AppCompatActivity() {
     private var soundMs = 0
 
     private fun showSplashAndSound() {
-        if (splashDone) return
+        if (splashDone) { splashVisible = false; return }
         splashDone = true
+        splashVisible = true
         try {
             val v = ImageView(this).apply {
                 setImageResource(R.drawable.splash)
@@ -2069,7 +2095,12 @@ class MainActivity : AppCompatActivity() {
                 setBackgroundColor(Color.parseColor("#F7F7F7"))
             }
             val fade = Runnable {
-                v.animate().alpha(0f).setDuration(600).withEndAction { try { root.removeView(v) } catch (_: Exception) { } }.start()
+                if (!splashVisible) return@Runnable
+                splashVisible = false
+                v.animate().alpha(0f).setDuration(600).withEndAction {
+                    try { root.removeView(v) } catch (_: Exception) { }
+                    maybeShowPendingUpdate()
+                }.start()
             }
             v.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
@@ -2083,7 +2114,11 @@ class MainActivity : AppCompatActivity() {
             })
             root.addView(v, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             main.postDelayed(fade, 15000) // seguridad
-        } catch (e: Exception) { playStartSound() }
+        } catch (e: Exception) {
+            splashVisible = false
+            playStartSound()
+            maybeShowPendingUpdate()
+        }
     }
 
     // Sonido: app/src/main/res/raw/arranque.mp3 (o .ogg)
@@ -3697,6 +3732,7 @@ class MainActivity : AppCompatActivity() {
         add("Barra inferior: Ruta, engranaje Ruta, Fuentes, Datos e Info. Cada icono abre su pantalla; otra pulsaci\u00F3n vuelve al mapa. Atr\u00E1s cierra men\u00FAs, nunca la app.")
         android.app.AlertDialog.Builder(this)
             .setMessage(sp)
+            .setNegativeButton("\uD83D\uDD04 Buscar actualización") { _, _ -> checkForUpdates(false) }
             .setNeutralButton("\uD83C\uDFCD Cr\u00E9ditos") { _, _ -> showCredits() }
             .setPositiveButton("OK", null)
             .setOnDismissListener { infoIcon?.background = ring(ORANGE, 50) }
@@ -3986,11 +4022,198 @@ class MainActivity : AppCompatActivity() {
         compassRegistered = false
     }
 
+    // ---------------- ACTUALIZACIONES ----------------
+    private fun currentVersionCode(): Long = try {
+        versionCodeOf(packageManager.getPackageInfo(packageName, 0))
+    } catch (_: Exception) { 0L }
+
+    private fun currentVersionName(): String = try {
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+    } catch (_: Exception) { "?" }
+
+    private fun versionCodeOf(pi: android.content.pm.PackageInfo): Long =
+        if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()
+
+    private fun checkForUpdates(auto: Boolean) {
+        scope.launch {
+            val info = fetchUpdateInfo()
+            if (info == null) {
+                if (!auto) toast("No se pudo comprobar la actualización")
+                return@launch
+            }
+            if (info.versionCode <= currentVersionCode()) {
+                if (!auto) toast("Estás al día · V-" + currentVersionName())
+                return@launch
+            }
+            val skipped = getSharedPreferences("rf", MODE_PRIVATE).getLong("skippedUpdateCode", 0L)
+            if (auto && info.versionCode == skipped) return@launch
+            if (splashVisible) pendingUpdate = info else showUpdateDialog(info)
+        }
+    }
+
+    private suspend fun fetchUpdateInfo(): UpdateInfo? = withContext(Dispatchers.IO) {
+        val client = http.newBuilder()
+            .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        for (base in updateUrls) {
+            try {
+                val sep = if (base.contains("?")) "&" else "?"
+                val req = Request.Builder()
+                    .url(base + sep + "t=" + System.currentTimeMillis())
+                    .header("Cache-Control", "no-cache")
+                    .header("User-Agent", "rutasfuentes/" + currentVersionName())
+                    .build()
+                client.newCall(req).execute().use { r ->
+                    if (!r.isSuccessful) return@use
+                    val body = r.body?.string().orEmpty().removePrefix("\uFEFF")
+                    if (body.isBlank()) return@use
+                    val o = JSONObject(body)
+                    val code = o.optLong("versionCode", 0L)
+                    val name = o.optString("versionName", "")
+                    val apk = o.optString("apkUrl", "")
+                    if (code <= 0L || name.isBlank() || !apk.startsWith("https://")) return@use
+                    return@withContext UpdateInfo(
+                        code, name, apk,
+                        o.optString("sha256", ""),
+                        o.optLong("size", 0L),
+                        o.optString("notes", "")
+                    )
+                }
+            } catch (_: Exception) { }
+        }
+        null
+    }
+
+    private fun maybeShowPendingUpdate() {
+        if (splashVisible) return
+        val info = pendingUpdate ?: return
+        pendingUpdate = null
+        showUpdateDialog(info)
+    }
+
+    private fun showUpdateDialog(info: UpdateInfo) {
+        val sizeTxt = if (info.size > 0) String.format(Locale.US, " · %.1f MB", info.size / 1048576.0) else ""
+        val notes = info.notes.ifBlank { "Mejoras y correcciones." }
+        val msg = "Nueva versión V-" + info.versionName + sizeTxt + "\n\n" + notes + "\n\n¿Descargar e instalar ahora?"
+        android.app.AlertDialog.Builder(this)
+            .setTitle("🔄 Actualización disponible")
+            .setMessage(msg)
+            .setPositiveButton("Descargar") { _, _ -> downloadAndInstall(info) }
+            .setNegativeButton("Ahora no") { _, _ ->
+                getSharedPreferences("rf", MODE_PRIVATE).edit().putLong("skippedUpdateCode", info.versionCode).apply()
+            }
+            .show()
+    }
+
+    private fun downloadAndInstall(info: UpdateInfo) {
+        val pd = android.app.ProgressDialog(this)
+        pd.setMessage("Descargando V-${info.versionName}…")
+        pd.setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL)
+        pd.max = 100
+        pd.setCancelable(true)
+        val cancelled = java.util.concurrent.atomic.AtomicBoolean(false)
+        val callRef = java.util.concurrent.atomic.AtomicReference<okhttp3.Call?>(null)
+        pd.setButton(android.content.DialogInterface.BUTTON_NEGATIVE, "Cancelar") { _, _ ->
+            cancelled.set(true); callRef.get()?.cancel()
+        }
+        pd.setOnCancelListener { cancelled.set(true); callRef.get()?.cancel() }
+        pd.show()
+
+        scope.launch {
+            val destDir = File(cacheDir, "update").apply { mkdirs() }
+            val dest = File(destDir, "RutasFuentes-${info.versionName}.apk")
+            val ok = withContext(Dispatchers.IO) {
+                try {
+                    val req = Request.Builder()
+                        .url(info.apkUrl)
+                        .header("User-Agent", "rutasfuentes/" + currentVersionName())
+                        .build()
+                    val client = http.newBuilder()
+                        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                        .build()
+                    val c = client.newCall(req)
+                    callRef.set(c)
+                    c.execute().use { r ->
+                        if (!r.isSuccessful) return@withContext false
+                        val body = r.body ?: return@withContext false
+                        val total = body.contentLength()
+                        body.byteStream().use { input ->
+                            FileOutputStream(dest).use { out ->
+                                val buf = ByteArray(64 * 1024)
+                                var read = 0L
+                                while (true) {
+                                    if (cancelled.get()) return@withContext false
+                                    val n = input.read(buf)
+                                    if (n < 0) break
+                                    out.write(buf, 0, n)
+                                    read += n
+                                    if (total > 0) runOnUiThread { pd.progress = ((read * 100) / total).toInt() }
+                                }
+                            }
+                        }
+                    }
+                    if (info.sha256.isNotBlank() && !sha256(dest).equals(info.sha256, ignoreCase = true)) {
+                        dest.delete(); return@withContext false
+                    }
+                    val pi = packageManager.getPackageArchiveInfo(dest.absolutePath, 0)
+                    if (pi == null || pi.packageName != packageName || versionCodeOf(pi) != info.versionCode) {
+                        dest.delete(); return@withContext false
+                    }
+                    true
+                } catch (_: Exception) { false }
+            }
+            try { pd.dismiss() } catch (_: Exception) { }
+            if (cancelled.get()) { toast("Descarga cancelada"); return@launch }
+            if (!ok) { toast("No se pudo descargar o verificar la actualización"); return@launch }
+            if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                pendingInstall = dest
+                toast("Activa «Instalar apps desconocidas» para Rutas Moteras")
+                try {
+                    startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+                } catch (_: Exception) { }
+                return@launch
+            }
+            installApk(dest)
+        }
+    }
+
+    private fun sha256(f: File): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        f.inputStream().use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest().joinToString("") { b -> "%02x".format(b.toInt() and 0xff) }
+    }
+
+    private fun installApk(file: File) {
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        } catch (e: Exception) {
+            toast("No se pudo abrir el instalador: ${e.message}")
+        }
+    }
+
     override fun onResume() {
         super.onResume(); map.onResume(); myLoc.enableMyLocation()
         lastProcessedFixTime = 0L
         main.removeCallbacks(locLoop); main.postDelayed(locLoop, 1500)
         if (currentTab == 0) registerCompass() else unregisterCompass()
+        val install = pendingInstall
+        if (install != null && install.exists() && (Build.VERSION.SDK_INT < 26 || packageManager.canRequestPackageInstalls())) {
+            pendingInstall = null
+            installApk(install)
+        }
     }
     override fun onPause() {
         super.onPause(); map.onPause(); myLoc.disableMyLocation(); main.removeCallbacks(locLoop); unregisterCompass()
