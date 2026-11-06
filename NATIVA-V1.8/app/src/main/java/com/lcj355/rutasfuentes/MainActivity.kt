@@ -251,6 +251,9 @@ class MainActivity : AppCompatActivity() {
         loadData()
         askLocation()
         checkForUpdates(auto = true)
+        // La brujula debe aparecer desde el arranque, aunque aun no haya GPS.
+        main.post { placeRoseOnMap() }
+        main.postDelayed({ placeRoseOnMap() }, 1200L)
     }
 
     // ---------------- UI ----------------
