@@ -124,12 +124,27 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nubesBtn: android.widget.ImageView
     private var infoIcon: android.widget.ImageView? = null
     private lateinit var radiusRow: LinearLayout
+    private lateinit var groupRow: LinearLayout
+    private val groupButtons = ArrayList<FrameLayout>()
+    private val selectedGroups = mutableSetOf(0, 1, 2, 3)
+    private val groupTitles = listOf("Fuente / fontanilla", "Manantial / nacimiento", "Pilar / pilón", "Pozo / otros")
+    private val groupShortTitles = listOf("Fuente", "Manantial", "Pilar", "Pozo/otros")
+    private val groupPluralTitles = listOf("Fuentes", "Manantiales", "Pilares", "Pozos/otros")
+    private val groupWords = listOf(
+        listOf("fuent", "fontan"),
+        listOf("manantial", "manantal", "manadero", "nacimiento", "nacedero", "nacimient", "surgencia", "rezume", "afloramiento", "venero", "venerillo", "brote", "borbollon", "perezoso", "remanado"),
+        listOf("pilar", "pilon", "pileta", "pila"),
+        listOf("pozo", "pocito", "pocita", "poceta", "pocillo", "pozuelo", "poza", "aljibe", "cisterna", "alcubilla")
+    )
     private var fuenteRadius = 25.0
     private lateinit var routeInfo: LinearLayout
     private lateinit var routeInfoHeader: LinearLayout
     private lateinit var statusText: TextView
     private lateinit var routeStats: TextView
     private var routeStatsText = ""
+    private var rutaSummary: TextView? = null
+    private var dataCountsText: TextView? = null
+    private var dataMetaText: TextView? = null
     private lateinit var routeStatsRow: LinearLayout
     private var routeTotalKm = 0.0
     private var routeTotalMin = 0.0
@@ -194,15 +209,18 @@ class MainActivity : AppCompatActivity() {
     private val DIVIDER = Color.parseColor("#ECEFF1")
     private val SURFACE2 = Color.parseColor("#F7F8FA")
 
-    data class Fountain(val id: Int, val name: String, val town: String, val lat: Double, val lon: Double, val acc: String)
+    data class Fountain(val id: Int, val name: String, val town: String, val lat: Double, val lon: Double, val acc: String, val group: Int)
 
     private val fountains = ArrayList<Fountain>()
+    private var dataVersion = "1.0"
+    private var dataProvinceCount = 0
     private var fountainsByLat: List<Fountain> = emptyList()
     private val fSearch = ArrayList<String>()
     private val townNames = ArrayList<String>()
     private val towns = LinkedHashMap<String, DoubleArray>()
     private val townSearch = ArrayList<String>()
     private val postal = HashMap<String, List<String>>()
+    private val townPostal = HashMap<String, String>()
 
     private val markers = ArrayList<Marker>()
     private val poiMarkers = ArrayList<Marker>()
@@ -239,6 +257,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installCrashHandler()
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         val cfg = Configuration.getInstance()
         cfg.load(applicationContext, PreferenceManager.getDefaultSharedPreferences(applicationContext))
@@ -256,6 +275,7 @@ class MainActivity : AppCompatActivity() {
         // La brujula debe aparecer desde el arranque, aunque aun no haya GPS.
         main.post { placeRoseOnMap() }
         main.postDelayed({ placeRoseOnMap() }, 1200L)
+        main.postDelayed({ maybeShowCrashReport() }, 1400L)
     }
 
     // ---------------- UI ----------------
@@ -768,9 +788,13 @@ class MainActivity : AppCompatActivity() {
         root.addView(searchOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         // Paneles
-        panelFuentes = makePanel("⛲ Fuentes cerca de ti")
-        radiusRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(2), 0, 0, dp(6)) }
-        for (r in listOf(10, 25, 50, 100, 150, 200)) {
+        panelFuentes = makePanel("⛲ Cerca de ti")
+        radiusRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(2), 0, dp(2), dp(6))
+        }
+        for (r in listOf(25, 50, 100, 150, 200)) {
             radiusRow.addView(tv("$r", 12.5f, DARK, true).apply {
                 gravity = Gravity.CENTER; setPadding(dp(9), dp(8), dp(9), dp(8)); tag = r
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(4) }
@@ -782,11 +806,45 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             setOnClickListener { searchTarget = "dest"; openSearch() }
         })
-        fuentesCount = tv("", 13f, GREEN_TEXT, true).apply { setPadding(0, dp(2), 0, dp(10)) }
+        fuentesCount = tv("", 12f, GREEN_TEXT, true).apply {
+            maxLines = 2
+            setLineSpacing(dp(1).toFloat(), 1f)
+            setPadding(0, dp(2), 0, dp(10))
+        }
         panelFuentes.addView(fuentesCount)
         panelFuentes.addView(android.widget.HorizontalScrollView(this@MainActivity).apply {
-            isHorizontalScrollBarEnabled = false; addView(radiusRow)
+            isHorizontalScrollBarEnabled = false
+            isFillViewport = true
+            addView(radiusRow, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        groupRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(2), dp(4), dp(2), dp(8))
+        }
+        groupButtons.clear()
+        val groupIcons = listOf(R.drawable.ic_fountain, R.drawable.ic_spring, R.drawable.ic_pilar, R.drawable.ic_well)
+        for (idx in 0..3) {
+            val btn = iconCircle(groupIcons[idx], Color.WHITE, if (selectedGroups.contains(idx)) GREEN_FUENTE else ORANGE, 44)
+            btn.tag = idx
+            btn.contentDescription = groupTitles[idx]
+            (btn.layoutParams as LinearLayout.LayoutParams).apply {
+                marginEnd = if (idx < 3) dp(10) else 0
+                gravity = Gravity.CENTER
+            }
+            btn.setOnClickListener {
+                if (selectedGroups.contains(idx)) {
+                    if (selectedGroups.size == 1) { toast("Selecciona al menos un grupo"); return@setOnClickListener }
+                    selectedGroups.remove(idx)
+                } else selectedGroups.add(idx)
+                styleGroupRow()
+                showFuentesNear()
+            }
+            groupButtons.add(btn)
+            groupRow.addView(btn)
+        }
+        panelFuentes.addView(groupRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        styleGroupRow()
         fuenteList = ListView(this).apply { setPadding(0, 0, 0, dp(4)); clipToPadding = false; divider = null; dividerHeight = 0 }
         panelFuentes.addView(fuenteList, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
@@ -799,58 +857,81 @@ class MainActivity : AppCompatActivity() {
         }
         panelRecord.addView(recordText); panelRecord.addView(recordBtn)
 
-        panelMore = makePanel("\u2630 Datos")
-        fun dato(key: String, icon: Int, title: String, sub: String) {
+        fun panelSection(parent: LinearLayout, title: String) {
+            parent.addView(tv(title, 10.5f, TEXT2, true).apply {
+                letterSpacing = 0.12f
+                setPadding(dp(8), dp(14), 0, dp(6))
+            })
+        }
+        fun panelAction(parent: LinearLayout, icon: Int, title: String, sub: String, bg: Int = SURFACE2, fg: Int = ORANGE_TEXT, onClick: () -> Unit) {
             val row = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(2), dp(12), dp(2), dp(12))
+                background = round(Color.WHITE, 14, 1, DIVIDER)
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                isClickable = true
+                setOnClickListener { onClick() }
             }
-            row.addView(iconCircle(icon, SURFACE2, ORANGE_TEXT, 36))
+            row.addView(iconCircle(icon, bg, fg, 38))
             val col = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
-            col.addView(tv(title, 16f, DARK, true))
-            col.addView(tv(sub, 12.5f, TEXT2).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+            col.addView(tv(title, 15f, DARK, true))
+            col.addView(tv(sub, 11.5f, TEXT2).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
             row.addView(col)
-            row.setOnClickListener { onMore(key) }
-            panelMore.addView(row)
-            panelMore.addView(View(this@MainActivity).apply {
-                setBackgroundColor(DIVIDER)
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply { marginStart = dp(49) }
-            })
+            row.addView(tv("\u203A", 22f, TEXT2).apply { gravity = Gravity.CENTER })
+            parent.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
         }
-        dato("CP de la ruta", R.drawable.ic_postal, "CP de la ruta", "Códigos postales de salida, paradas y destino")
-        dato("GPX", R.drawable.ic_gpx, "GPX", "Exportar o importar el recorrido")
-        dato("Orientacion", R.drawable.ic_target, "Orientaci\u00F3n del mapa", "Norte arriba al centrar; gira con dos dedos")
-        dato("COPIA de datos", R.drawable.ic_backup, "COPIA de datos", "Copia ZIP con fotos y notas")
-        dato("Fotos: carpeta y copias", R.drawable.ic_photo, "Fotos: carpeta y copias", "Carpeta externa y copia automática")
-        panelRuta = makePanel("\u2699\uFE0F Ruta")
-        val box = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
-            val act = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) } }
-            act.addView(tv("🔗  Compartir", 14f, DARK, true).apply {
-                gravity = Gravity.CENTER; background = round(Color.parseColor("#EFEFEF"), 20); setPadding(0, dp(10), 0, dp(10))
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(6) }
-                setOnClickListener { shareRouteMenu() }
-            })
-            act.addView(tv("💾  Guardar", 14f, DARK, true).apply {
-                gravity = Gravity.CENTER; background = round(Color.parseColor("#EFEFEF"), 20); setPadding(0, dp(10), 0, dp(10))
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                setOnClickListener { saveRouteDialog() }
-            })
-            box.addView(act)
-        panelRuta.addView(box)
 
-        panelRuta.addView(tv("\u23FA  Grabar recorrido", 14f, DARK, true).apply {
-            gravity = Gravity.CENTER; background = round(Color.parseColor("#EFEFEF"), 20); setPadding(0, dp(12), 0, dp(12))
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) }
-            setOnClickListener { selectTab(2) }
-        })
-        panelRuta.addView(tv("\uD83D\uDCC1  Mis rutas guardadas", 14f, DARK, true).apply {
-            gravity = Gravity.CENTER; background = round(Color.parseColor("#EFEFEF"), 20); setPadding(0, dp(12), 0, dp(12))
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) }
-            setOnClickListener { showSavedRoutes() }
-        })
+        panelMore = makePanel("\u2630 Datos")
+        val dataCard = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = round(GREEN_SOFT, 16)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+        }
+        dataCard.addView(tv("DATOS EN LA APP", 10.5f, GREEN_TEXT, true).apply { letterSpacing = 0.12f })
+        dataCountsText = tv("${fmtInt(fountains.size)} fuentes · ${fmtInt(towns.size)} pueblos", 13.5f, DARK, true).apply { setPadding(0, dp(2), 0, 0) }
+        dataCard.addView(dataCountsText)
+        dataMetaText = tv("${fmtInt(postal.size)} CP · Datos v$dataVersion · $dataProvinceCount provincias", 11.5f, TEXT2)
+        dataCard.addView(dataMetaText)
+        panelMore.addView(dataCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+
+        panelSection(panelMore, "RUTA Y ARCHIVOS")
+        panelAction(panelMore, R.drawable.ic_postal, "CP de la ruta", "Salida, paradas y destino") { onMore("CP de la ruta") }
+        panelAction(panelMore, R.drawable.ic_gpx, "GPX", "Exportar o importar el recorrido") { onMore("GPX") }
+        panelSection(panelMore, "MAPA")
+        panelAction(panelMore, R.drawable.ic_target, "Orientación del mapa", "Norte arriba al centrar") { onMore("Orientacion") }
+        panelSection(panelMore, "COPIA Y FOTOS")
+        panelAction(panelMore, R.drawable.ic_backup, "Copia de datos", "Fotos, notas y rutas guardadas") { onMore("COPIA de datos") }
+        panelAction(panelMore, R.drawable.ic_photo, "Fotos: carpeta y copias", "Carpeta externa y copia automática") { onMore("Fotos: carpeta y copias") }
+
+        panelRuta = makePanel("\u2699\uFE0F Ruta")
+        val rutaContent = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+        panelRuta.addView(android.widget.ScrollView(this@MainActivity).apply {
+            isFillViewport = true
+            addView(rutaContent, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        val rutaCard = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = round(BLUE_SOFT, 16)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+        }
+        rutaCard.addView(tv("RUTA ACTUAL", 10.5f, ROUTE_BLUE, true).apply { letterSpacing = 0.12f })
+        rutaSummary = tv("Sin ruta", 14f, DARK, true).apply { setPadding(0, dp(2), 0, 0) }
+        rutaCard.addView(rutaSummary)
+        rutaCard.addView(tv("Distancia y tiempo de la ruta calculada", 11.5f, TEXT2))
+        rutaContent.addView(rutaCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+
+        panelSection(rutaContent, "ESTA RUTA")
+        panelAction(rutaContent, R.drawable.ic_share, "Compartir ruta", "WhatsApp, Google Maps u otras apps", BLUE_SOFT, ROUTE_BLUE) { shareRouteMenu() }
+        panelAction(rutaContent, R.drawable.ic_backup, "Guardar ruta", "Añadir a Mis rutas", BLUE_SOFT, ROUTE_BLUE) { saveRouteDialog() }
+        panelAction(rutaContent, R.drawable.ic_route, "Mis rutas guardadas", "Cargar o eliminar rutas", BLUE_SOFT, ROUTE_BLUE) { showSavedRoutes() }
+        panelSection(rutaContent, "RECORRIDO")
+        panelAction(rutaContent, R.drawable.ic_route, "Grabar recorrido", "Registra y exporta tu ruta en GPX", GREEN_SOFT, GREEN_TEXT) { selectTab(2) }
+        panelAction(rutaContent, R.drawable.ic_chart, "Perfil de altura", "Desnivel y altitud de la ruta", GREEN_SOFT, GREEN_TEXT) { elevationDialog() }
+        panelSection(rutaContent, "NAVEGACIÓN")
+        panelAction(rutaContent, R.drawable.ic_center_route, "Navegación giro a giro", "Iniciar o detener la navegación", ORANGE_SOFT, ORANGE_TEXT) { toggleNav() }
+        rutaContent.addView(View(this@MainActivity).apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(10)) })
 
         // Brujula transparente anclada al Norte del mapa
         compassRoseOn = (cfg().getString("roseOn", "1") ?: "1") == "1"
@@ -1030,12 +1111,14 @@ class MainActivity : AppCompatActivity() {
             val js = withContext(Dispatchers.IO) { assets.open("data.json").bufferedReader().readText() }
             withContext(Dispatchers.Default) {
                 val o = JSONObject(js)
+                val dv = o.optString("version", "1.0")
+                val dp = o.optJSONArray("provs")?.length() ?: 0
                 val arr = o.getJSONArray("fd")
                 val fTemp = ArrayList<Fountain>(arr.length())
                 val fSTemp = ArrayList<String>(arr.length())
                 for (i in 0 until arr.length()) {
                     val a = arr.getJSONArray(i)
-                    fTemp.add(Fountain(a.getInt(0), a.getString(1), a.getString(2), a.getDouble(3), a.getDouble(4), a.optString(5)))
+                    fTemp.add(Fountain(a.getInt(0), a.getString(1), a.getString(2), a.getDouble(3), a.getDouble(4), a.optString(5), fountainGroup(a.getString(1))))
                     fSTemp.add(norm(a.getString(1) + " " + a.getString(2)))
                 }
                 val fsTemp = fTemp.sortedBy { it.lat }
@@ -1046,8 +1129,13 @@ class MainActivity : AppCompatActivity() {
                 val pTemp = HashMap<String, List<String>>()
                 val pj = o.getJSONObject("postal")
                 for (k in pj.keys()) { val a = pj.getJSONArray(k); val l = ArrayList<String>(); for (i in 0 until a.length()) l.add(a.getString(i)); pTemp[k] = l }
+                val tpTemp = HashMap<String, String>()
+                for ((t, cps) in pTemp) {
+                    tpTemp[t] = cps.minOrNull() ?: ""
+                }
                 // Publicar todo de golpe en el hilo principal: evita ConcurrentModificationException
                 withContext(Dispatchers.Main) {
+                    dataVersion = dv; dataProvinceCount = dp
                     fountains.clear(); fountains.addAll(fTemp)
                     fountainsByLat = fsTemp
                     fSearch.clear(); fSearch.addAll(fSTemp)
@@ -1055,6 +1143,8 @@ class MainActivity : AppCompatActivity() {
                     townNames.clear(); townNames.addAll(tnTemp)
                     townSearch.clear(); townSearch.addAll(tsTemp)
                     postal.clear(); postal.putAll(pTemp)
+                    townPostal.clear(); townPostal.putAll(tpTemp)
+                    updateDataCard()
                     refreshMarkers(); showFuentesNear()
                 }
             }
@@ -1928,6 +2018,7 @@ class MainActivity : AppCompatActivity() {
         routeInfoHeader.addView(thinBlueLine())
         routeInfo.visibility = if (!routePanelHidden && map.visibility == View.VISIBLE) View.VISIBLE else View.GONE
         if (routeInfo.visibility == View.VISIBLE) routeInfo.bringToFront()
+        updateRutaSummary()
         routeInfo.post { layoutFab() }
         syncBarRings()
         updateRoutePointMarkers()
@@ -2076,7 +2167,7 @@ class MainActivity : AppCompatActivity() {
         if (gpsStartOn) {
             gpsStartOn = false
             startPt = null; startName = ""
-            if (routePts.isNotEmpty()) { routePts.clear(); stepPts.clear(); steps.clear(); hideRouteStats(); drawRoute() }
+            if (routePts.isNotEmpty()) { routePts.clear(); stepPts.clear(); steps.clear(); hideRouteStats(); resetRoutePois(); drawRoute() }
             updRouteInfo(); toast("Salida GPS desactivada")
             return
         }
@@ -2167,6 +2258,21 @@ class MainActivity : AppCompatActivity() {
         routeTotalKm = 0.0; routeTotalMin = 0.0
         routeStatsRow.visibility = View.GONE
         routeStats.post { layoutFab() }
+        updateRutaSummary()
+    }
+
+    private fun updateRutaSummary() {
+        val v = rutaSummary ?: return
+        v.text = when {
+            routePts.size >= 2 -> routeStatsText.ifBlank { "Ruta calculada" }
+            startPt != null || endPt != null || paradas.isNotEmpty() -> "Ruta sin calcular"
+            else -> "Sin ruta"
+        }
+    }
+
+    private fun updateDataCard() {
+        dataCountsText?.text = "${fmtInt(fountains.size)} fuentes · ${fmtInt(towns.size)} pueblos"
+        dataMetaText?.text = "${fmtInt(postal.size)} CP · Datos v$dataVersion · $dataProvinceCount provincias"
     }
 
     // Distancia que queda por la ruta desde el punto más cercano a mi posición
@@ -2323,6 +2429,77 @@ class MainActivity : AppCompatActivity() {
 
     private fun overpassQuery(amenity: String, lat: Double, lon: Double, radius: Int): String =
         "[out:json][timeout:20];(node[\"amenity\"=\"$amenity\"](around:$radius,$lat,$lon);way[\"amenity\"=\"$amenity\"](around:$radius,$lat,$lon););out center 60;"
+
+    private fun routeBBox(pad: Double = 0.03): String? {
+        if (routePts.size < 2) return null
+        var minLat = Double.MAX_VALUE; var maxLat = -Double.MAX_VALUE
+        var minLon = Double.MAX_VALUE; var maxLon = -Double.MAX_VALUE
+        for (p in routePts) {
+            if (p.latitude < minLat) minLat = p.latitude
+            if (p.latitude > maxLat) maxLat = p.latitude
+            if (p.longitude < minLon) minLon = p.longitude
+            if (p.longitude > maxLon) maxLon = p.longitude
+        }
+        return "${minLat - pad},${minLon - pad},${maxLat + pad},${maxLon + pad}"
+    }
+
+    private fun routeCenter(): GeoPoint? = if (routePts.isEmpty()) null else routePts[routePts.size / 2]
+
+    private fun poiNearRoute(p: Poi, maxKm: Double = 5.0): Boolean {
+        if (routePts.size < 2) return true
+        val pt = GeoPoint(p.lat, p.lon)
+        val step = maxOf(1, routePts.size / 120)
+        var i = 0
+        while (i < routePts.size) {
+            if (pt.distanceToAsDouble(routePts[i]) <= maxKm * 1000.0) return true
+            i += step
+        }
+        return pt.distanceToAsDouble(routePts.last()) <= maxKm * 1000.0
+    }
+
+    private fun overpassKindFilter(kind: String): String = when (kind) {
+        "fuel" -> "[\"amenity\"=\"fuel\"]"
+        "restaurant" -> "[\"amenity\"=\"restaurant\"]"
+        "hotel" -> "[\"tourism\"=\"hotel\"]"
+        "parking" -> "[\"amenity\"=\"parking\"]"
+        "drinking_water" -> "[\"amenity\"=\"drinking_water\"]"
+        "hospital" -> "[\"amenity\"=\"hospital\"]"
+        "car_repair" -> "[\"shop\"=\"car_repair\"]"
+        "supermarket" -> "[\"shop\"=\"supermarket\"]"
+        "dealer" -> "[\"shop\"=\"motorcycle\"]"
+        else -> "[\"amenity\"=\"$kind\"]"
+    }
+
+    private fun overpassRouteQuery(kind: String, bbox: String): String {
+        val f = overpassKindFilter(kind)
+        return "[out:json][timeout:25];(node$f($bbox);way$f($bbox););out center 300;"
+    }
+
+    private suspend fun fetchOverpass(kind: String, q: String): List<Poi> {
+        val cl = http.newBuilder()
+            .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
+            .callTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
+        val mirrors = listOf(
+            "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.private.coffee/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter"
+        )
+        for (m in mirrors) {
+            val r = withContext(Dispatchers.IO) { overpassFetch(cl, m, q) } ?: continue
+            val found = parseOverpass(r.second, kind)
+            if (found.isNotEmpty()) return found
+        }
+        return emptyList()
+    }
+
+    private fun resetRoutePois() {
+        poiMarkers.forEach { map.overlays.remove(it) }
+        poiMarkers.clear(); poiByKind.clear(); poiPts.clear(); poiKinds.clear(); poiCache.clear()
+        poiShown = false
+        map.invalidate()
+    }
 
     private suspend fun overpassFetch(cl: okhttp3.OkHttpClient, mirror: String, q: String): Pair<String, String>? {
         return try {
@@ -2572,7 +2749,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) { emptyList<Poi>() }
     }
 
-    private fun parseOverpass(body: String): List<Poi> {
+    private fun parseOverpass(body: String, kind: String): List<Poi> {
         val out = ArrayList<Poi>()
         try {
             val els = org.json.JSONObject(body).getJSONArray("elements")
@@ -2583,7 +2760,7 @@ class MainActivity : AppCompatActivity() {
                 val tags = e.optJSONObject("tags")
                 out.add(Poi(
                     id = "ov-" + e.optString("type", "n") + "-" + e.optString("id", "$lat$lon"),
-                    kind = "overpass", name = tags?.optString("name", "POI") ?: "POI",
+                    kind = kind, name = tags?.optString("name", "POI") ?: "POI",
                     lat = lat, lon = lon,
                     address = tags?.optString("addr:street", "")?.ifBlank { null },
                     phone = tags?.optString("phone", "")?.ifBlank { null },
@@ -2597,12 +2774,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadPois(kind: String) {
+        val hasRoute = routePts.size >= 2
         val c = lastLoc ?: map.mapCenter ?: return
-        poiCache[kind]?.let { (t, list) ->
-            if (System.currentTimeMillis() - t < 600000L) { renderPois(list, kind, "guardado"); return }
+        if (!hasRoute) {
+            poiCache[kind]?.let { (t, list) ->
+                if (System.currentTimeMillis() - t < 600000L) { renderPois(list, kind, "guardado"); return }
+            }
         }
-        showStatus("\uD83D\uDD0D Buscando " + poiLabel(kind) + "\u2026", 0)
+        showStatus("\uD83D\uDD0D Buscando " + poiLabel(kind) + (if (hasRoute) " en la ruta\u2026" else "\u2026"), 0)
         scope.launch {
+            if (hasRoute) {
+                val bbox = routeBBox()
+                if (bbox == null) { showStatus("\u26A0\uFE0F POIs: ruta no disponible", 6000); return@launch }
+                val list = if (kind == "dealer") {
+                    val ctr = routeCenter()
+                    if (ctr == null) emptyList() else dealersFromApi(ctr.latitude, ctr.longitude).filter { poiNearRoute(it) }
+                } else {
+                    fetchOverpass(kind, overpassRouteQuery(kind, bbox)).filter { poiNearRoute(it) }
+                }
+                if (list.isEmpty()) { showStatus("\u26A0\uFE0F " + poiLabel(kind) + ": sin datos en la ruta", 6000); return@launch }
+                renderPois(list, kind, "\u22485 km de la ruta")
+                return@launch
+            }
             val list = if (kind == "dealer") dealersFromApi(c.latitude, c.longitude)
                        else poisFromNominatimLadder(kind, c.latitude, c.longitude)
             if (list.isNotEmpty()) {
@@ -2613,23 +2806,7 @@ class MainActivity : AppCompatActivity() {
             // Respaldo: Overpass (mas lento; puede estar saturado)
             showStatus("\u26A0 Nominatim: " + poiErr.take(40) + " \u00B7 Overpass\u2026", 0)
             val amenity = if (kind == "dealer") "motorcycle" else kind
-            val q = overpassQuery(amenity, c.latitude, c.longitude, 4000)
-            val cl = http.newBuilder()
-                .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
-                .callTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
-            val mirrors = listOf(
-                "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-                "https://overpass-api.de/api/interpreter",
-                "https://overpass.private.coffee/api/interpreter",
-                "https://overpass.kumi.systems/api/interpreter"
-            )
-            var found: List<Poi> = emptyList()
-            for (m in mirrors) {
-                val r = withContext(Dispatchers.IO) { overpassFetch(cl, m, q) } ?: continue
-                found = parseOverpass(r.second)
-                if (found.isNotEmpty()) break
-            }
+            val found = fetchOverpass(kind, overpassQuery(amenity, c.latitude, c.longitude, 4000))
             if (found.isEmpty()) { showStatus("\u26A0\uFE0F POIs: sin datos (reintenta)", 6000); return@launch }
             poiCache[kind] = System.currentTimeMillis() to found
             renderPois(found, kind, "en el mapa")
@@ -2683,11 +2860,16 @@ class MainActivity : AppCompatActivity() {
         poiMarkers.clear()
         poiByKind.values.forEach { poiMarkers.addAll(it) }
         val allPts = poiPts.values.flatten()
-        val ctr = lastLoc ?: map.mapCenter
+        val routeMode = routePts.size >= 2
+        val ctr = if (routeMode) routeCenter() else (lastLoc ?: map.mapCenter)
         if (ctr != null && allPts.isNotEmpty()) {
             if (kind == poiKinds.first()) map.controller.setCenter(ctr)
-            val maxKm = allPts.maxOf { it.distanceToAsDouble(ctr) / 1000.0 }
-            val z = when { maxKm <= 3.0 -> 15.0; maxKm <= 8.0 -> 14.0; maxKm <= 20.0 -> 13.0; maxKm <= 45.0 -> 12.0; else -> 11.0 }
+            val maxKm = if (routeMode) routePts.maxOf { it.distanceToAsDouble(ctr) / 1000.0 }
+                       else allPts.maxOf { it.distanceToAsDouble(ctr) / 1000.0 }
+            val z = when {
+                maxKm <= 3.0 -> 15.0; maxKm <= 8.0 -> 14.0; maxKm <= 20.0 -> 13.0
+                maxKm <= 45.0 -> 12.0; maxKm <= 100.0 -> 11.0; maxKm <= 200.0 -> 10.0; else -> 9.0
+            }
             map.controller.setZoom(z)
         }
         poiShown = true
@@ -2872,8 +3054,30 @@ class MainActivity : AppCompatActivity() {
             b.alpha = 1f
         }
     }
+
+    private fun fountainGroup(name: String): Int {
+        val n = norm(name)
+        var best = 3
+        var bestPos = Int.MAX_VALUE
+        for (idx in groupWords.indices) {
+            for (w in groupWords[idx]) {
+                val pos = n.indexOf(w)
+                if (pos >= 0 && pos < bestPos) { bestPos = pos; best = idx }
+            }
+        }
+        return best
+    }
+
+    private fun styleGroupRow() {
+        for (b in groupButtons) {
+            val on = selectedGroups.contains(b.tag as Int)
+            val color = if (on) GREEN_FUENTE else ORANGE
+            b.background = round(Color.WHITE, 22, 2, color)
+            (b.getChildAt(0) as? ImageView)?.setColorFilter(color)
+        }
+    }
     // ---------------- LISTA FUENTES (formato) ----------------
-    private class FRow(val name: String, val town: String, val km: String)
+    private class FRow(val name: String, val town: String, val cp: String, val km: String)
     private inner class FuentesAdapter(private val items: List<FRow>) : BaseAdapter() {
         override fun getCount() = items.size
         override fun getItem(p: Int) = items[p]
@@ -2905,6 +3109,9 @@ class MainActivity : AppCompatActivity() {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
+            if (items[p].cp.isNotEmpty()) {
+                sub.addView(tv("CP ${items[p].cp}", 11.5f, TEXT2).apply { setPadding(dp(6), 0, 0, 0) })
+            }
             col.addView(sub)
             row.addView(col)
             row.addView(tv(items[p].km, 12f, ORANGE_TEXT, true).apply {
@@ -2927,24 +3134,37 @@ class MainActivity : AppCompatActivity() {
             myLoc.enableMyLocation()
             nearList = ArrayList()
             fuentesCount.text = ""
-            fuenteList.adapter = MsgAdapter("Esperando GPS. Activa la ubicación y vuelve a tocar Fuentes.")
+            fuenteList.adapter = MsgAdapter("Esperando GPS. Activa la ubicación y vuelve a tocar Cerca de ti.")
             return
         }
         val lat = gps.latitude; val lon = gps.longitude
         val R = fuenteRadius
         val rTxt = if (R >= 1) R.toInt().toString() else R.toString()
+        val selected = selectedGroups.toSet()
         scope.launch {
             val near = withContext(Dispatchers.Default) {
-                fountains.map { it to distKm(lat, lon, it) }.filter { it.second <= R }.sortedBy { it.second }.take(400)
+                fountains.map { it to distKm(lat, lon, it) }
+                    .filter { it.second <= R && selected.contains(it.first.group) }
+                    .sortedBy { it.second }.take(400)
             }
             nearList = ArrayList(near.map { it.first })
             if (near.isEmpty()) {
                 fuentesCount.text = ""
-                fuenteList.adapter = MsgAdapter("Sin fuentes a menos de $rTxt km de tu ubicación")
+                fuenteList.adapter = MsgAdapter("Sin fuentes de los grupos seleccionados a menos de $rTxt km")
             } else {
-                val rows = near.map { FRow(it.first.name, it.first.town, String.format(Locale.US, "%.1f km", it.second)) }
+                val rows = near.map {
+                    FRow(it.first.name, it.first.town, townPostal[it.first.town] ?: "", String.format(Locale.US, "%.1f km", it.second))
+                }
                 fuenteList.adapter = FuentesAdapter(rows)
-                fuentesCount.text = if (near.size >= 400) "400+ fuentes · $rTxt km" else "${near.size} fuentes · $rTxt km"
+                val groupCounts = IntArray(4)
+                for ((f, _) in near) groupCounts[f.group]++
+                val groupText = (0..3)
+                    .filter { selected.contains(it) }
+                    .joinToString("/") { i ->
+                        val label = if (groupCounts[i] == 1) groupShortTitles[i] else groupPluralTitles[i]
+                        label.replace("/", "\u2060/\u2060")
+                    }
+                fuentesCount.text = (if (near.size >= 400) "400+" else "${near.size}") + " · " + groupText
                 fuenteList.setOnItemClickListener { _, _, pos, _ -> val f = nearList.getOrNull(pos); if (f != null) { selectTab(0); centerOn(GeoPoint(f.lat, f.lon), 16.0); showFuenteDialog(f) } }
             }
         }
@@ -3338,6 +3558,7 @@ class MainActivity : AppCompatActivity() {
                         val loc = man.getJSONArray("location"); stepPts.add(GeoPoint(loc.getDouble(1), loc.getDouble(0)))
                         steps.add(describe(man.optString("type"), man.optString("modifier")) + (if (nm.isNotEmpty()) " · $nm" else "")) } }
                 drawRoute()
+                resetRoutePois()
                 val mins = (r0.getDouble("duration") / 60).toInt(); val hh = mins / 60; val mm = mins % 60
                 val timeStr = if (hh > 0) "$hh h $mm min" else "$mm min"
                 statusText.visibility = View.GONE
@@ -3345,6 +3566,7 @@ class MainActivity : AppCompatActivity() {
                 routeTotalMin = r0.getDouble("duration") / 60.0
                 routeStatsText = fmtRouteStats()
                 styleStats()
+                updateRutaSummary()
                 routeStatsRow.visibility = View.VISIBLE
                 routeStats.post { layoutFab() }
                 if (navAfterCalc) { navAfterCalc = false; startNav() }
@@ -3600,6 +3822,7 @@ class MainActivity : AppCompatActivity() {
         }
         routePts.clear(); stepPts.clear(); steps.clear()
         hideRouteStats()
+        resetRoutePois()
         drawRoute(); updRouteInfo(); map.invalidate()
     }
 
@@ -3609,6 +3832,7 @@ class MainActivity : AppCompatActivity() {
         paradas.clear()
         routePts.clear(); stepPts.clear(); steps.clear()
         hideRouteStats()
+        resetRoutePois()
         if (navMode) stopNav()
         drawRoute(); updRouteInfo(); map.invalidate(); toast("🗑️ Ruta borrada")
     }
@@ -3618,6 +3842,7 @@ class MainActivity : AppCompatActivity() {
         if (::centrarBtn.isInitialized) centrarBtn.visibility = if (on) View.VISIBLE else View.GONE
         routeCenterActive = null
         updateRouteCenterButton()
+        updateRutaSummary()
     }
 
     private fun drawRoute() {
@@ -3746,78 +3971,277 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAboutDialog() {
-        val version = try {
-            packageManager.getPackageInfo(packageName, 0).versionName
-        } catch (_: Exception) { "1.6" }
-        val sp = android.text.SpannableStringBuilder()
-        fun add(text: String, green: Boolean = false, center: Boolean = false, bold: Boolean = false, scale: Float = 1f) {
-            val start = sp.length
-            sp.append(text)
-            val end = sp.length
-            if (green) sp.setSpan(android.text.style.ForegroundColorSpan(GREEN_FUENTE), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (bold) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (scale != 1f) sp.setSpan(android.text.style.RelativeSizeSpan(scale), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (center) sp.setSpan(android.text.style.AlignmentSpan.Standard(android.text.Layout.Alignment.ALIGN_CENTER), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-        add("Rutas Moteras V-$version\n", green = true, center = true, bold = true, scale = 1.30f)
-        add("Fuentes de Andaluc\u00EDa\n\n", green = true, center = true, bold = true, scale = 1.10f)
-        add("C\u00D3MO USAR:\n\n", green = true, center = true, bold = true, scale = 1.06f)
-        add("\uD83C\uDFCD RUTA (icono moto)\n")
-        add("Abre o cierra Configurar ruta: Salida, Paradas (m\u00E1x. 10) y Destino. Cada punto admite GPS, buscador o Manual. Atr\u00E1s quita el \u00FAltimo punto, Calcular traza la ruta y Reset la vac\u00EDa.\n\n")
-        add("\u2699\uFE0F RUTA (engranaje)\n")
-        add("Compartir por WhatsApp o Google Maps, Guardar, Grabar recorrido y Mis rutas guardadas. Tambi\u00E9n abre el perfil de altura y la navegaci\u00F3n giro a giro.\n\n")
-        add("\u26F2 FUENTES\n")
-        add("Fuentes y manantiales cerca de ti, de 10 a 200 km. La lupa busca por nombre, pueblo o c\u00F3digo postal. Toca una fuente para ver distancia, acceso, fotos y notas, o usarla como Salida, Parada o Destino.\n\n")
-        add("\u2630 DATOS\n")
-        add("CP de la ruta, GPX (exportar o importar), Orientaci\u00F3n del mapa, Copia ZIP con fotos y notas, y carpeta de Fotos.\n\n")
-        add("\u2139\uFE0F INFO\n")
-        add("Esta ayuda, Acerca de y Cr\u00E9ditos.\n\n")
-        add("\uD83D\uDD0D \u00BFA d\u00F3nde?\n")
-        add("Busca fuentes, pueblos o c\u00F3digos postales. Manual abre un punto de mira: mueve el mapa y pulsa + o toca el mapa para fijarlo.\n\n")
-        add("\uD83D\uDDFA\uFE0F Capas\n")
-        add("Mapa, Sat\u00E9lite, Relieve, Bici y Tr\u00E1fico DGT. El bot\u00F3n de nubes abre NASA, radar de lluvia y clima.\n\n")
-        add("\uD83C\uDFAF Diana\n")
-        add("Centra el mapa en tu posici\u00F3n y lo deja Norte arriba. El aro es verde cuando est\u00E1s centrado al norte y naranja cuando no.\n\n")
-        add("\uD83E\uDDED Modo Br\u00FAjula / GPS\n")
-        add("El bot\u00F3n de la br\u00FAjula alterna entre rumbo del sensor y rumbo GPS. En GPS, si no hay rumbo fiable, usa la br\u00FAjula. La rosa muestra el Norte del mapa y tu rumbo; gira el mapa con dos dedos.\n\n")
-        add("Barra inferior: Ruta, engranaje Ruta, Fuentes, Datos e Info. Cada icono abre su pantalla; otra pulsaci\u00F3n vuelve al mapa. Atr\u00E1s cierra men\u00FAs, nunca la app.")
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = round(Color.WHITE, 20)
-            setPadding(dp(20), dp(16), dp(20), dp(12))
-        }
-        val scroll = android.widget.ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-        }
-        scroll.addView(TextView(this).apply {
-            text = sp
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(DARK)
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(2), 0, dp(2), dp(6))
-        })
-        box.addView(scroll)
-
         val dlg = android.app.Dialog(this)
         dlg.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
-        fun action(text: String, bg: Int, fg: Int, onClick: () -> Unit) {
-            box.addView(tv(text, 15f, fg, true).apply {
-                gravity = Gravity.CENTER
-                background = round(bg, 14)
-                setPadding(0, dp(12), 0, dp(12))
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) }
-                setOnClickListener { onClick() }
-            })
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = round(Color.WHITE, 24)
+            setPadding(dp(16), dp(16), dp(16), dp(12))
         }
-        action("\uD83D\uDD04 Buscar actualización", GREEN_FUENTE, Color.WHITE) { dlg.dismiss(); checkForUpdates(false) }
-        action("\uD83C\uDFCD Cr\u00E9ditos", SURFACE2, DARK) { dlg.dismiss(); showCredits() }
-        action("OK", ORANGE, Color.WHITE) { dlg.dismiss() }
+        val scroll = android.widget.ScrollView(this)
+        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
-        dlg.setContentView(box)
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(2), dp(2), dp(2), dp(12))
+        }
+        header.addView(ImageView(this).apply {
+            setImageResource(R.mipmap.ic_launcher)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Logotipo de Rutas Moteras"
+        }, LinearLayout.LayoutParams(dp(62), dp(62)).apply { rightMargin = dp(12) })
+        val titles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        titles.addView(tv("Rutas Moteras", 23f, DARK, true))
+        titles.addView(tv("Fuentes de Andalucía", 13f, GREEN_TEXT, true).apply { setPadding(0, dp(1), 0, dp(2)) })
+        titles.addView(tv("Versión ${appVersionName()}", 12f, TEXT2))
+        header.addView(titles, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        content.addView(header)
+
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = round(GREEN_SOFT, 16)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+        }
+        card.addView(tv("DATOS EN LA APP", 10.5f, GREEN_TEXT, true).apply { letterSpacing = 0.12f })
+        card.addView(tv("${fmtInt(fountains.size)} fuentes · ${fmtInt(towns.size)} pueblos", 13.5f, DARK, true).apply { setPadding(0, dp(2), 0, 0) })
+        card.addView(tv("${fmtInt(postal.size)} CP · Datos v$dataVersion · $dataProvinceCount provincias", 11.5f, TEXT2))
+        content.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
+
+        fun row(iconRes: Int, bg: Int, fg: Int, title: String, sub: String, onClick: () -> Unit) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = round(Color.WHITE, 14, 1, DIVIDER)
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                isClickable = true
+                setOnClickListener { onClick() }
+            }
+            row.addView(iconCircle(iconRes, bg, fg, 38))
+            val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            texts.addView(tv(title, 14.5f, DARK, true))
+            texts.addView(tv(sub, 11.5f, TEXT2))
+            row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(tv("›", 22f, TEXT2).apply { gravity = Gravity.CENTER })
+            content.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+        }
+
+        row(R.drawable.ic_refresh, GREEN_SOFT, GREEN_TEXT, "Buscar actualización", "Busca una versión nueva") { dlg.dismiss(); checkForUpdates(false) }
+        row(R.drawable.ic_help, BLUE_SOFT, ROUTE_BLUE, "Cómo usar la app", "Guía rápida de la app") { dlg.dismiss(); showHelpDialog() }
+        row(R.drawable.ic_lock, ORANGE_SOFT, ORANGE_TEXT, "Privacidad", "Qué se guarda y qué no") { dlg.dismiss(); showPrivacyDialog() }
+        row(R.drawable.ic_book, GREEN_SOFT, GREEN_TEXT, "Fuentes y licencias", "Atribuciones y licencias") { dlg.dismiss(); showSourcesDialog() }
+        row(R.drawable.ic_history, BLUE_SOFT, ROUTE_BLUE, "Historial de versiones", "Novedades y cambios") { dlg.dismiss(); showChangelogDialog() }
+        row(R.drawable.ic_mail, ORANGE_SOFT, ORANGE_TEXT, "Sugerencia o fallo", "Con datos técnicos del móvil") { dlg.dismiss(); showFeedbackDialog() }
+        row(R.drawable.ic_share, GREEN_SOFT, GREEN_TEXT, "Compartir la app", "Comparte el enlace de descarga") { dlg.dismiss(); shareApp() }
+        row(R.drawable.ic_route, BLUE_SOFT, ROUTE_BLUE, "Créditos", "Idea original y agradecimientos") { dlg.dismiss(); showCredits() }
+
+        content.addView(tv("Sin publicidad", 11f, TEXT2).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(14), 0, dp(2))
+        })
+        scroll.addView(content)
+        root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        val close = tv("CERRAR", 15f, Color.WHITE, true).apply {
+            gravity = Gravity.CENTER
+            background = round(ORANGE, 14)
+            setPadding(0, dp(12), 0, dp(12))
+            setOnClickListener { dlg.dismiss() }
+        }
+        root.addView(close, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+
+        dlg.setContentView(root)
         dlg.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         dlg.setOnDismissListener { infoIcon?.background = ring(ORANGE, 50) }
         dlg.show()
-        dlg.window?.setLayout((resources.displayMetrics.widthPixels * 0.92).toInt(), (resources.displayMetrics.heightPixels * 0.84).toInt())
+        dlg.window?.setLayout((resources.displayMetrics.widthPixels * 0.92).toInt(), (resources.displayMetrics.heightPixels * 0.88).toInt())
+    }
+
+    private fun showHelpDialog() {
+        showTextDialog(
+            "Cómo usar Rutas Moteras",
+            "MAPA\n" +
+                "• Moto: abre o cierra Configurar ruta (Salida, hasta 10 paradas y Destino). Cada punto admite GPS, buscador o Manual.\n" +
+                "• Engranaje: comparte la ruta, guárdala, graba el recorrido, abre Mis rutas, el perfil de altura y la navegación giro a giro.\n" +
+                "• Fuentes: fuentes y manantiales cerca de ti de 10 a 200 km. La lupa busca por nombre, pueblo o código postal.\n" +
+                "• Datos: CP de la ruta, GPX, orientación del mapa, copia ZIP y carpeta de fotos.\n" +
+                "• Info: esta ayuda, Acerca de y Créditos.\n\n" +
+                "BÚSQUEDA Y CAPAS\n" +
+                "• ¿A dónde? busca fuentes, pueblos o códigos postales. Manual abre un punto de mira para fijarlo en el mapa.\n" +
+                "• Capas: Mapa, Satélite, Relieve, Bici y Tráfico DGT. El botón de nubes abre NASA, radar de lluvia y clima.\n\n" +
+                "BRÚJULA Y GPS\n" +
+                "• La diana centra el mapa en tu posición y deja el Norte arriba.\n" +
+                "• La brújula alterna entre rumbo del sensor y rumbo GPS. La rosa muestra el Norte del mapa y tu rumbo; gira el mapa con dos dedos.\n\n" +
+                "BARRA INFERIOR\n" +
+                "Cada icono abre su pantalla; otra pulsación vuelve al mapa. Atrás cierra menús, nunca la app."
+        )
+    }
+
+    private fun showPrivacyDialog() {
+        showTextDialog(
+            "Privacidad",
+            "Rutas Moteras no tiene cuentas, publicidad ni seguimiento.\n\n" +
+                "• Ubicación: se usa para centrar el mapa, buscar fuentes cercanas y navegar. No se envía a ningún servidor propio.\n" +
+                "• Fotos y notas: se guardan en el teléfono. La copia automática solo escribe en la carpeta que tú elijas.\n" +
+                "• Copias de seguridad: el ZIP lo creas tú y se guarda o comparte donde decidas.\n" +
+                "• Servicios externos: al usar mapa, rutas, clima o incidencias se consultan proveedores como OpenStreetMap, OSRM, Overpass, Nominatim, Open-Meteo, NASA, RainViewer y DGT.\n" +
+                "• Permisos: ubicación para el mapa y la navegación; Internet para mapas, clima y actualizaciones; instalación de apps para las actualizaciones.\n\n" +
+                "Puedes usar la app sin crear ninguna cuenta."
+        )
+    }
+
+    private fun showSourcesDialog() {
+        showTextDialog(
+            "Fuentes y licencias",
+            "MAPAS Y DATOS\n" +
+                "• OpenStreetMap contributors · ODbL\nhttps://www.openstreetmap.org/copyright\n" +
+                "• OpenTopoMap · CC-BY-SA\nhttps://opentopomap.org\n" +
+                "• CyclOSM · OSM\nhttps://cyclosm.org\n" +
+                "• Esri World Imagery · términos de Esri\nhttps://www.esri.com\n" +
+                "• NASA GIBS · datos públicos\nhttps://earthdata.nasa.gov\n" +
+                "• RainViewer · radar de lluvia\nhttps://www.rainviewer.com\n" +
+                "• DGT infocar · enlace oficial de tráfico\nhttps://infocar.dgt.es\n" +
+                "• Open-Meteo · clima y elevación · CC BY 4.0\nhttps://open-meteo.com\n" +
+                "• OSRM, Overpass y Nominatim · rutas y búsqueda OSM\nhttps://project-osrm.org\n" +
+                "• Localizador de concesionarios Harley-Davidson\nhttps://maps.harley-davidson.com\n\n" +
+                "FUENTES DE AGUA\n" +
+                "Datos del proyecto Rutas Moteras · Fuentes de Andalucía.\n\n" +
+                "Este listado resume las fuentes principales; cada enlace conserva sus propios términos.",
+            links = true
+        )
+    }
+
+    private fun showChangelogDialog() {
+        showTextDialog(
+            "Historial de versiones",
+            "1.9.6\n" +
+                "• Cerca de ti: grupos Fuente/Manantial/Pilar/Pozo, sin radio de 10 km y CP en cada resultado.\n" +
+                "• POIs a lo largo de la ruta calculada o cerca de tu ubicación si no hay ruta.\n" +
+                "• Datos y Ruta: menús por secciones, resumen de ruta y accesos directos.\n" +
+                "• Acerca de: privacidad, fuentes y licencias, historial, sugerencias e informe local de errores.\n\n" +
+                "1.9.5\n" +
+                "• Copia de seguridad completa con rutas y ajustes.\n" +
+                "• Restauración segura de ajustes.\n" +
+                "• Pantalla encendida en navegación y grabación.\n" +
+                "• Comprobación de actualización al volver y tráfico HTTPS.\n\n" +
+                "1.9.3 · Brújula visible desde el arranque.\n" +
+                "1.9.2 · Brújula estable sin GPS o fuera de pantalla.\n" +
+                "1.9.1 · Botones del diálogo Acerca de corregidos.\n" +
+                "1.9.0 · Actualizaciones desde GitHub Releases y firma release."
+        )
+    }
+
+    private fun showTextDialog(title: String, body: String, links: Boolean = false) {
+        val dlg = android.app.Dialog(this)
+        dlg.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = round(Color.WHITE, 24)
+            setPadding(dp(18), dp(16), dp(18), dp(12))
+        }
+        root.addView(tv(title, 20f, DARK, true).apply { setPadding(0, 0, 0, dp(8)) })
+        val scroll = android.widget.ScrollView(this)
+        scroll.addView(tv(body, 13.5f, DARK).apply {
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(0, 0, 0, dp(12))
+            if (links) {
+                autoLinkMask = android.text.util.Linkify.WEB_URLS
+                movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                linksClickable = true
+            }
+        })
+        root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(tv("CERRAR", 15f, Color.WHITE, true).apply {
+            gravity = Gravity.CENTER
+            background = round(ORANGE, 14)
+            setPadding(0, dp(12), 0, dp(12))
+            setOnClickListener { dlg.dismiss() }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+        dlg.setContentView(root)
+        dlg.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+        dlg.show()
+        dlg.window?.setLayout((resources.displayMetrics.widthPixels * 0.92).toInt(), (resources.displayMetrics.heightPixels * 0.82).toInt())
+    }
+
+    private fun showFeedbackDialog() {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Sugerencia o fallo")
+            .setItems(arrayOf("Sugerencia o mejora", "Fallo o error", "Copiar información del dispositivo")) { _, w ->
+                when (w) {
+                    0 -> openIssue("Sugerencia", false)
+                    1 -> openIssue("Fallo", true)
+                    2 -> copyDeviceInfo()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun openIssue(kind: String, bug: Boolean) {
+        val extra = if (bug) "\n\nPasos para reproducirlo:\n1. " else "\n\n¿Qué te gustaría mejorar?"
+        val body = "Describe aquí el ${if (bug) "fallo" else "detalle"}...$extra\n\n---\n${deviceInfoText()}"
+        val url = "https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/issues/new?title=" +
+            android.net.Uri.encode("[$kind] ") + "&body=" + android.net.Uri.encode(body)
+        try {
+            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+        } catch (_: Exception) { toast("No se pudo abrir el navegador") }
+    }
+
+    private fun copyDeviceInfo() {
+        val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("Rutas Moteras", deviceInfoText()))
+        toast("Información copiada")
+    }
+
+    private fun shareApp() {
+        val text = "Rutas Moteras · Fuentes de Andalucía\n" +
+            "https://github.com/LCJ355/RUTAS-MOTERAS-FUENTES-DE-ANDALUCIA/releases/latest"
+        try {
+            startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, text)
+            }, "Compartir Rutas Moteras"))
+        } catch (_: Exception) { toast("No se pudo compartir") }
+    }
+
+    private fun deviceInfoText(): String =
+        "App: Rutas Moteras ${appVersionName()} (${currentVersionCode()})\n" +
+            "Android: ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})\n" +
+            "Dispositivo: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\n" +
+            "Datos: v$dataVersion · ${fmtInt(fountains.size)} fuentes"
+
+    private fun appVersionName(): String = try {
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+    } catch (_: Exception) { "?" }
+
+    private fun fmtInt(n: Int): String = java.text.NumberFormat.getIntegerInstance().format(n)
+
+    private fun installCrashHandler() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, ex ->
+            runCatching {
+                val sw = java.io.StringWriter()
+                ex.printStackTrace(java.io.PrintWriter(sw))
+                val stamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(java.util.Date())
+                File(filesDir, "last_crash.txt").writeText("Fecha: $stamp\n${deviceInfoText()}\n\n${sw}")
+            }
+            if (previous != null) previous.uncaughtException(thread, ex)
+            else {
+                android.os.Process.killProcess(android.os.Process.myPid())
+                kotlin.system.exitProcess(10)
+            }
+        }
+    }
+
+    private fun maybeShowCrashReport() {
+        val f = File(filesDir, "last_crash.txt")
+        if (!f.exists() || f.length() == 0L) return
+        android.app.AlertDialog.Builder(this)
+            .setTitle("La app se cerró la última vez")
+            .setMessage("Se guardó un informe técnico en el teléfono. Puedes compartirlo para ayudar a corregir el fallo; no se envía automáticamente.")
+            .setPositiveButton("Compartir informe") { _, _ -> shareFile(f, "text/plain") }
+            .setNeutralButton("Descartar") { _, _ -> f.delete() }
+            .setNegativeButton("Más tarde", null)
+            .show()
     }
 
     // ---------------- GPX ----------------
@@ -3851,6 +4275,7 @@ class MainActivity : AppCompatActivity() {
             val pts = re.findAll(text).map { GeoPoint(it.groupValues[1].toDouble(), it.groupValues[2].toDouble()) }.toList()
             if (pts.size < 2) { toast("GPX sin puntos suficientes"); return@registerForActivityResult }
             routePts.clear(); routePts.addAll(pts)
+            resetRoutePois()
             paradas.clear(); if (pts.size > 2) for (i in 1 until pts.size - 1) { if (paradas.size >= 10) break; paradas.add(pts[i] to "GPX") }
             startPt = pts.first(); startName = "GPX"; gpsStartOn = false; endPt = pts.last(); endName = "GPX"
             selectTab(0); drawRoute(); updRouteInfo(); toast("GPX importado (${pts.size} puntos)")
