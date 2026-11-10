@@ -4113,7 +4113,9 @@ class MainActivity : AppCompatActivity() {
     private fun showChangelogDialog() {
         showTextDialog(
             "Historial de versiones",
-            "1.9.6\n" +
+            "1.9.7\n" +
+                "• Brújula: no se coloca en el centro cuando el GPS real está fuera de pantalla al ver una ruta.\n\n" +
+                "1.9.6\n" +
                 "• Cerca de ti: grupos Fuente/Manantial/Pilar/Pozo, sin radio de 10 km y CP en cada resultado.\n" +
                 "• POIs a lo largo de la ruta calculada o cerca de tu ubicación si no hay ruta.\n" +
                 "• Datos y Ruta: menús por secciones, resumen de ruta y accesos directos.\n" +
@@ -4357,7 +4359,8 @@ class MainActivity : AppCompatActivity() {
             }
             return
         }
-        val p = myLoc.myLocation ?: lastLoc
+        val gps = myLoc.myLocation
+        val p = gps ?: lastLoc
         val pt = android.graphics.Point()
         var useCenter = p == null
         if (p != null) {
@@ -4376,12 +4379,14 @@ class MainActivity : AppCompatActivity() {
             }
             val margin = dp(4)
             if (pt.x < margin || pt.y < margin || pt.x > map.width - margin || pt.y > map.height - margin) {
-                useCenter = true
+                // Si la posicion real esta fuera de pantalla (por ejemplo al ver una ruta),
+                // no colocamos la brujula en un centro que no corresponde a tu posicion.
+                c.visibility = View.INVISIBLE
+                return
             }
         }
         if (useCenter) {
-            // Sin GPS o con la ubicacion fuera de pantalla, la brujula se queda
-            // visible en el centro en vez de desaparecer.
+            // Sin GPS, la brujula se queda visible en el centro.
             pt.x = map.width / 2
             pt.y = map.height / 2
         }
